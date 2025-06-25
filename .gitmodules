@@ -1,0 +1,6 @@
+[submodule "rtl/picorv32"]
+	path = rtl/picorv32
+	url = https://github.com/YosysHQ/picorv32.git
+[submodule "sw/FFmpeg"]
+	path = sw/FFmpeg
+	url = https://github.com/FFmpeg/FFmpeg.git

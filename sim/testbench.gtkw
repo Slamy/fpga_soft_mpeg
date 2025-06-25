@@ -1,0 +1,37 @@
+[*]
+[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
+[*] Wed Jun 25 17:48:09 2025
+[*]
+[dumpfile] "/tmp/waveform.vcd"
+[dumpfile_mtime] "Wed Jun 25 17:47:31 2025"
+[dumpfile_size] 12374395
+[savefile] "/home/andre/GIT/HybridMPEG/sim/testbench.gtkw"
+[timestart] 0
+[size] 1920 1152
+[pos] -1 -1
+*-20.828886 3296000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.testbench.
+[sst_width] 341
+[signals_width] 300
+[sst_expanded] 1
+[sst_vpaned_height] 348
+@28
+TOP.testbench.pcpi_valid
+TOP.testbench.pcpi_wait
+TOP.testbench.pcpi_wr
+TOP.testbench.resetn
+@22
+TOP.testbench.trace_data[35:0]
+@28
+TOP.testbench.trace_valid
+TOP.testbench.trap
+@8022
+TOP.testbench.underflow_cnt[0][31:0]
+TOP.testbench.underflow_cnt[1][31:0]
+@24
+TOP.testbench.soft_state[31:0]
+@28
+TOP.testbench.debugflag
+[pattern_trace] 1
+[pattern_trace] 0
