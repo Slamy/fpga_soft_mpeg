@@ -33,13 +33,22 @@ int main(void)
 	assert(buffer);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
 	assert(mpeg);
-	//plm_audio_t *mpeg_audio = plm_audio_create_with_buffer(buffer, 0);
-	//assert(mpeg_audio);
+	// plm_audio_t *mpeg_audio = plm_audio_create_with_buffer(buffer, 0);
+	// assert(mpeg_audio);
 #else
 	plm_t *mpeg = plm_create_with_filename(path);
 
 #endif
 	FILE *outfile = fopen("samples.bin", "wb");
+
+	int index = 0;
+	for (auto v : PLM_AUDIO_SYNTHESIS_WINDOW)
+	{
+		printf("9'd%d: PLM_AUDIO_SYNTHESIS_WINDOW = %d;\n", index, v);
+		index++;
+	}
+
+	// g++ -g pctest.cpp  && ./a.out > a
 
 	for (;;)
 	{
@@ -60,6 +69,7 @@ int main(void)
 			break;
 		}
 	}
+
 	// aplay -f float_le samples.bin  -r 44100 -c2
 	// g++ -g pctest.cpp  && ./a.out
 	// g++ -g pctest.cpp  && ./a.out && aplay -f cd samples.bin

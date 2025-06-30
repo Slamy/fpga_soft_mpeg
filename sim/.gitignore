@@ -1,5 +1,8 @@
 /obj_dir/
+/out_*/
 *.mem
 *.bin
 
 /audio.wav
+*.mp3
+*.mpg
