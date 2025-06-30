@@ -1,21 +1,54 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Wed Jun 25 17:48:09 2025
+[*] Fri Jun 13 16:10:52 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Wed Jun 25 17:47:31 2025"
-[dumpfile_size] 12374395
+[dumpfile_mtime] "Fri Jun 13 16:10:29 2025"
+[dumpfile_size] 65311143
 [savefile] "/home/andre/GIT/HybridMPEG/sim/testbench.gtkw"
 [timestart] 0
-[size] 1920 1152
+[size] 2560 1348
 [pos] -1 -1
-*-20.828886 3296000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-20.434877 942000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.testbench.
+[treeopen] TOP.testbench.uut.
+[treeopen] TOP.testbench.uut.genblk1.
+[treeopen] TOP.testbench.uut.genblk2.
 [sst_width] 341
 [signals_width] 300
 [sst_expanded] 1
-[sst_vpaned_height] 348
+[sst_vpaned_height] 417
+@28
+TOP.testbench.clk
+@22
+TOP.testbench.mem_addr[31:0]
+@28
+TOP.testbench.mem_instr
+@22
+TOP.testbench.mem_la_addr[31:0]
+@28
+TOP.testbench.mem_la_read
+@22
+TOP.testbench.mem_la_wdata[31:0]
+@28
+TOP.testbench.mem_la_write
+@22
+TOP.testbench.mem_la_wstrb[3:0]
+TOP.testbench.mem_rdata[31:0]
+@28
+TOP.testbench.mem_ready
+TOP.testbench.mem_valid
+@22
+TOP.testbench.mem_wdata[31:0]
+TOP.testbench.mem_wstrb[3:0]
+TOP.testbench.pcpi_insn[31:0]
+TOP.testbench.pcpi_rd[31:0]
+@28
+TOP.testbench.pcpi_ready
+@22
+TOP.testbench.pcpi_rs1[31:0]
+TOP.testbench.pcpi_rs2[31:0]
 @28
 TOP.testbench.pcpi_valid
 TOP.testbench.pcpi_wait
@@ -29,8 +62,14 @@ TOP.testbench.trap
 @8022
 TOP.testbench.underflow_cnt[0][31:0]
 TOP.testbench.underflow_cnt[1][31:0]
-@24
+@25
 TOP.testbench.soft_state[31:0]
+@420
+TOP.testbench.uut.STACKADDR
+@22
+TOP.testbench.uut.cpuregs[2][31:0]
+TOP.testbench.uut.next_pc[31:0]
+TOP.testbench.uut.reg_pc[31:0]
 @28
 TOP.testbench.debugflag
 [pattern_trace] 1

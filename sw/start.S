@@ -50,7 +50,7 @@ start:
 	/* zero-initialize all registers */
 
 	/* set stack pointer */
-	lui sp,((2300000/4)-1)>>12
+	lui sp,((500000/4)-1)>>12
 
 	/* call main C code */
 	jal ra,main

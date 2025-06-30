@@ -14,10 +14,6 @@ static void catch_function(int signo)
     status = signo;
 }
 
-#ifdef HEATMAP
-uint64_t memory_heatmap[2300000];
-#endif
-
 class Machine
 {
 public:
@@ -36,7 +32,7 @@ public:
     virtual ~Machine()
     {
         fclose(f_audio_right);
-        fclose(f_audio_left);   
+        fclose(f_audio_left);
     }
 
     Machine()
@@ -81,13 +77,6 @@ public:
 #endif
         sim_time += 1;
 
-#ifdef HEATMAP
-        if ((dut.rootp->testbench__DOT__mem_la_read || dut.rootp->testbench__DOT__mem_la_write) && (dut.rootp->testbench__DOT__mem_la_addr&0xf0000000)==0)
-        {
-            memory_heatmap[dut.rootp->testbench__DOT__mem_la_addr/4]++;
-        }
-#endif
-
         if (dut.rootp->testbench__DOT__sample_left_write)
             fwrite(&dut.rootp->testbench__DOT__sample, sizeof(int16_t), 1, f_audio_left);
         if (dut.rootp->testbench__DOT__sample_right_write)
@@ -116,17 +105,4 @@ int main(int argc, char **argv, char **env)
 
     fprintf(stderr, "Closing...\n");
     fflush(stdout);
-
-#ifdef HEATMAP
-    int maxi=0;
-    for (int i=0;i<128000;i++)
-    {
-        if (memory_heatmap[i]) maxi = i;
-    }
-
-    for (int i=0;i<maxi;i++)
-    {
-        printf("%08x %x\n",i*4,memory_heatmap[i]);
-    }
-#endif
 }

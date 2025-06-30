@@ -15,10 +15,10 @@ module testbench (
 
     bit [31:0] underflow_cnt[2];
 
-    bit [31:0] mpeg_audio_rom[21100];
+    bit [31:0] mpeg_audio_rom[21888];
     initial $readmemh("fma.mem", mpeg_audio_rom);
 
-    bit [31:0] memory[2300000/4];
+    bit [31:0] memory[500000];
     initial $readmemh("../sw/firmware.mem", memory);
 
     wire        trap;
@@ -31,9 +31,9 @@ module testbench (
     wire [ 3:0] mem_wstrb;
     bit  [31:0] mem_rdata;
 
-    wire        mem_la_read /*verilator public_flat_rd*/ ;
-    wire        mem_la_write/*verilator public_flat_rd*/ ;
-    wire [31:0] mem_la_addr /*verilator public_flat_rd*/ ;
+    wire        mem_la_read;
+    wire        mem_la_write;
+    wire [31:0] mem_la_addr;
     wire [31:0] mem_la_wdata;
     wire [ 3:0] mem_la_wstrb;
 
