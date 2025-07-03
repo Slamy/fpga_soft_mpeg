@@ -3862,6 +3862,8 @@ static const plm_quantizer_spec_t PLM_AUDIO_QUANT_TAB[] = {
 	{ 65535, 0, 16 }   // 17
 };
 
+//#define SOFT_CONVOLVE
+
 struct plm_audio_t {
 	double time;
 	int samples_decoded;
@@ -3886,7 +3888,9 @@ struct plm_audio_t {
 	plm_samples_t samples;
 	intsample_t D[1024];
 	intsample_t V[2][1024];
+#ifdef SOFT_CONVOLVE
 	intsample_t U[32];
+#endif
 };
 
 int plm_audio_find_frame_sync(plm_audio_t *self);
@@ -4202,6 +4206,43 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 				for (int ch = 0; ch < 2; ch++) {
 					plm_audio_idct36(self->sample[ch], p, self->V[ch], self->v_pos);
 
+					OUT_DEBUG = 3;
+
+					// Using hardware
+					intsample_t hw_U[32];
+
+					{
+						for (int i = 0; i < 32; ++i) {
+							//*((volatile intsample_t *)OUTPORT)=i;
+
+							int d_index = 512 - (self->v_pos >> 1);
+							int v_index = (self->v_pos % 128) >> 1;
+
+							// calculate the first 8
+							synth_window_mac->result=0;
+							synth_window_mac->addr = &self->V[ch][v_index+i];
+							synth_window_mac->index = d_index+i;
+
+							// step forward
+							v_index += 128*8;
+							d_index += 64*8;
+
+							// second 8 samples
+							d_index -= (512 - 32);
+							v_index = (128 - 32 + 1024) - v_index;
+							// CPU will stall here probably
+							synth_window_mac->addr = &self->V[ch][v_index+i];
+							synth_window_mac->index = d_index+i;
+							// CPU will stall here probably
+
+							hw_U[i] = synth_window_mac->result;
+							//*((volatile intsample_t *)OUTPORT)=hw_U[i];
+						}
+					}
+
+#ifdef SOFT_CONVOLVE
+
+					// With software for reference
 					// Build U, windowing, calculate output
 					memset(self->U, 0, sizeof(self->U));
 					OUT_DEBUG = 3;
@@ -4228,13 +4269,26 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 						d_index += 64 - 32;
 					}
 
+					// Verify hardware results against software results
+					if (memcmp(hw_U, self->U,sizeof(hw_U)))
+					{
+						*((volatile uint8_t *)OUTPORT)=0x42;
+						//*((volatile uint8_t *)OUTPORT)=0x42;
+						for (int i = 0; i < 32; ++i) {
+							*((volatile uint32_t *)OUTPORT_L)=hw_U[i];
+							*((volatile uint32_t *)OUTPORT_R)=self->U[i];
+						}
+
+						for(;;);
+					}
+#endif
 					OUT_DEBUG = 5;
 					{
 						volatile int16_t *out_channel = ch == 0
 						?((volatile int16_t *)OUT_L) 
 						: ((volatile int16_t *)OUT_R) ;
 						for (int j = 0; j < 32; j++) {
-							*out_channel = self->U[j] / (0x10000);
+							*out_channel = hw_U[j] / (0x10000);
 						}
 					}
 				} // End of synthesis channel loop
