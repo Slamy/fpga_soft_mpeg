@@ -144,7 +144,7 @@ See below for detailed the API documentation.
 #define PL_MPEG_H
 
 #include <stdint.h>
-
+#include <math.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -226,10 +226,10 @@ typedef struct {
 	double time;
 	unsigned int count;
 	#ifdef PLM_AUDIO_SEPARATE_CHANNELS
-		float left[PLM_AUDIO_SAMPLES_PER_FRAME];
-		float right[PLM_AUDIO_SAMPLES_PER_FRAME];
+	int16_t left[PLM_AUDIO_SAMPLES_PER_FRAME];
+		int16_t right[PLM_AUDIO_SAMPLES_PER_FRAME];
 	#else
-		float interleaved[PLM_AUDIO_SAMPLES_PER_FRAME * 2];
+		int16_t interleaved[PLM_AUDIO_SAMPLES_PER_FRAME * 2];
 	#endif
 } plm_samples_t;
 
@@ -1208,6 +1208,7 @@ plm_frame_t *plm_decode_video(plm_t *self) {
 }
 
 plm_samples_t *plm_decode_audio(plm_t *self) {
+	OUT_DEBUG = 10;
 	if (!plm_init_decoders(self)) {
 		return NULL;
 	}
@@ -3686,93 +3687,98 @@ static const int PLM_AUDIO_SCALEFACTOR_BASE[] = {
 	0x02000000, 0x01965FEA, 0x01428A30
 };
 
-static const float PLM_AUDIO_SYNTHESIS_WINDOW[] = {
-	     0.0,     -0.5,     -0.5,     -0.5,     -0.5,     -0.5,
-	    -0.5,     -1.0,     -1.0,     -1.0,     -1.0,     -1.5,
-	    -1.5,     -2.0,     -2.0,     -2.5,     -2.5,     -3.0,
-	    -3.5,     -3.5,     -4.0,     -4.5,     -5.0,     -5.5,
-	    -6.5,     -7.0,     -8.0,     -8.5,     -9.5,    -10.5,
-	   -12.0,    -13.0,    -14.5,    -15.5,    -17.5,    -19.0,
-	   -20.5,    -22.5,    -24.5,    -26.5,    -29.0,    -31.5,
-	   -34.0,    -36.5,    -39.5,    -42.5,    -45.5,    -48.5,
-	   -52.0,    -55.5,    -58.5,    -62.5,    -66.0,    -69.5,
-	   -73.5,    -77.0,    -80.5,    -84.5,    -88.0,    -91.5,
-	   -95.0,    -98.0,   -101.0,   -104.0,    106.5,    109.0,
-	   111.0,    112.5,    113.5,    114.0,    114.0,    113.5,
-	   112.0,    110.5,    107.5,    104.0,    100.0,     94.5,
-	    88.5,     81.5,     73.0,     63.5,     53.0,     41.5,
-	    28.5,     14.5,     -1.0,    -18.0,    -36.0,    -55.5,
-	   -76.5,    -98.5,   -122.0,   -147.0,   -173.5,   -200.5,
-	  -229.5,   -259.5,   -290.5,   -322.5,   -355.5,   -389.5,
-	  -424.0,   -459.5,   -495.5,   -532.0,   -568.5,   -605.0,
-	  -641.5,   -678.0,   -714.0,   -749.0,   -783.5,   -817.0,
-	  -849.0,   -879.5,   -908.5,   -935.0,   -959.5,   -981.0,
-	 -1000.5,  -1016.0,  -1028.5,  -1037.5,  -1042.5,  -1043.5,
-	 -1040.0,  -1031.5,   1018.5,   1000.0,    976.0,    946.5,
-	   911.0,    869.5,    822.0,    767.5,    707.0,    640.0,
-	   565.5,    485.0,    397.0,    302.5,    201.0,     92.5,
-	   -22.5,   -144.0,   -272.5,   -407.0,   -547.5,   -694.0,
-	  -846.0,  -1003.0,  -1165.0,  -1331.5,  -1502.0,  -1675.5,
-	 -1852.5,  -2031.5,  -2212.5,  -2394.0,  -2576.5,  -2758.5,
-	 -2939.5,  -3118.5,  -3294.5,  -3467.5,  -3635.5,  -3798.5,
-	 -3955.0,  -4104.5,  -4245.5,  -4377.5,  -4499.0,  -4609.5,
-	 -4708.0,  -4792.5,  -4863.5,  -4919.0,  -4958.0,  -4979.5,
-	 -4983.0,  -4967.5,  -4931.5,  -4875.0,  -4796.0,  -4694.5,
-	 -4569.5,  -4420.0,  -4246.0,  -4046.0,  -3820.0,  -3567.0,
-	  3287.0,   2979.5,   2644.0,   2280.5,   1888.0,   1467.5,
-	  1018.5,    541.0,     35.0,   -499.0,  -1061.0,  -1650.0,
-	 -2266.5,  -2909.0,  -3577.0,  -4270.0,  -4987.5,  -5727.5,
-	 -6490.0,  -7274.0,  -8077.5,  -8899.5,  -9739.0, -10594.5,
-	-11464.5, -12347.0, -13241.0, -14144.5, -15056.0, -15973.5,
-	-16895.5, -17820.0, -18744.5, -19668.0, -20588.0, -21503.0,
-	-22410.5, -23308.5, -24195.0, -25068.5, -25926.5, -26767.0,
-	-27589.0, -28389.0, -29166.5, -29919.0, -30644.5, -31342.0,
-	-32009.5, -32645.0, -33247.0, -33814.5, -34346.0, -34839.5,
-	-35295.0, -35710.0, -36084.5, -36417.5, -36707.5, -36954.0,
-	-37156.5, -37315.0, -37428.0, -37496.0,  37519.0,  37496.0,
-	 37428.0,  37315.0,  37156.5,  36954.0,  36707.5,  36417.5,
-	 36084.5,  35710.0,  35295.0,  34839.5,  34346.0,  33814.5,
-	 33247.0,  32645.0,  32009.5,  31342.0,  30644.5,  29919.0,
-	 29166.5,  28389.0,  27589.0,  26767.0,  25926.5,  25068.5,
-	 24195.0,  23308.5,  22410.5,  21503.0,  20588.0,  19668.0,
-	 18744.5,  17820.0,  16895.5,  15973.5,  15056.0,  14144.5,
-	 13241.0,  12347.0,  11464.5,  10594.5,   9739.0,   8899.5,
-	  8077.5,   7274.0,   6490.0,   5727.5,   4987.5,   4270.0,
-	  3577.0,   2909.0,   2266.5,   1650.0,   1061.0,    499.0,
-	   -35.0,   -541.0,  -1018.5,  -1467.5,  -1888.0,  -2280.5,
-	 -2644.0,  -2979.5,   3287.0,   3567.0,   3820.0,   4046.0,
-	  4246.0,   4420.0,   4569.5,   4694.5,   4796.0,   4875.0,
-	  4931.5,   4967.5,   4983.0,   4979.5,   4958.0,   4919.0,
-	  4863.5,   4792.5,   4708.0,   4609.5,   4499.0,   4377.5,
-	  4245.5,   4104.5,   3955.0,   3798.5,   3635.5,   3467.5,
-	  3294.5,   3118.5,   2939.5,   2758.5,   2576.5,   2394.0,
-	  2212.5,   2031.5,   1852.5,   1675.5,   1502.0,   1331.5,
-	  1165.0,   1003.0,    846.0,    694.0,    547.5,    407.0,
-	   272.5,    144.0,     22.5,    -92.5,   -201.0,   -302.5,
-	  -397.0,   -485.0,   -565.5,   -640.0,   -707.0,   -767.5,
-	  -822.0,   -869.5,   -911.0,   -946.5,   -976.0,  -1000.0,
-	  1018.5,   1031.5,   1040.0,   1043.5,   1042.5,   1037.5,
-	  1028.5,   1016.0,   1000.5,    981.0,    959.5,    935.0,
-	   908.5,    879.5,    849.0,    817.0,    783.5,    749.0,
-	   714.0,    678.0,    641.5,    605.0,    568.5,    532.0,
-	   495.5,    459.5,    424.0,    389.5,    355.5,    322.5,
-	   290.5,    259.5,    229.5,    200.5,    173.5,    147.0,
-	   122.0,     98.5,     76.5,     55.5,     36.0,     18.0,
-	     1.0,    -14.5,    -28.5,    -41.5,    -53.0,    -63.5,
-	   -73.0,    -81.5,    -88.5,    -94.5,   -100.0,   -104.0,
-	  -107.5,   -110.5,   -112.0,   -113.5,   -114.0,   -114.0,
-	  -113.5,   -112.5,   -111.0,   -109.0,    106.5,    104.0,
-	   101.0,     98.0,     95.0,     91.5,     88.0,     84.5,
-	    80.5,     77.0,     73.5,     69.5,     66.0,     62.5,
-	    58.5,     55.5,     52.0,     48.5,     45.5,     42.5,
-	    39.5,     36.5,     34.0,     31.5,     29.0,     26.5,
-	    24.5,     22.5,     20.5,     19.0,     17.5,     15.5,
-	    14.5,     13.0,     12.0,     10.5,      9.5,      8.5,
-	     8.0,      7.0,      6.5,      5.5,      5.0,      4.5,
-	     4.0,      3.5,      3.5,      3.0,      2.5,      2.5,
-	     2.0,      2.0,      1.5,      1.5,      1.0,      1.0,
-	     1.0,      1.0,      0.5,      0.5,      0.5,      0.5,
-	     0.5,      0.5
+typedef int32_t intsample_t;
+#define MULTDIV 256
+#define FLOAT_TO_FIX_2(x) (x*2)
+#define FLOAT_TO_FIX_256(x) ((intsample_t)(x*MULTDIV))
+
+static const intsample_t PLM_AUDIO_SYNTHESIS_WINDOW[] = {
+	FLOAT_TO_FIX_2(     0.0),FLOAT_TO_FIX_2(     -0.5),FLOAT_TO_FIX_2(     -0.5),FLOAT_TO_FIX_2(     -0.5),FLOAT_TO_FIX_2(     -0.5),FLOAT_TO_FIX_2(     -0.5),
+	FLOAT_TO_FIX_2(    -0.5),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(     -1.5),
+	FLOAT_TO_FIX_2(    -1.5),FLOAT_TO_FIX_2(     -2.0),FLOAT_TO_FIX_2(     -2.0),FLOAT_TO_FIX_2(     -2.5),FLOAT_TO_FIX_2(     -2.5),FLOAT_TO_FIX_2(     -3.0),
+	FLOAT_TO_FIX_2(    -3.5),FLOAT_TO_FIX_2(     -3.5),FLOAT_TO_FIX_2(     -4.0),FLOAT_TO_FIX_2(     -4.5),FLOAT_TO_FIX_2(     -5.0),FLOAT_TO_FIX_2(     -5.5),
+	FLOAT_TO_FIX_2(    -6.5),FLOAT_TO_FIX_2(     -7.0),FLOAT_TO_FIX_2(     -8.0),FLOAT_TO_FIX_2(     -8.5),FLOAT_TO_FIX_2(     -9.5),FLOAT_TO_FIX_2(    -10.5),
+	FLOAT_TO_FIX_2(   -12.0),FLOAT_TO_FIX_2(    -13.0),FLOAT_TO_FIX_2(    -14.5),FLOAT_TO_FIX_2(    -15.5),FLOAT_TO_FIX_2(    -17.5),FLOAT_TO_FIX_2(    -19.0),
+	FLOAT_TO_FIX_2(   -20.5),FLOAT_TO_FIX_2(    -22.5),FLOAT_TO_FIX_2(    -24.5),FLOAT_TO_FIX_2(    -26.5),FLOAT_TO_FIX_2(    -29.0),FLOAT_TO_FIX_2(    -31.5),
+	FLOAT_TO_FIX_2(   -34.0),FLOAT_TO_FIX_2(    -36.5),FLOAT_TO_FIX_2(    -39.5),FLOAT_TO_FIX_2(    -42.5),FLOAT_TO_FIX_2(    -45.5),FLOAT_TO_FIX_2(    -48.5),
+	FLOAT_TO_FIX_2(   -52.0),FLOAT_TO_FIX_2(    -55.5),FLOAT_TO_FIX_2(    -58.5),FLOAT_TO_FIX_2(    -62.5),FLOAT_TO_FIX_2(    -66.0),FLOAT_TO_FIX_2(    -69.5),
+	FLOAT_TO_FIX_2(   -73.5),FLOAT_TO_FIX_2(    -77.0),FLOAT_TO_FIX_2(    -80.5),FLOAT_TO_FIX_2(    -84.5),FLOAT_TO_FIX_2(    -88.0),FLOAT_TO_FIX_2(    -91.5),
+	FLOAT_TO_FIX_2(   -95.0),FLOAT_TO_FIX_2(    -98.0),FLOAT_TO_FIX_2(   -101.0),FLOAT_TO_FIX_2(   -104.0),FLOAT_TO_FIX_2(    106.5),FLOAT_TO_FIX_2(    109.0),
+	FLOAT_TO_FIX_2(   111.0),FLOAT_TO_FIX_2(    112.5),FLOAT_TO_FIX_2(    113.5),FLOAT_TO_FIX_2(    114.0),FLOAT_TO_FIX_2(    114.0),FLOAT_TO_FIX_2(    113.5),
+	FLOAT_TO_FIX_2(   112.0),FLOAT_TO_FIX_2(    110.5),FLOAT_TO_FIX_2(    107.5),FLOAT_TO_FIX_2(    104.0),FLOAT_TO_FIX_2(    100.0),FLOAT_TO_FIX_2(     94.5),
+	FLOAT_TO_FIX_2(    88.5),FLOAT_TO_FIX_2(     81.5),FLOAT_TO_FIX_2(     73.0),FLOAT_TO_FIX_2(     63.5),FLOAT_TO_FIX_2(     53.0),FLOAT_TO_FIX_2(     41.5),
+	FLOAT_TO_FIX_2(    28.5),FLOAT_TO_FIX_2(     14.5),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(    -18.0),FLOAT_TO_FIX_2(    -36.0),FLOAT_TO_FIX_2(    -55.5),
+	FLOAT_TO_FIX_2(   -76.5),FLOAT_TO_FIX_2(    -98.5),FLOAT_TO_FIX_2(   -122.0),FLOAT_TO_FIX_2(   -147.0),FLOAT_TO_FIX_2(   -173.5),FLOAT_TO_FIX_2(   -200.5),
+	FLOAT_TO_FIX_2(  -229.5),FLOAT_TO_FIX_2(   -259.5),FLOAT_TO_FIX_2(   -290.5),FLOAT_TO_FIX_2(   -322.5),FLOAT_TO_FIX_2(   -355.5),FLOAT_TO_FIX_2(   -389.5),
+	FLOAT_TO_FIX_2(  -424.0),FLOAT_TO_FIX_2(   -459.5),FLOAT_TO_FIX_2(   -495.5),FLOAT_TO_FIX_2(   -532.0),FLOAT_TO_FIX_2(   -568.5),FLOAT_TO_FIX_2(   -605.0),
+	FLOAT_TO_FIX_2(  -641.5),FLOAT_TO_FIX_2(   -678.0),FLOAT_TO_FIX_2(   -714.0),FLOAT_TO_FIX_2(   -749.0),FLOAT_TO_FIX_2(   -783.5),FLOAT_TO_FIX_2(   -817.0),
+	FLOAT_TO_FIX_2(  -849.0),FLOAT_TO_FIX_2(   -879.5),FLOAT_TO_FIX_2(   -908.5),FLOAT_TO_FIX_2(   -935.0),FLOAT_TO_FIX_2(   -959.5),FLOAT_TO_FIX_2(   -981.0),
+	FLOAT_TO_FIX_2( -1000.5),FLOAT_TO_FIX_2(  -1016.0),FLOAT_TO_FIX_2(  -1028.5),FLOAT_TO_FIX_2(  -1037.5),FLOAT_TO_FIX_2(  -1042.5),FLOAT_TO_FIX_2(  -1043.5),
+	FLOAT_TO_FIX_2( -1040.0),FLOAT_TO_FIX_2(  -1031.5),FLOAT_TO_FIX_2(   1018.5),FLOAT_TO_FIX_2(   1000.0),FLOAT_TO_FIX_2(    976.0),FLOAT_TO_FIX_2(    946.5),
+	FLOAT_TO_FIX_2(   911.0),FLOAT_TO_FIX_2(    869.5),FLOAT_TO_FIX_2(    822.0),FLOAT_TO_FIX_2(    767.5),FLOAT_TO_FIX_2(    707.0),FLOAT_TO_FIX_2(    640.0),
+	FLOAT_TO_FIX_2(   565.5),FLOAT_TO_FIX_2(    485.0),FLOAT_TO_FIX_2(    397.0),FLOAT_TO_FIX_2(    302.5),FLOAT_TO_FIX_2(    201.0),FLOAT_TO_FIX_2(     92.5),
+	FLOAT_TO_FIX_2(   -22.5),FLOAT_TO_FIX_2(   -144.0),FLOAT_TO_FIX_2(   -272.5),FLOAT_TO_FIX_2(   -407.0),FLOAT_TO_FIX_2(   -547.5),FLOAT_TO_FIX_2(   -694.0),
+	FLOAT_TO_FIX_2(  -846.0),FLOAT_TO_FIX_2(  -1003.0),FLOAT_TO_FIX_2(  -1165.0),FLOAT_TO_FIX_2(  -1331.5),FLOAT_TO_FIX_2(  -1502.0),FLOAT_TO_FIX_2(  -1675.5),
+	FLOAT_TO_FIX_2( -1852.5),FLOAT_TO_FIX_2(  -2031.5),FLOAT_TO_FIX_2(  -2212.5),FLOAT_TO_FIX_2(  -2394.0),FLOAT_TO_FIX_2(  -2576.5),FLOAT_TO_FIX_2(  -2758.5),
+	FLOAT_TO_FIX_2( -2939.5),FLOAT_TO_FIX_2(  -3118.5),FLOAT_TO_FIX_2(  -3294.5),FLOAT_TO_FIX_2(  -3467.5),FLOAT_TO_FIX_2(  -3635.5),FLOAT_TO_FIX_2(  -3798.5),
+	FLOAT_TO_FIX_2( -3955.0),FLOAT_TO_FIX_2(  -4104.5),FLOAT_TO_FIX_2(  -4245.5),FLOAT_TO_FIX_2(  -4377.5),FLOAT_TO_FIX_2(  -4499.0),FLOAT_TO_FIX_2(  -4609.5),
+	FLOAT_TO_FIX_2( -4708.0),FLOAT_TO_FIX_2(  -4792.5),FLOAT_TO_FIX_2(  -4863.5),FLOAT_TO_FIX_2(  -4919.0),FLOAT_TO_FIX_2(  -4958.0),FLOAT_TO_FIX_2(  -4979.5),
+	FLOAT_TO_FIX_2( -4983.0),FLOAT_TO_FIX_2(  -4967.5),FLOAT_TO_FIX_2(  -4931.5),FLOAT_TO_FIX_2(  -4875.0),FLOAT_TO_FIX_2(  -4796.0),FLOAT_TO_FIX_2(  -4694.5),
+	FLOAT_TO_FIX_2( -4569.5),FLOAT_TO_FIX_2(  -4420.0),FLOAT_TO_FIX_2(  -4246.0),FLOAT_TO_FIX_2(  -4046.0),FLOAT_TO_FIX_2(  -3820.0),FLOAT_TO_FIX_2(  -3567.0),
+	FLOAT_TO_FIX_2(  3287.0),FLOAT_TO_FIX_2(   2979.5),FLOAT_TO_FIX_2(   2644.0),FLOAT_TO_FIX_2(   2280.5),FLOAT_TO_FIX_2(   1888.0),FLOAT_TO_FIX_2(   1467.5),
+	FLOAT_TO_FIX_2(  1018.5),FLOAT_TO_FIX_2(    541.0),FLOAT_TO_FIX_2(     35.0),FLOAT_TO_FIX_2(   -499.0),FLOAT_TO_FIX_2(  -1061.0),FLOAT_TO_FIX_2(  -1650.0),
+	FLOAT_TO_FIX_2( -2266.5),FLOAT_TO_FIX_2(  -2909.0),FLOAT_TO_FIX_2(  -3577.0),FLOAT_TO_FIX_2(  -4270.0),FLOAT_TO_FIX_2(  -4987.5),FLOAT_TO_FIX_2(  -5727.5),
+	FLOAT_TO_FIX_2( -6490.0),FLOAT_TO_FIX_2(  -7274.0),FLOAT_TO_FIX_2(  -8077.5),FLOAT_TO_FIX_2(  -8899.5),FLOAT_TO_FIX_2(  -9739.0),FLOAT_TO_FIX_2( -10594.5),
+	FLOAT_TO_FIX_2(-11464.5),FLOAT_TO_FIX_2( -12347.0),FLOAT_TO_FIX_2( -13241.0),FLOAT_TO_FIX_2( -14144.5),FLOAT_TO_FIX_2( -15056.0),FLOAT_TO_FIX_2( -15973.5),
+	FLOAT_TO_FIX_2(-16895.5),FLOAT_TO_FIX_2( -17820.0),FLOAT_TO_FIX_2( -18744.5),FLOAT_TO_FIX_2( -19668.0),FLOAT_TO_FIX_2( -20588.0),FLOAT_TO_FIX_2( -21503.0),
+	FLOAT_TO_FIX_2(-22410.5),FLOAT_TO_FIX_2( -23308.5),FLOAT_TO_FIX_2( -24195.0),FLOAT_TO_FIX_2( -25068.5),FLOAT_TO_FIX_2( -25926.5),FLOAT_TO_FIX_2( -26767.0),
+	FLOAT_TO_FIX_2(-27589.0),FLOAT_TO_FIX_2( -28389.0),FLOAT_TO_FIX_2( -29166.5),FLOAT_TO_FIX_2( -29919.0),FLOAT_TO_FIX_2( -30644.5),FLOAT_TO_FIX_2( -31342.0),
+	FLOAT_TO_FIX_2(-32009.5),FLOAT_TO_FIX_2( -32645.0),FLOAT_TO_FIX_2( -33247.0),FLOAT_TO_FIX_2( -33814.5),FLOAT_TO_FIX_2( -34346.0),FLOAT_TO_FIX_2( -34839.5),
+	FLOAT_TO_FIX_2(-35295.0),FLOAT_TO_FIX_2( -35710.0),FLOAT_TO_FIX_2( -36084.5),FLOAT_TO_FIX_2( -36417.5),FLOAT_TO_FIX_2( -36707.5),FLOAT_TO_FIX_2( -36954.0),
+	FLOAT_TO_FIX_2(-37156.5),FLOAT_TO_FIX_2( -37315.0),FLOAT_TO_FIX_2( -37428.0),FLOAT_TO_FIX_2( -37496.0),FLOAT_TO_FIX_2(  37519.0),FLOAT_TO_FIX_2(  37496.0),
+	FLOAT_TO_FIX_2( 37428.0),FLOAT_TO_FIX_2(  37315.0),FLOAT_TO_FIX_2(  37156.5),FLOAT_TO_FIX_2(  36954.0),FLOAT_TO_FIX_2(  36707.5),FLOAT_TO_FIX_2(  36417.5),
+	FLOAT_TO_FIX_2( 36084.5),FLOAT_TO_FIX_2(  35710.0),FLOAT_TO_FIX_2(  35295.0),FLOAT_TO_FIX_2(  34839.5),FLOAT_TO_FIX_2(  34346.0),FLOAT_TO_FIX_2(  33814.5),
+	FLOAT_TO_FIX_2( 33247.0),FLOAT_TO_FIX_2(  32645.0),FLOAT_TO_FIX_2(  32009.5),FLOAT_TO_FIX_2(  31342.0),FLOAT_TO_FIX_2(  30644.5),FLOAT_TO_FIX_2(  29919.0),
+	FLOAT_TO_FIX_2( 29166.5),FLOAT_TO_FIX_2(  28389.0),FLOAT_TO_FIX_2(  27589.0),FLOAT_TO_FIX_2(  26767.0),FLOAT_TO_FIX_2(  25926.5),FLOAT_TO_FIX_2(  25068.5),
+	FLOAT_TO_FIX_2( 24195.0),FLOAT_TO_FIX_2(  23308.5),FLOAT_TO_FIX_2(  22410.5),FLOAT_TO_FIX_2(  21503.0),FLOAT_TO_FIX_2(  20588.0),FLOAT_TO_FIX_2(  19668.0),
+	FLOAT_TO_FIX_2( 18744.5),FLOAT_TO_FIX_2(  17820.0),FLOAT_TO_FIX_2(  16895.5),FLOAT_TO_FIX_2(  15973.5),FLOAT_TO_FIX_2(  15056.0),FLOAT_TO_FIX_2(  14144.5),
+	FLOAT_TO_FIX_2( 13241.0),FLOAT_TO_FIX_2(  12347.0),FLOAT_TO_FIX_2(  11464.5),FLOAT_TO_FIX_2(  10594.5),FLOAT_TO_FIX_2(   9739.0),FLOAT_TO_FIX_2(   8899.5),
+	FLOAT_TO_FIX_2(  8077.5),FLOAT_TO_FIX_2(   7274.0),FLOAT_TO_FIX_2(   6490.0),FLOAT_TO_FIX_2(   5727.5),FLOAT_TO_FIX_2(   4987.5),FLOAT_TO_FIX_2(   4270.0),
+	FLOAT_TO_FIX_2(  3577.0),FLOAT_TO_FIX_2(   2909.0),FLOAT_TO_FIX_2(   2266.5),FLOAT_TO_FIX_2(   1650.0),FLOAT_TO_FIX_2(   1061.0),FLOAT_TO_FIX_2(    499.0),
+	FLOAT_TO_FIX_2(   -35.0),FLOAT_TO_FIX_2(   -541.0),FLOAT_TO_FIX_2(  -1018.5),FLOAT_TO_FIX_2(  -1467.5),FLOAT_TO_FIX_2(  -1888.0),FLOAT_TO_FIX_2(  -2280.5),
+	FLOAT_TO_FIX_2( -2644.0),FLOAT_TO_FIX_2(  -2979.5),FLOAT_TO_FIX_2(   3287.0),FLOAT_TO_FIX_2(   3567.0),FLOAT_TO_FIX_2(   3820.0),FLOAT_TO_FIX_2(   4046.0),
+	FLOAT_TO_FIX_2(  4246.0),FLOAT_TO_FIX_2(   4420.0),FLOAT_TO_FIX_2(   4569.5),FLOAT_TO_FIX_2(   4694.5),FLOAT_TO_FIX_2(   4796.0),FLOAT_TO_FIX_2(   4875.0),
+	FLOAT_TO_FIX_2(  4931.5),FLOAT_TO_FIX_2(   4967.5),FLOAT_TO_FIX_2(   4983.0),FLOAT_TO_FIX_2(   4979.5),FLOAT_TO_FIX_2(   4958.0),FLOAT_TO_FIX_2(   4919.0),
+	FLOAT_TO_FIX_2(  4863.5),FLOAT_TO_FIX_2(   4792.5),FLOAT_TO_FIX_2(   4708.0),FLOAT_TO_FIX_2(   4609.5),FLOAT_TO_FIX_2(   4499.0),FLOAT_TO_FIX_2(   4377.5),
+	FLOAT_TO_FIX_2(  4245.5),FLOAT_TO_FIX_2(   4104.5),FLOAT_TO_FIX_2(   3955.0),FLOAT_TO_FIX_2(   3798.5),FLOAT_TO_FIX_2(   3635.5),FLOAT_TO_FIX_2(   3467.5),
+	FLOAT_TO_FIX_2(  3294.5),FLOAT_TO_FIX_2(   3118.5),FLOAT_TO_FIX_2(   2939.5),FLOAT_TO_FIX_2(   2758.5),FLOAT_TO_FIX_2(   2576.5),FLOAT_TO_FIX_2(   2394.0),
+	FLOAT_TO_FIX_2(  2212.5),FLOAT_TO_FIX_2(   2031.5),FLOAT_TO_FIX_2(   1852.5),FLOAT_TO_FIX_2(   1675.5),FLOAT_TO_FIX_2(   1502.0),FLOAT_TO_FIX_2(   1331.5),
+	FLOAT_TO_FIX_2(  1165.0),FLOAT_TO_FIX_2(   1003.0),FLOAT_TO_FIX_2(    846.0),FLOAT_TO_FIX_2(    694.0),FLOAT_TO_FIX_2(    547.5),FLOAT_TO_FIX_2(    407.0),
+	FLOAT_TO_FIX_2(   272.5),FLOAT_TO_FIX_2(    144.0),FLOAT_TO_FIX_2(     22.5),FLOAT_TO_FIX_2(    -92.5),FLOAT_TO_FIX_2(   -201.0),FLOAT_TO_FIX_2(   -302.5),
+	FLOAT_TO_FIX_2(  -397.0),FLOAT_TO_FIX_2(   -485.0),FLOAT_TO_FIX_2(   -565.5),FLOAT_TO_FIX_2(   -640.0),FLOAT_TO_FIX_2(   -707.0),FLOAT_TO_FIX_2(   -767.5),
+	FLOAT_TO_FIX_2(  -822.0),FLOAT_TO_FIX_2(   -869.5),FLOAT_TO_FIX_2(   -911.0),FLOAT_TO_FIX_2(   -946.5),FLOAT_TO_FIX_2(   -976.0),FLOAT_TO_FIX_2(  -1000.0),
+	FLOAT_TO_FIX_2(  1018.5),FLOAT_TO_FIX_2(   1031.5),FLOAT_TO_FIX_2(   1040.0),FLOAT_TO_FIX_2(   1043.5),FLOAT_TO_FIX_2(   1042.5),FLOAT_TO_FIX_2(   1037.5),
+	FLOAT_TO_FIX_2(  1028.5),FLOAT_TO_FIX_2(   1016.0),FLOAT_TO_FIX_2(   1000.5),FLOAT_TO_FIX_2(    981.0),FLOAT_TO_FIX_2(    959.5),FLOAT_TO_FIX_2(    935.0),
+	FLOAT_TO_FIX_2(   908.5),FLOAT_TO_FIX_2(    879.5),FLOAT_TO_FIX_2(    849.0),FLOAT_TO_FIX_2(    817.0),FLOAT_TO_FIX_2(    783.5),FLOAT_TO_FIX_2(    749.0),
+	FLOAT_TO_FIX_2(   714.0),FLOAT_TO_FIX_2(    678.0),FLOAT_TO_FIX_2(    641.5),FLOAT_TO_FIX_2(    605.0),FLOAT_TO_FIX_2(    568.5),FLOAT_TO_FIX_2(    532.0),
+	FLOAT_TO_FIX_2(   495.5),FLOAT_TO_FIX_2(    459.5),FLOAT_TO_FIX_2(    424.0),FLOAT_TO_FIX_2(    389.5),FLOAT_TO_FIX_2(    355.5),FLOAT_TO_FIX_2(    322.5),
+	FLOAT_TO_FIX_2(   290.5),FLOAT_TO_FIX_2(    259.5),FLOAT_TO_FIX_2(    229.5),FLOAT_TO_FIX_2(    200.5),FLOAT_TO_FIX_2(    173.5),FLOAT_TO_FIX_2(    147.0),
+	FLOAT_TO_FIX_2(   122.0),FLOAT_TO_FIX_2(     98.5),FLOAT_TO_FIX_2(     76.5),FLOAT_TO_FIX_2(     55.5),FLOAT_TO_FIX_2(     36.0),FLOAT_TO_FIX_2(     18.0),
+	FLOAT_TO_FIX_2(     1.0),FLOAT_TO_FIX_2(    -14.5),FLOAT_TO_FIX_2(    -28.5),FLOAT_TO_FIX_2(    -41.5),FLOAT_TO_FIX_2(    -53.0),FLOAT_TO_FIX_2(    -63.5),
+	FLOAT_TO_FIX_2(   -73.0),FLOAT_TO_FIX_2(    -81.5),FLOAT_TO_FIX_2(    -88.5),FLOAT_TO_FIX_2(    -94.5),FLOAT_TO_FIX_2(   -100.0),FLOAT_TO_FIX_2(   -104.0),
+	FLOAT_TO_FIX_2(  -107.5),FLOAT_TO_FIX_2(   -110.5),FLOAT_TO_FIX_2(   -112.0),FLOAT_TO_FIX_2(   -113.5),FLOAT_TO_FIX_2(   -114.0),FLOAT_TO_FIX_2(   -114.0),
+	FLOAT_TO_FIX_2(  -113.5),FLOAT_TO_FIX_2(   -112.5),FLOAT_TO_FIX_2(   -111.0),FLOAT_TO_FIX_2(   -109.0),FLOAT_TO_FIX_2(    106.5),FLOAT_TO_FIX_2(    104.0),
+	FLOAT_TO_FIX_2(   101.0),FLOAT_TO_FIX_2(     98.0),FLOAT_TO_FIX_2(     95.0),FLOAT_TO_FIX_2(     91.5),FLOAT_TO_FIX_2(     88.0),FLOAT_TO_FIX_2(     84.5),
+	FLOAT_TO_FIX_2(    80.5),FLOAT_TO_FIX_2(     77.0),FLOAT_TO_FIX_2(     73.5),FLOAT_TO_FIX_2(     69.5),FLOAT_TO_FIX_2(     66.0),FLOAT_TO_FIX_2(     62.5),
+	FLOAT_TO_FIX_2(    58.5),FLOAT_TO_FIX_2(     55.5),FLOAT_TO_FIX_2(     52.0),FLOAT_TO_FIX_2(     48.5),FLOAT_TO_FIX_2(     45.5),FLOAT_TO_FIX_2(     42.5),
+	FLOAT_TO_FIX_2(    39.5),FLOAT_TO_FIX_2(     36.5),FLOAT_TO_FIX_2(     34.0),FLOAT_TO_FIX_2(     31.5),FLOAT_TO_FIX_2(     29.0),FLOAT_TO_FIX_2(     26.5),
+	FLOAT_TO_FIX_2(    24.5),FLOAT_TO_FIX_2(     22.5),FLOAT_TO_FIX_2(     20.5),FLOAT_TO_FIX_2(     19.0),FLOAT_TO_FIX_2(     17.5),FLOAT_TO_FIX_2(     15.5),
+	FLOAT_TO_FIX_2(    14.5),FLOAT_TO_FIX_2(     13.0),FLOAT_TO_FIX_2(     12.0),FLOAT_TO_FIX_2(     10.5),FLOAT_TO_FIX_2(      9.5),FLOAT_TO_FIX_2(      8.5),
+	FLOAT_TO_FIX_2(     8.0),FLOAT_TO_FIX_2(      7.0),FLOAT_TO_FIX_2(      6.5),FLOAT_TO_FIX_2(      5.5),FLOAT_TO_FIX_2(      5.0),FLOAT_TO_FIX_2(      4.5),
+	FLOAT_TO_FIX_2(     4.0),FLOAT_TO_FIX_2(      3.5),FLOAT_TO_FIX_2(      3.5),FLOAT_TO_FIX_2(      3.0),FLOAT_TO_FIX_2(      2.5),FLOAT_TO_FIX_2(      2.5),
+	FLOAT_TO_FIX_2(     2.0),FLOAT_TO_FIX_2(      2.0),FLOAT_TO_FIX_2(      1.5),FLOAT_TO_FIX_2(      1.5),FLOAT_TO_FIX_2(      1.0),FLOAT_TO_FIX_2(      1.0),
+	FLOAT_TO_FIX_2(     1.0),FLOAT_TO_FIX_2(      1.0),FLOAT_TO_FIX_2(      0.5),FLOAT_TO_FIX_2(      0.5),FLOAT_TO_FIX_2(      0.5),FLOAT_TO_FIX_2(      0.5),
+	FLOAT_TO_FIX_2(     0.5),FLOAT_TO_FIX_2(      0.5)
 };
 
 // Quantizer lookup, step 1: bitrate classes
@@ -3878,9 +3884,9 @@ struct plm_audio_t {
 	int sample[2][32][3];
 
 	plm_samples_t samples;
-	float D[1024];
-	float V[2][1024];
-	float U[32];
+	intsample_t D[1024];
+	intsample_t V[2][1024];
+	intsample_t U[32];
 };
 
 int plm_audio_find_frame_sync(plm_audio_t *self);
@@ -3888,7 +3894,7 @@ int plm_audio_decode_header(plm_audio_t *self);
 void plm_audio_decode_frame(plm_audio_t *self);
 const plm_quantizer_spec_t *plm_audio_read_allocation(plm_audio_t *self, int sb, int tab3);
 void plm_audio_read_samples(plm_audio_t *self, int ch, int sb, int part); 
-void plm_audio_idct36(int s[32][3], int ss, float *d, int dp);
+void plm_audio_idct36(int s[32][3], int ss, intsample_t *d, int dp);
 
 plm_audio_t *plm_audio_create_with_buffer(plm_buffer_t *buffer, int destroy_when_done) {
 	plm_audio_t *self = (plm_audio_t *)PLM_MALLOC(sizeof(plm_audio_t));
@@ -3899,8 +3905,8 @@ plm_audio_t *plm_audio_create_with_buffer(plm_buffer_t *buffer, int destroy_when
 	self->destroy_buffer_when_done = destroy_when_done;
 	self->samplerate_index = 3; // Indicates 0
 
-	memcpy(self->D, PLM_AUDIO_SYNTHESIS_WINDOW, 512 * sizeof(float));
-	memcpy(self->D + 512, PLM_AUDIO_SYNTHESIS_WINDOW, 512 * sizeof(float));
+	memcpy(self->D, PLM_AUDIO_SYNTHESIS_WINDOW, 512 * sizeof(intsample_t));
+	memcpy(self->D + 512, PLM_AUDIO_SYNTHESIS_WINDOW, 512 * sizeof(intsample_t));
 
 	// Attempt to decode first header
 	self->next_frame_data_size = plm_audio_decode_header(self);
@@ -4080,6 +4086,8 @@ int plm_audio_decode_header(plm_audio_t *self) {
 }
 
 void plm_audio_decode_frame(plm_audio_t *self) {
+	OUT_DEBUG = 11;
+
 	// Prepare the quantizer table lookups
 	int tab3 = 0;
 	int sblimit = 0;
@@ -4093,6 +4101,7 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 	if (self->bound > sblimit) {
 		self->bound = sblimit;
 	}
+	OUT_DEBUG = 12;
 
 	// Read the allocation information
 	for (int sb = 0; sb < self->bound; sb++) {
@@ -4105,6 +4114,7 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 			self->allocation[1][sb] =
 			plm_audio_read_allocation(self, sb, tab3);
 	}
+	OUT_DEBUG = 13;
 
 	// Read scale factor selector information
 	int channels = (self->mode == PLM_AUDIO_MODE_MONO) ? 1 : 2;
@@ -4118,6 +4128,7 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 			self->scale_factor_info[1][sb] = self->scale_factor_info[0][sb];
 		}
 	}
+	OUT_DEBUG = 14;
 
 	// Read scale factors
 	for (int sb = 0; sb < sblimit; sb++) {
@@ -4159,6 +4170,7 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 	int out_pos = 0;
 	for (int part = 0; part < 3; part++) {
 		for (int granule = 0; granule < 4; granule++) {
+			OUT_DEBUG = 15;
 
 			// Read the samples
 			for (int sb = 0; sb < self->bound; sb++) {
@@ -4180,6 +4192,8 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 				self->sample[1][sb][2] = 0;
 			}
 
+			OUT_DEBUG = 16;
+
 			// Synthesis loop
 			for (int p = 0; p < 3; p++) {
 				// Shifting step
@@ -4190,6 +4204,7 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 
 					// Build U, windowing, calculate output
 					memset(self->U, 0, sizeof(self->U));
+					OUT_DEBUG = 3;
 
 					int d_index = 512 - (self->v_pos >> 1);
 					int v_index = (self->v_pos % 128) >> 1;
@@ -4197,10 +4212,10 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 						for (int i = 0; i < 32; ++i) {
 							self->U[i] += self->D[d_index++] * self->V[ch][v_index++];
 						}
-
 						v_index += 128 - 32;
 						d_index += 64 - 32;
 					}
+					OUT_DEBUG = 4;
 
 					d_index -= (512 - 32);
 					v_index = (128 - 32 + 1024) - v_index;
@@ -4213,20 +4228,15 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 						d_index += 64 - 32;
 					}
 
-					// Output samples
-					#ifdef PLM_AUDIO_SEPARATE_CHANNELS
-						float *out_channel = ch == 0
-							? self->samples.left
-							: self->samples.right;
+					OUT_DEBUG = 5;
+					{
+						volatile int16_t *out_channel = ch == 0
+						?((volatile int16_t *)OUT_L) 
+						: ((volatile int16_t *)OUT_R) ;
 						for (int j = 0; j < 32; j++) {
-							out_channel[out_pos + j] = self->U[j] / -1090519040.0f;
+							*out_channel = self->U[j] / (0x10000);
 						}
-					#else
-						for (int j = 0; j < 32; j++) {
-							self->samples.interleaved[((out_pos + j) << 1) + ch] = 
-								self->U[j] / -1090519040.0f;
-						}
-					#endif
+					}
 				} // End of synthesis channel loop
 				out_pos += 32;
 			} // End of synthesis sub-block loop
@@ -4295,110 +4305,223 @@ void plm_audio_read_samples(plm_audio_t *self, int ch, int sb, int part) {
 	sample[2] = (val * (sf >> 12) + ((val * (sf & 4095) + 2048) >> 12)) >> 12;
 }
 
-void plm_audio_idct36(int s[32][3], int ss, float *d, int dp) {
-	float t01, t02, t03, t04, t05, t06, t07, t08, t09, t10, t11, t12,
+void plm_audio_idct36(int s[32][3], int ss, intsample_t *d, int dp)
+{
+	int32_t t01, t02, t03, t04, t05, t06, t07, t08, t09, t10, t11, t12,
 		t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24,
 		t25, t26, t27, t28, t29, t30, t31, t32, t33;
+	OUT_DEBUG=1;
 
-	t01 = (float)(s[0][ss] + s[31][ss]); t02 = (float)(s[0][ss] - s[31][ss]) * 0.500602998235f;
-	t03 = (float)(s[1][ss] + s[30][ss]); t04 = (float)(s[1][ss] - s[30][ss]) * 0.505470959898f;
-	t05 = (float)(s[2][ss] + s[29][ss]); t06 = (float)(s[2][ss] - s[29][ss]) * 0.515447309923f;
-	t07 = (float)(s[3][ss] + s[28][ss]); t08 = (float)(s[3][ss] - s[28][ss]) * 0.53104259109f;
-	t09 = (float)(s[4][ss] + s[27][ss]); t10 = (float)(s[4][ss] - s[27][ss]) * 0.553103896034f;
-	t11 = (float)(s[5][ss] + s[26][ss]); t12 = (float)(s[5][ss] - s[26][ss]) * 0.582934968206f;
-	t13 = (float)(s[6][ss] + s[25][ss]); t14 = (float)(s[6][ss] - s[25][ss]) * 0.622504123036f;
-	t15 = (float)(s[7][ss] + s[24][ss]); t16 = (float)(s[7][ss] - s[24][ss]) * 0.674808341455f;
-	t17 = (float)(s[8][ss] + s[23][ss]); t18 = (float)(s[8][ss] - s[23][ss]) * 0.744536271002f;
-	t19 = (float)(s[9][ss] + s[22][ss]); t20 = (float)(s[9][ss] - s[22][ss]) * 0.839349645416f;
-	t21 = (float)(s[10][ss] + s[21][ss]); t22 = (float)(s[10][ss] - s[21][ss]) * 0.972568237862f;
-	t23 = (float)(s[11][ss] + s[20][ss]); t24 = (float)(s[11][ss] - s[20][ss]) * 1.16943993343f;
-	t25 = (float)(s[12][ss] + s[19][ss]); t26 = (float)(s[12][ss] - s[19][ss]) * 1.48416461631f;
-	t27 = (float)(s[13][ss] + s[18][ss]); t28 = (float)(s[13][ss] - s[18][ss]) * 2.05778100995f;
-	t29 = (float)(s[14][ss] + s[17][ss]); t30 = (float)(s[14][ss] - s[17][ss]) * 3.40760841847f;
-	t31 = (float)(s[15][ss] + s[16][ss]); t32 = (float)(s[15][ss] - s[16][ss]) * 10.1900081235f;
+	t01 = (s[0][ss] + s[31][ss]);
+	t02 = (s[0][ss] - s[31][ss]) * FLOAT_TO_FIX_256(0.500602998235f) / MULTDIV;
+	t03 = (s[1][ss] + s[30][ss]);
+	t04 = (s[1][ss] - s[30][ss]) * FLOAT_TO_FIX_256(0.505470959898f) / MULTDIV;
+	t05 = (s[2][ss] + s[29][ss]);
+	t06 = (s[2][ss] - s[29][ss]) * FLOAT_TO_FIX_256(0.515447309923f) / MULTDIV;
+	t07 = (s[3][ss] + s[28][ss]);
+	t08 = (s[3][ss] - s[28][ss]) * FLOAT_TO_FIX_256(0.53104259109f) / MULTDIV;
+	t09 = (s[4][ss] + s[27][ss]);
+	t10 = (s[4][ss] - s[27][ss]) * FLOAT_TO_FIX_256(0.553103896034f) / MULTDIV;
+	t11 = (s[5][ss] + s[26][ss]);
+	t12 = (s[5][ss] - s[26][ss]) * FLOAT_TO_FIX_256(0.582934968206f) / MULTDIV;
+	t13 = (s[6][ss] + s[25][ss]);
+	t14 = (s[6][ss] - s[25][ss]) * FLOAT_TO_FIX_256(0.622504123036f) / MULTDIV;
+	t15 = (s[7][ss] + s[24][ss]);
+	t16 = (s[7][ss] - s[24][ss]) * FLOAT_TO_FIX_256(0.674808341455f) / MULTDIV;
+	t17 = (s[8][ss] + s[23][ss]);
+	t18 = (s[8][ss] - s[23][ss]) * FLOAT_TO_FIX_256(0.744536271002f) / MULTDIV;
+	t19 = (s[9][ss] + s[22][ss]);
+	t20 = (s[9][ss] - s[22][ss]) * FLOAT_TO_FIX_256(0.839349645416f) / MULTDIV;
+	t21 = (s[10][ss] + s[21][ss]);
+	t22 = (s[10][ss] - s[21][ss]) * FLOAT_TO_FIX_256(0.972568237862f) / MULTDIV;
+	t23 = (s[11][ss] + s[20][ss]);
+	t24 = (s[11][ss] - s[20][ss]) * FLOAT_TO_FIX_256(1.16943993343f) / MULTDIV;
+	t25 = (s[12][ss] + s[19][ss]);
+	t26 = (s[12][ss] - s[19][ss]) * FLOAT_TO_FIX_256(1.48416461631f) / MULTDIV;
+	t27 = (s[13][ss] + s[18][ss]);
+	t28 = (s[13][ss] - s[18][ss]) * FLOAT_TO_FIX_256(2.05778100995f) / MULTDIV;
+	t29 = (s[14][ss] + s[17][ss]);
+	t30 = (s[14][ss] - s[17][ss]) * FLOAT_TO_FIX_256(3.40760841847f) / MULTDIV;
+	t31 = (s[15][ss] + s[16][ss]);
+	t32 = (s[15][ss] - s[16][ss]) * FLOAT_TO_FIX_256(10.1900081235f) / MULTDIV;
 
-	t33 = t01 + t31; t31 = (t01 - t31) * 0.502419286188f;
-	t01 = t03 + t29; t29 = (t03 - t29) * 0.52249861494f;
-	t03 = t05 + t27; t27 = (t05 - t27) * 0.566944034816f;
-	t05 = t07 + t25; t25 = (t07 - t25) * 0.64682178336f;
-	t07 = t09 + t23; t23 = (t09 - t23) * 0.788154623451f;
-	t09 = t11 + t21; t21 = (t11 - t21) * 1.06067768599f;
-	t11 = t13 + t19; t19 = (t13 - t19) * 1.72244709824f;
-	t13 = t15 + t17; t17 = (t15 - t17) * 5.10114861869f;
-	t15 = t33 + t13; t13 = (t33 - t13) * 0.509795579104f;
-	t33 = t01 + t11; t01 = (t01 - t11) * 0.601344886935f;
-	t11 = t03 + t09; t09 = (t03 - t09) * 0.899976223136f;
-	t03 = t05 + t07; t07 = (t05 - t07) * 2.56291544774f;
-	t05 = t15 + t03; t15 = (t15 - t03) * 0.541196100146f;
-	t03 = t33 + t11; t11 = (t33 - t11) * 1.30656296488f;
-	t33 = t05 + t03; t05 = (t05 - t03) * 0.707106781187f;
-	t03 = t15 + t11; t15 = (t15 - t11) * 0.707106781187f;
+	t33 = t01 + t31;
+	t31 = (t01 - t31) * FLOAT_TO_FIX_256(0.502419286188f) / MULTDIV;
+	t01 = t03 + t29;
+	t29 = (t03 - t29) * FLOAT_TO_FIX_256(0.52249861494f) / MULTDIV;
+	t03 = t05 + t27;
+	t27 = (t05 - t27) * FLOAT_TO_FIX_256(0.566944034816f) / MULTDIV;
+	t05 = t07 + t25;
+	t25 = (t07 - t25) * FLOAT_TO_FIX_256(0.64682178336f) / MULTDIV;
+	t07 = t09 + t23;
+	t23 = (t09 - t23) * FLOAT_TO_FIX_256(0.788154623451f) / MULTDIV;
+	t09 = t11 + t21;
+	t21 = (t11 - t21) * FLOAT_TO_FIX_256(1.06067768599f) / MULTDIV;
+	t11 = t13 + t19;
+	t19 = (t13 - t19) * FLOAT_TO_FIX_256(1.72244709824f) / MULTDIV;
+	t13 = t15 + t17;
+	t17 = (t15 - t17) * FLOAT_TO_FIX_256(5.10114861869f) / MULTDIV;
+	t15 = t33 + t13;
+	t13 = (t33 - t13) * FLOAT_TO_FIX_256(0.509795579104f) / MULTDIV;
+	t33 = t01 + t11;
+	t01 = (t01 - t11) * FLOAT_TO_FIX_256(0.601344886935f) / MULTDIV;
+	t11 = t03 + t09;
+	t09 = (t03 - t09) * FLOAT_TO_FIX_256(0.899976223136f) / MULTDIV;
+	t03 = t05 + t07;
+	t07 = (t05 - t07) * FLOAT_TO_FIX_256(2.56291544774f) / MULTDIV;
+	t05 = t15 + t03;
+	t15 = (t15 - t03) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
+	t03 = t33 + t11;
+	t11 = (t33 - t11) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
+	t33 = t05 + t03;
+	t05 = (t05 - t03) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t03 = t15 + t11;
+	t15 = (t15 - t11) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
 	t03 += t15;
-	t11 = t13 + t07; t13 = (t13 - t07) * 0.541196100146f;
-	t07 = t01 + t09; t09 = (t01 - t09) * 1.30656296488f;
-	t01 = t11 + t07; t07 = (t11 - t07) * 0.707106781187f;
-	t11 = t13 + t09; t13 = (t13 - t09) * 0.707106781187f;
-	t11 += t13; t01 += t11;
-	t11 += t07; t07 += t13;
-	t09 = t31 + t17; t31 = (t31 - t17) * 0.509795579104f;
-	t17 = t29 + t19; t29 = (t29 - t19) * 0.601344886935f;
-	t19 = t27 + t21; t21 = (t27 - t21) * 0.899976223136f;
-	t27 = t25 + t23; t23 = (t25 - t23) * 2.56291544774f;
-	t25 = t09 + t27; t09 = (t09 - t27) * 0.541196100146f;
-	t27 = t17 + t19; t19 = (t17 - t19) * 1.30656296488f;
-	t17 = t25 + t27; t27 = (t25 - t27) * 0.707106781187f;
-	t25 = t09 + t19; t19 = (t09 - t19) * 0.707106781187f;
+	t11 = t13 + t07;
+	t13 = (t13 - t07) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
+	t07 = t01 + t09;
+	t09 = (t01 - t09) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
+	t01 = t11 + t07;
+	t07 = (t11 - t07) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t11 = t13 + t09;
+	t13 = (t13 - t09) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t11 += t13;
+	t01 += t11;
+	t11 += t07;
+	t07 += t13;
+	t09 = t31 + t17;
+	t31 = (t31 - t17) * FLOAT_TO_FIX_256(0.509795579104f) / MULTDIV;
+	t17 = t29 + t19;
+	t29 = (t29 - t19) * FLOAT_TO_FIX_256(0.601344886935f) / MULTDIV;
+	t19 = t27 + t21;
+	t21 = (t27 - t21) * FLOAT_TO_FIX_256(0.899976223136f) / MULTDIV;
+	t27 = t25 + t23;
+	t23 = (t25 - t23) * FLOAT_TO_FIX_256(2.56291544774f) / MULTDIV;
+	t25 = t09 + t27;
+	t09 = (t09 - t27) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
+	t27 = t17 + t19;
+	t19 = (t17 - t19) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
+	t17 = t25 + t27;
+	t27 = (t25 - t27) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t25 = t09 + t19;
+	t19 = (t09 - t19) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
 	t25 += t19;
-	t09 = t31 + t23; t31 = (t31 - t23) * 0.541196100146f;
-	t23 = t29 + t21; t21 = (t29 - t21) * 1.30656296488f;
-	t29 = t09 + t23; t23 = (t09 - t23) * 0.707106781187f;
-	t09 = t31 + t21; t31 = (t31 - t21) * 0.707106781187f;
-	t09 += t31;	t29 += t09;	t09 += t23;	t23 += t31;
-	t17 += t29;	t29 += t25;	t25 += t09;	t09 += t27;
-	t27 += t23;	t23 += t19; t19 += t31;
-	t21 = t02 + t32; t02 = (t02 - t32) * 0.502419286188f;
-	t32 = t04 + t30; t04 = (t04 - t30) * 0.52249861494f;
-	t30 = t06 + t28; t28 = (t06 - t28) * 0.566944034816f;
-	t06 = t08 + t26; t08 = (t08 - t26) * 0.64682178336f;
-	t26 = t10 + t24; t10 = (t10 - t24) * 0.788154623451f;
-	t24 = t12 + t22; t22 = (t12 - t22) * 1.06067768599f;
-	t12 = t14 + t20; t20 = (t14 - t20) * 1.72244709824f;
-	t14 = t16 + t18; t16 = (t16 - t18) * 5.10114861869f;
-	t18 = t21 + t14; t14 = (t21 - t14) * 0.509795579104f;
-	t21 = t32 + t12; t32 = (t32 - t12) * 0.601344886935f;
-	t12 = t30 + t24; t24 = (t30 - t24) * 0.899976223136f;
-	t30 = t06 + t26; t26 = (t06 - t26) * 2.56291544774f;
-	t06 = t18 + t30; t18 = (t18 - t30) * 0.541196100146f;
-	t30 = t21 + t12; t12 = (t21 - t12) * 1.30656296488f;
-	t21 = t06 + t30; t30 = (t06 - t30) * 0.707106781187f;
-	t06 = t18 + t12; t12 = (t18 - t12) * 0.707106781187f;
+	t09 = t31 + t23;
+	t31 = (t31 - t23) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
+	t23 = t29 + t21;
+	t21 = (t29 - t21) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
+	t29 = t09 + t23;
+	t23 = (t09 - t23) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t09 = t31 + t21;
+	t31 = (t31 - t21) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t09 += t31;
+	t29 += t09;
+	t09 += t23;
+	t23 += t31;
+	t17 += t29;
+	t29 += t25;
+	t25 += t09;
+	t09 += t27;
+	t27 += t23;
+	t23 += t19;
+	t19 += t31;
+	t21 = t02 + t32;
+	t02 = (t02 - t32) * FLOAT_TO_FIX_256(0.502419286188f) / MULTDIV;
+	t32 = t04 + t30;
+	t04 = (t04 - t30) * FLOAT_TO_FIX_256(0.52249861494f) / MULTDIV;
+	t30 = t06 + t28;
+	t28 = (t06 - t28) * FLOAT_TO_FIX_256(0.566944034816f) / MULTDIV;
+	t06 = t08 + t26;
+	t08 = (t08 - t26) * FLOAT_TO_FIX_256(0.64682178336f) / MULTDIV;
+	t26 = t10 + t24;
+	t10 = (t10 - t24) * FLOAT_TO_FIX_256(0.788154623451f) / MULTDIV;
+	t24 = t12 + t22;
+	t22 = (t12 - t22) * FLOAT_TO_FIX_256(1.06067768599f) / MULTDIV;
+	t12 = t14 + t20;
+	t20 = (t14 - t20) * FLOAT_TO_FIX_256(1.72244709824f) / MULTDIV;
+	t14 = t16 + t18;
+	t16 = (t16 - t18) * FLOAT_TO_FIX_256(5.10114861869f) / MULTDIV;
+	t18 = t21 + t14;
+	t14 = (t21 - t14) * FLOAT_TO_FIX_256(0.509795579104f) / MULTDIV;
+	t21 = t32 + t12;
+	t32 = (t32 - t12) * FLOAT_TO_FIX_256(0.601344886935f) / MULTDIV;
+	t12 = t30 + t24;
+	t24 = (t30 - t24) * FLOAT_TO_FIX_256(0.899976223136f) / MULTDIV;
+	t30 = t06 + t26;
+	t26 = (t06 - t26) * FLOAT_TO_FIX_256(2.56291544774f) / MULTDIV;
+	t06 = t18 + t30;
+	t18 = (t18 - t30) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
+	t30 = t21 + t12;
+	t12 = (t21 - t12) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
+	t21 = t06 + t30;
+	t30 = (t06 - t30) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t06 = t18 + t12;
+	t12 = (t18 - t12) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
 	t06 += t12;
-	t18 = t14 + t26; t26 = (t14 - t26) * 0.541196100146f;
-	t14 = t32 + t24; t24 = (t32 - t24) * 1.30656296488f;
-	t32 = t18 + t14; t14 = (t18 - t14) * 0.707106781187f;
-	t18 = t26 + t24; t24 = (t26 - t24) * 0.707106781187f;
-	t18 += t24; t32 += t18;
-	t18 += t14; t26 = t14 + t24;
-	t14 = t02 + t16; t02 = (t02 - t16) * 0.509795579104f;
-	t16 = t04 + t20; t04 = (t04 - t20) * 0.601344886935f;
-	t20 = t28 + t22; t22 = (t28 - t22) * 0.899976223136f;
-	t28 = t08 + t10; t10 = (t08 - t10) * 2.56291544774f;
-	t08 = t14 + t28; t14 = (t14 - t28) * 0.541196100146f;
-	t28 = t16 + t20; t20 = (t16 - t20) * 1.30656296488f;
-	t16 = t08 + t28; t28 = (t08 - t28) * 0.707106781187f;
-	t08 = t14 + t20; t20 = (t14 - t20) * 0.707106781187f;
+	t18 = t14 + t26;
+	t26 = (t14 - t26) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
+	t14 = t32 + t24;
+	t24 = (t32 - t24) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
+	t32 = t18 + t14;
+	t14 = (t18 - t14) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t18 = t26 + t24;
+	t24 = (t26 - t24) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t18 += t24;
+	t32 += t18;
+	t18 += t14;
+	t26 = t14 + t24;
+	t14 = t02 + t16;
+	t02 = (t02 - t16) * FLOAT_TO_FIX_256(0.509795579104f) / MULTDIV;
+	t16 = t04 + t20;
+	t04 = (t04 - t20) * FLOAT_TO_FIX_256(0.601344886935f) / MULTDIV;
+	t20 = t28 + t22;
+	t22 = (t28 - t22) * FLOAT_TO_FIX_256(0.899976223136f) / MULTDIV;
+	t28 = t08 + t10;
+	t10 = (t08 - t10) * FLOAT_TO_FIX_256(2.56291544774f) / MULTDIV;
+	t08 = t14 + t28;
+	t14 = (t14 - t28) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
+	t28 = t16 + t20;
+	t20 = (t16 - t20) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
+	t16 = t08 + t28;
+	t28 = (t08 - t28) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t08 = t14 + t20;
+	t20 = (t14 - t20) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
 	t08 += t20;
-	t14 = t02 + t10; t02 = (t02 - t10) * 0.541196100146f;
-	t10 = t04 + t22; t22 = (t04 - t22) * 1.30656296488f;
-	t04 = t14 + t10; t10 = (t14 - t10) * 0.707106781187f;
-	t14 = t02 + t22; t02 = (t02 - t22) * 0.707106781187f;
-	t14 += t02;	t04 += t14;	t14 += t10;	t10 += t02;
-	t16 += t04;	t04 += t08;	t08 += t14;	t14 += t28;
-	t28 += t10;	t10 += t20;	t20 += t02;	t21 += t16;
-	t16 += t32;	t32 += t04;	t04 += t06;	t06 += t08;
-	t08 += t18;	t18 += t14;	t14 += t30;	t30 += t28;
-	t28 += t26;	t26 += t10;	t10 += t12;	t12 += t20;
-	t20 += t24;	t24 += t02;
+	t14 = t02 + t10;
+	t02 = (t02 - t10) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
+	t10 = t04 + t22;
+	t22 = (t04 - t22) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
+	t04 = t14 + t10;
+	t10 = (t14 - t10) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t14 = t02 + t22;
+	t02 = (t02 - t22) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t14 += t02;
+	t04 += t14;
+	t14 += t10;
+	t10 += t02;
+	t16 += t04;
+	t04 += t08;
+	t08 += t14;
+	t14 += t28;
+	t28 += t10;
+	t10 += t20;
+	t20 += t02;
+	t21 += t16;
+	t16 += t32;
+	t32 += t04;
+	t04 += t06;
+	t06 += t08;
+	t08 += t18;
+	t18 += t14;
+	t14 += t30;
+	t30 += t28;
+	t28 += t26;
+	t26 += t10;
+	t10 += t12;
+	t12 += t20;
+	t20 += t24;
+	t24 += t02;
 
 	d[dp + 48] = -t33;
 	d[dp + 49] = d[dp + 47] = -t21;
@@ -4417,23 +4540,40 @@ void plm_audio_idct36(int s[32][3], int ss, float *d, int dp) {
 	d[dp + 62] = d[dp + 34] = -t09;
 	d[dp + 63] = d[dp + 33] = -t14;
 	d[dp + 32] = -t05;
-	d[dp + 0] = t05; d[dp + 31] = -t30;
-	d[dp + 1] = t30; d[dp + 30] = -t27;
-	d[dp + 2] = t27; d[dp + 29] = -t28;
-	d[dp + 3] = t28; d[dp + 28] = -t07;
-	d[dp + 4] = t07; d[dp + 27] = -t26;
-	d[dp + 5] = t26; d[dp + 26] = -t23;
-	d[dp + 6] = t23; d[dp + 25] = -t10;
-	d[dp + 7] = t10; d[dp + 24] = -t15;
-	d[dp + 8] = t15; d[dp + 23] = -t12;
-	d[dp + 9] = t12; d[dp + 22] = -t19;
-	d[dp + 10] = t19; d[dp + 21] = -t20;
-	d[dp + 11] = t20; d[dp + 20] = -t13;
-	d[dp + 12] = t13; d[dp + 19] = -t24;
-	d[dp + 13] = t24; d[dp + 18] = -t31;
-	d[dp + 14] = t31; d[dp + 17] = -t02;
-	d[dp + 15] = t02; d[dp + 16] = 0.0;
-}
+	d[dp + 0] = t05;
+	d[dp + 31] = -t30;
+	d[dp + 1] = t30;
+	d[dp + 30] = -t27;
+	d[dp + 2] = t27;
+	d[dp + 29] = -t28;
+	d[dp + 3] = t28;
+	d[dp + 28] = -t07;
+	d[dp + 4] = t07;
+	d[dp + 27] = -t26;
+	d[dp + 5] = t26;
+	d[dp + 26] = -t23;
+	d[dp + 6] = t23;
+	d[dp + 25] = -t10;
+	d[dp + 7] = t10;
+	d[dp + 24] = -t15;
+	d[dp + 8] = t15;
+	d[dp + 23] = -t12;
+	d[dp + 9] = t12;
+	d[dp + 22] = -t19;
+	d[dp + 10] = t19;
+	d[dp + 21] = -t20;
+	d[dp + 11] = t20;
+	d[dp + 20] = -t13;
+	d[dp + 12] = t13;
+	d[dp + 19] = -t24;
+	d[dp + 13] = t24;
+	d[dp + 18] = -t31;
+	d[dp + 14] = t31;
+	d[dp + 17] = -t02;
+	d[dp + 15] = t02;
+	d[dp + 16] = 0.0;
 
+	OUT_DEBUG=2;
+}
 
 #endif // PL_MPEG_IMPLEMENTATION
