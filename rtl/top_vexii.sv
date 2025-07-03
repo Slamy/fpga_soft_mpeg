@@ -7,7 +7,9 @@ module top_vexii (
     input resetn
 );
 
-    bit [31:0] underflow_cnt[2];
+    bit signed [34:0] fifo_water_level[2];
+    bit signed [34:0] ticks_since_playback_started;
+
     bit fifo_nearly_empty;
 
     bit [31:0] mpeg_audio_rom[21888];
@@ -106,8 +108,8 @@ module top_vexii (
                      mac_vector_accu + mac_vector_temp1 * mac_vector_temp2, mac_vector_accu,
                      mac_vector_temp1, mac_vector_temp2);
             */
-           mac_vector_accu <= mac_vector_accu + mac_vector_temp1 * mac_vector_temp2;
-           // mac_vector_accu <= mac_vector_accu + 1;
+            mac_vector_accu <= mac_vector_accu + mac_vector_temp1 * mac_vector_temp2;
+            // mac_vector_accu <= mac_vector_accu + 1;
         end
 
         case (mac_state)
@@ -120,7 +122,7 @@ module top_vexii (
                     mac_vector_index <= dmem_cmd_payload_data[8:0];
                     mac_vector_cnt <= 8;
                     mac_state <= FETCH;
-                     //$display("Vector Index %x", dmem_cmd_payload_data[8:0]);
+                    //$display("Vector Index %x", dmem_cmd_payload_data[8:0]);
 
                 end
                 if (dmem_cmd_payload_address == 32'h30000008 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready)
@@ -149,6 +151,9 @@ module top_vexii (
         if (dmem_cmd_payload_address[31:28] == 4'd3) dmem_cmd_ready = !mac_state;
     end
 
+    // Assuming 30 MHz clock rate and 44100 Hz sample rate
+    localparam TICKS_PER_SAMPLE = 680;
+
     always_ff @(posedge clk) begin
         debugflag <= 0;
         imem_rsp_valid <= 0;
@@ -159,17 +164,30 @@ module top_vexii (
         if (dmem_cmd_payload_address == 32'h10000030 && dmem_cmd_payload_write && dmem_cmd_valid)
             soft_state <= dmem_cmd_payload_data;
 
-        if (underflow_cnt[0] > 0 && draining_fifo) underflow_cnt[0] <= underflow_cnt[0] - 1;
-        if (underflow_cnt[1] > 0 && draining_fifo) underflow_cnt[1] <= underflow_cnt[1] - 1;
+        if (draining_fifo) begin
+            fifo_water_level[0] <= fifo_water_level[0] - 1;
+            fifo_water_level[1] <= fifo_water_level[1] - 1;
+            ticks_since_playback_started <= ticks_since_playback_started + 1;
+        end
 
-        if (sample_left_write) underflow_cnt[0] <= underflow_cnt[0] + 680;
-        if (sample_right_write) underflow_cnt[1] <= underflow_cnt[1] + 680;
+        if (sample_left_write) fifo_water_level[0] <= fifo_water_level[0] + TICKS_PER_SAMPLE;
+        if (sample_right_write) fifo_water_level[1] <= fifo_water_level[1] + TICKS_PER_SAMPLE;
 
-        fifo_nearly_empty <= (underflow_cnt[0] < 3000) || (underflow_cnt[1] < 3000);
-        if (underflow_cnt[0] > (680 * 40)) draining_fifo <= 1;
+        // 
+        fifo_nearly_empty <= (fifo_water_level[0] < (TICKS_PER_SAMPLE*4)) || (fifo_water_level[1] < (TICKS_PER_SAMPLE*4));
+
+        // With 40 samples available, we start the playback
+        if (fifo_water_level[0] > (TICKS_PER_SAMPLE * 40)) draining_fifo <= 1;
 
         if (dmem_cmd_payload_address == 32'h10000000 && dmem_cmd_valid && dmem_cmd_payload_write)
-            $display("Debug out %x", dmem_cmd_payload_data);
+            $display(
+                "Debug out %x  Samples decoded: %d %d  Samples played %d  Load: %d %%",
+                dmem_cmd_payload_data,
+                fifo_water_level[0] / TICKS_PER_SAMPLE,
+                fifo_water_level[1] / TICKS_PER_SAMPLE,
+                ticks_since_playback_started / TICKS_PER_SAMPLE,
+                ticks_since_playback_started * 100 / fifo_water_level[0]
+            );
 
         if (dmem_cmd_valid && dmem_cmd_ready) begin
             dmem_rsp_payload_id <= dmem_cmd_payload_id;

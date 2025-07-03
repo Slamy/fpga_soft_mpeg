@@ -40,7 +40,7 @@ extern caddr_t _end; /* _end is set in the linker command file */
 void print_chr(char ch);
 void print_str(const char *p);
 
-#define SOFT_CONVOLVE
+// #define SOFT_CONVOLVE
 #define PL_MPEG_IMPLEMENTATION
 #define PLM_NO_STDIO
 #include "pl_mpeg.h"
@@ -56,37 +56,48 @@ void print_str(const char *p)
 		*((volatile uint8_t *)OUTPORT) = *(p++);
 }
 
-
 void test_vector_unit()
 {
 	synth_window_mac->result = 0;
 	synth_window_mac->addr = 0;
 	synth_window_mac->index = 1;
-	//while (synth_window_mac->busy);
+	// while (synth_window_mac->busy);
 
 	synth_window_mac->result = 0;
 	synth_window_mac->addr = 0;
 	synth_window_mac->index = 1;
-	//while (synth_window_mac->busy);
+	// while (synth_window_mac->busy);
 
-	*((volatile intsample_t *)OUTPORT)=synth_window_mac->result;
-
+	*((volatile intsample_t *)OUTPORT) = synth_window_mac->result;
 }
 
 void main(void)
 {
-	//test_vector_unit();
+	// test_vector_unit();
 	//*((volatile uint8_t *)OUTPORT_END) = 0;
-	//for(;;);
+	// for(;;);
 	print_str("Hello world\n");
 
 	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 87552, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
 
+	int cnt = 0;
+
 	for (;;)
 	{
-		plm_samples_t *derp = plm_decode_audio(mpeg);
-		print_str("fertig\n");
+		plm_samples_t *samples = plm_decode_audio(mpeg);
+
+		if (samples)
+		{
+			// Give some feedback to the user that we are running
+			*((volatile uint8_t *)OUTPORT) = cnt;
+			cnt++;
+		}
+		else
+		{
+			// End simulation since the MPEG stream has ended
+			*((volatile uint8_t *)OUTPORT_END) = 0;
+		}
 	}
 }
 

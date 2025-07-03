@@ -7,7 +7,9 @@ module top_vexii_wb (
     input resetn
 );
 
-    bit [31:0] underflow_cnt[2];
+    bit signed [34:0] fifo_water_level[2];
+    bit signed [34:0] ticks_since_playback_started;
+
     bit fifo_nearly_empty;
 
     bit [31:0] mpeg_audio_rom[21888];
@@ -176,6 +178,9 @@ module top_vexii_wb (
         endcase
     end
 
+    // Assuming 30 MHz clock rate and 44100 Hz sample rate
+    localparam TICKS_PER_SAMPLE = 680;
+    
     always_ff @(posedge clk) begin
         debugflag  <= 0;
         dmem_stb_q <= dmem_stb;
@@ -185,19 +190,33 @@ module top_vexii_wb (
         imem_cyc_q <= imem_cyc;
         imem_ack_q <= imem_ack;
 
+        if (dmem_adr_byte == 32'h1000000c && dmem_we && dmem_stb)
+            $finish();
         if (dmem_adr_byte == 32'h10000030 && dmem_we && dmem_stb) soft_state <= dmem_mosi;
 
-        if (underflow_cnt[0] > 0 && draining_fifo) underflow_cnt[0] <= underflow_cnt[0] - 1;
-        if (underflow_cnt[1] > 0 && draining_fifo) underflow_cnt[1] <= underflow_cnt[1] - 1;
+        if (draining_fifo) begin
+            fifo_water_level[0] <= fifo_water_level[0] - 1;
+            fifo_water_level[1] <= fifo_water_level[1] - 1;
+            ticks_since_playback_started <= ticks_since_playback_started + 1;
+        end
 
-        if (sample_left_write) underflow_cnt[0] <= underflow_cnt[0] + 680;
-        if (sample_right_write) underflow_cnt[1] <= underflow_cnt[1] + 680;
+        if (sample_left_write) fifo_water_level[0] <= fifo_water_level[0] + TICKS_PER_SAMPLE;
+        if (sample_right_write) fifo_water_level[1] <= fifo_water_level[1] + TICKS_PER_SAMPLE;
 
-        fifo_nearly_empty <= (underflow_cnt[0] < 3000) || (underflow_cnt[1] < 3000);
-        if (underflow_cnt[0] > (680 * 40)) draining_fifo <= 1;
+        // 
+        fifo_nearly_empty <= (fifo_water_level[0] < (TICKS_PER_SAMPLE*4)) || (fifo_water_level[1] < (TICKS_PER_SAMPLE*4));
+
+        // With 40 samples available, we start the playback
+        if (fifo_water_level[0] > (TICKS_PER_SAMPLE * 40)) draining_fifo <= 1;
 
         if (dmem_adr_byte == 32'h10000000 && dmem_we && dmem_stb)
-            $display("Debug out %x %c", dmem_mosi, dmem_mosi[7:0]);
+            $display(
+                "Debug out %x  Samples decoded: %d %d  Samples played %d  Load: %d %%",
+                dmem_mosi,
+                fifo_water_level[0] / TICKS_PER_SAMPLE,
+                fifo_water_level[1] / TICKS_PER_SAMPLE,
+                ticks_since_playback_started / TICKS_PER_SAMPLE,
+                ticks_since_playback_started * 100 / fifo_water_level[0]);
 
         if (dmem_stb) begin
             //if (dmem_we) $display("CPU Write at %x", dmem_adr);
