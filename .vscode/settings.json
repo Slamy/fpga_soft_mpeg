@@ -45,24 +45,7 @@
         "streambuf": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "channel_layout.h": "c",
-        "float_dsp.h": "c",
-        "libm.h": "c",
-        "libm_mips.h": "c",
-        "get_bits.h": "c",
-        "attributes.h": "c",
-        "thread.h": "c",
-        "cpu.h": "c",
-        "asm.h": "c",
-        "mpegaudiodsp.h": "c",
-        "mpegaudio.h": "c",
-        "samplefmt.h": "c",
-        "prctl.h": "c",
-        "config.h": "c",
-        "unistd.h": "c",
-        "mathops.h": "c",
-        "ratio": "c",
-        "system_error": "c",
-        "array": "c"
+        "variant": "c",
+        "csignal": "cpp"
     }
 }

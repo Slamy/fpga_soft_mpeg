@@ -1,5 +1,23 @@
-#include "Vtestbench.h"
-#include "Vtestbench___024root.h"
+
+
+#if defined(VEXII)
+#include "Vtop_vexii.h"
+#include "Vtop_vexii___024root.h"
+#define DUT Vtop_vexii
+#define CONCAT_FLAT_PUBLIC(x) top_vexii##x
+#elif defined(VEXII_WB)
+#include "Vtop_vexii_wb.h"
+#include "Vtop_vexii_wb___024root.h"
+#define DUT Vtop_vexii_wb
+#define CONCAT_FLAT_PUBLIC(x) top_vexii_wb##x
+#elif defined(PICORV32)
+#include "Vtop_picorv32.h"
+#include "Vtop_picorv32___024root.h"
+#define DUT Vtop_picorv32
+#define CONCAT_FLAT_PUBLIC(x) top_picorv32##x
+#else
+#error "No target defined"
+#endif
 
 #include <verilated_fst_c.h>
 #include <verilated_vcd_c.h>
@@ -14,14 +32,12 @@ static void catch_function(int signo)
     status = signo;
 }
 
-#ifdef HEATMAP
 uint64_t memory_heatmap[2300000];
-#endif
 
 class Machine
 {
 public:
-    Vtestbench dut;
+    DUT dut;
 
 #ifdef TRACE
     typedef VerilatedFstC tracetype_t;
@@ -32,11 +48,12 @@ public:
     FILE *f_audio_right{nullptr};
     char filename[100];
     uint64_t sim_time = 0;
+    bool first_sample_provided{false};
 
     virtual ~Machine()
     {
         fclose(f_audio_right);
-        fclose(f_audio_left);   
+        fclose(f_audio_left);
     }
 
     Machine()
@@ -81,17 +98,22 @@ public:
 #endif
         sim_time += 1;
 
-#ifdef HEATMAP
-        if ((dut.rootp->testbench__DOT__mem_la_read || dut.rootp->testbench__DOT__mem_la_write) && (dut.rootp->testbench__DOT__mem_la_addr&0xf0000000)==0)
+        /*
+        if ((dut.rootp->testbench__DOT__mem_la_read || dut.rootp->testbench__DOT__mem_la_write) && (dut.rootp->testbench__DOT__mem_la_addr & 0xf0000000) == 0)
         {
-            memory_heatmap[dut.rootp->testbench__DOT__mem_la_addr/4]++;
+            memory_heatmap[dut.rootp->testbench__DOT__mem_la_addr / 4]++;
         }
-#endif
+        */
 
-        if (dut.rootp->testbench__DOT__sample_left_write)
-            fwrite(&dut.rootp->testbench__DOT__sample, sizeof(int16_t), 1, f_audio_left);
-        if (dut.rootp->testbench__DOT__sample_right_write)
-            fwrite(&dut.rootp->testbench__DOT__sample, sizeof(int16_t), 1, f_audio_right);
+        if (!first_sample_provided && (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample_left_write) || dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample_right_write)))
+        {
+            first_sample_provided = true;
+            printf("First sample at %d\n", sim_time);
+        }
+        if (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample_left_write))
+            fwrite(&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample), sizeof(int16_t), 1, f_audio_left);
+        if (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample_right_write))
+            fwrite(&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample), sizeof(int16_t), 1, f_audio_right);
     }
 };
 
@@ -109,24 +131,24 @@ int main(int argc, char **argv, char **env)
     }
 
     // for (int i = 0; i < 90000000; i++)
-    while (status == 0)
+    while (status == 0 && !Verilated::gotFinish())
     {
         machine.modelstep();
     }
 
     fprintf(stderr, "Closing...\n");
     fflush(stdout);
+    /*
+        int maxi = 0;
+        for (int i = 0; i < 128000; i++)
+        {
+            if (memory_heatmap[i])
+                maxi = i;
+        }
 
-#ifdef HEATMAP
-    int maxi=0;
-    for (int i=0;i<128000;i++)
-    {
-        if (memory_heatmap[i]) maxi = i;
-    }
-
-    for (int i=0;i<maxi;i++)
-    {
-        printf("%08x %x\n",i*4,memory_heatmap[i]);
-    }
-#endif
+        for (int i = 0; i < maxi; i++)
+        {
+            printf("%08x %x\n", i * 4, memory_heatmap[i]);
+        }
+            */
 }
