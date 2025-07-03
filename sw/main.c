@@ -72,12 +72,12 @@ void test_vector_unit()
 
 void main(void)
 {
-	//test_vector_unit();
+	// test_vector_unit();
 	//*((volatile uint8_t *)OUTPORT_END) = 0;
-	// for(;;);
+	//  for(;;);
 	print_str("Hello world\n");
 
-	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 87552, 0);
+	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 51200 * 4, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
 
 	int cnt = 0;

@@ -4,3 +4,5 @@
 *.bin
 
 /audio.wav
+*.mp3
+*.mpg

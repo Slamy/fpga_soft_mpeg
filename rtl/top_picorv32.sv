@@ -13,7 +13,7 @@ module top_picorv32 (
 
     bit fifo_nearly_empty;
 
-    bit [31:0] mpeg_audio_rom[21888];
+    bit [31:0] mpeg_audio_rom[51200];
     initial $readmemh("fma.mem", mpeg_audio_rom);
 
     bit [31:0] memory[500000];

@@ -41,4 +41,4 @@ picorv32)
      ;;
 esac
 
-
+md5sum audio_*.bin

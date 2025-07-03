@@ -13,7 +13,7 @@ module top_vexii_wb (
 
     bit fifo_nearly_empty;
 
-    bit [31:0] mpeg_audio_rom[21888];
+    bit [31:0] mpeg_audio_rom[51200];
     initial $readmemh("fma.mem", mpeg_audio_rom);
 
     bit [31:0] memory[500000];
@@ -228,7 +228,7 @@ module top_vexii_wb (
                 end
                 4'd2: begin
                     if (!dmem_we) begin
-                        dmem_miso_mem <= reverse_endian_32(mpeg_audio_rom[15'(dmem_adr)]);
+                        dmem_miso_mem <= reverse_endian_32(mpeg_audio_rom[16'(dmem_adr)]);
                     end
                 end
                 4'd1: begin
