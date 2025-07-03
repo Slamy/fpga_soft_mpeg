@@ -8,7 +8,8 @@ module top_vexii (
 );
 
     bit signed [34:0] fifo_water_level[2];
-    bit signed [34:0] ticks_since_playback_started;
+    bit [34:0] ticks_since_playback_started;
+    bit [34:0] samples_decoded;
 
     bit fifo_nearly_empty;
 
@@ -172,8 +173,8 @@ module top_vexii (
 
         if (sample_left_write) fifo_water_level[0] <= fifo_water_level[0] + TICKS_PER_SAMPLE;
         if (sample_right_write) fifo_water_level[1] <= fifo_water_level[1] + TICKS_PER_SAMPLE;
+        if (sample_left_write) samples_decoded <= samples_decoded + 1;
 
-        // 
         fifo_nearly_empty <= (fifo_water_level[0] < (TICKS_PER_SAMPLE*4)) || (fifo_water_level[1] < (TICKS_PER_SAMPLE*4));
 
         // With 40 samples available, we start the playback
@@ -181,13 +182,12 @@ module top_vexii (
 
         if (dmem_cmd_payload_address == 32'h10000000 && dmem_cmd_valid && dmem_cmd_payload_write)
             $display(
-                "Debug out %x  Samples decoded: %d %d  Samples played %d  Load: %d %%",
+                "Debug out %x  Waterlevel: %d %d Samples decoded: %d  Samples played: %d  Load: %d %%",
                 dmem_cmd_payload_data,
                 fifo_water_level[0] / TICKS_PER_SAMPLE,
-                fifo_water_level[1] / TICKS_PER_SAMPLE,
+                fifo_water_level[1] / TICKS_PER_SAMPLE, samples_decoded,
                 ticks_since_playback_started / TICKS_PER_SAMPLE,
-                ticks_since_playback_started * 100 / fifo_water_level[0]
-            );
+                (ticks_since_playback_started / TICKS_PER_SAMPLE) * 100 / samples_decoded);
 
         if (dmem_cmd_valid && dmem_cmd_ready) begin
             dmem_rsp_payload_id <= dmem_cmd_payload_id;

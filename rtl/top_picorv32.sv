@@ -7,7 +7,11 @@ module top_picorv32 (
     input resetn
 );
 
-    bit [31:0] underflow_cnt[2];
+    bit signed [34:0] fifo_water_level[2];
+    bit [34:0] ticks_since_playback_started;
+    bit [34:0] samples_decoded;
+
+    bit fifo_nearly_empty;
 
     bit [31:0] mpeg_audio_rom[21888];
     initial $readmemh("fma.mem", mpeg_audio_rom);
@@ -145,24 +149,42 @@ module top_picorv32 (
     end
 
     bit fail;
+    bit draining_fifo = 0;
     bit [31:0] debug_l_storage;
 
+    always_comb begin
+        mem_ready = (mac_state == IDLE);
+    end
 
+    // Assuming 30 MHz clock rate and 44100 Hz sample rate
+    localparam TICKS_PER_SAMPLE = 680;
     always_ff @(posedge clk) begin
         debugflag <= 0;
-        mem_ready <= (mac_state == IDLE);
 
         if (mem_la_addr == 32'h10000030 && mem_la_write) soft_state <= mem_la_wdata;
 
-        if (underflow_cnt[0] > 0) underflow_cnt[0] <= underflow_cnt[0] - 1;
-        if (underflow_cnt[1] > 0) underflow_cnt[1] <= underflow_cnt[1] - 1;
+        if (draining_fifo) begin
+            fifo_water_level[0] <= fifo_water_level[0] - 1;
+            fifo_water_level[1] <= fifo_water_level[1] - 1;
+            ticks_since_playback_started <= ticks_since_playback_started + 1;
+        end
 
-        if (sample_left_write) underflow_cnt[0] <= underflow_cnt[0] + 680;
-        if (sample_right_write) underflow_cnt[1] <= underflow_cnt[1] + 680;
+        if (sample_left_write) fifo_water_level[0] <= fifo_water_level[0] + TICKS_PER_SAMPLE;
+        if (sample_right_write) fifo_water_level[1] <= fifo_water_level[1] + TICKS_PER_SAMPLE;
+        if (sample_left_write) samples_decoded <= samples_decoded + 1;
+
+        fifo_nearly_empty <= (fifo_water_level[0] < (TICKS_PER_SAMPLE*4)) || (fifo_water_level[1] < (TICKS_PER_SAMPLE*4));
+        // With 40 samples available, we start the playback
+        if (fifo_water_level[0] > (TICKS_PER_SAMPLE * 40)) draining_fifo <= 1;
 
         if (mem_la_addr == 32'h10000000 && mem_la_write) begin
-            $display("Debug out %x %c", mem_la_wdata, mem_la_wdata[7:0]);
-            //$display("Debug out %d", signed'(mem_la_wdata));
+            $display(
+                "Debug out %x  Waterlevel: %d %d Samples decoded: %d  Samples played: %d  Load: %d %%",
+                mem_la_wdata, fifo_water_level[0] / TICKS_PER_SAMPLE,
+                fifo_water_level[1] / TICKS_PER_SAMPLE, samples_decoded,
+                ticks_since_playback_started / TICKS_PER_SAMPLE,
+                (ticks_since_playback_started / TICKS_PER_SAMPLE) * 100 / samples_decoded);
+
         end
         if (mem_la_addr == 32'h10000004 && mem_la_write) debug_l_storage <= mem_la_wdata;
         if (mem_la_addr == 32'h10000008 && mem_la_write)

@@ -67,13 +67,12 @@ void test_vector_unit()
 	synth_window_mac->addr = 0;
 	synth_window_mac->index = 1;
 	// while (synth_window_mac->busy);
-
 	*((volatile intsample_t *)OUTPORT) = synth_window_mac->result;
 }
 
 void main(void)
 {
-	// test_vector_unit();
+	//test_vector_unit();
 	//*((volatile uint8_t *)OUTPORT_END) = 0;
 	// for(;;);
 	print_str("Hello world\n");
