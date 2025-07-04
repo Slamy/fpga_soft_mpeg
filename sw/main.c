@@ -37,13 +37,18 @@ extern caddr_t _end; /* _end is set in the linker command file */
 #define RAMSIZE (caddr_t)0x100000
 #endif
 
+
+
 void print_chr(char ch);
 void print_str(const char *p);
+void stop_verilator();
 
 // #define SOFT_CONVOLVE
+
 #define PL_MPEG_IMPLEMENTATION
 #define PLM_NO_STDIO
 #include "pl_mpeg.h"
+
 
 void print_chr(char ch)
 {
@@ -54,6 +59,13 @@ void print_str(const char *p)
 {
 	while (*p != 0)
 		*((volatile uint8_t *)OUTPORT) = *(p++);
+}
+
+void stop_verilator()
+{
+	print_str("Nope\n");
+
+	*((volatile uint8_t *)OUTPORT_END) = 0;
 }
 
 void test_vector_unit()
@@ -73,9 +85,8 @@ void test_vector_unit()
 void main(void)
 {
 	// test_vector_unit();
-	//*((volatile uint8_t *)OUTPORT_END) = 0;
+	// stop_verilator();
 	//  for(;;);
-	print_str("Hello world\n");
 
 	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 51200 * 4, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);

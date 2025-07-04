@@ -1,60 +1,65 @@
-// This is free and unencumbered software released into the public domain.
-//
-// Anyone is free to copy, modify, publish, use, compile, sell, or
-// distribute this software, either in source code form or as a compiled
-// binary, for any purpose, commercial or non-commercial, and by any
-// means.
+.section .init
+.globl _start
+.type _start,@function
 
-#define ENABLE_QREGS
-#define ENABLE_HELLO
-//#define ENABLE_RVTST
-#define ENABLE_SIEVE
-#define ENABLE_MULTST
-#define ENABLE_STATS
 
-#ifndef ENABLE_QREGS
-#  undef ENABLE_RVTST
+.globl pass
+.type pass,@function
+
+.globl fail
+.type fail,@function
+
+
+_start:
+#ifdef USE_GP
+.option push
+.option norelax
+	la gp, __global_pointer$
+.option pop
 #endif
 
-// Only save registers in IRQ wrapper that are to be saved by the caller in
-// the RISC-V ABI, with the excpetion of the stack pointer. The IRQ handler
-// will save the rest if necessary. I.e. skip x3, x4, x8, x9, and x18-x27.
-#undef ENABLE_FASTIRQ
 
-#include "custom_ops.S"
+init:
+	la sp, _sp
 
-	.section .text
-	.global start
-	.global irq
-	.global hello
-	.global sieve
-	.global multest
-	.global hard_mul
-	.global hard_mulh
-	.global hard_mulhsu
-	.global hard_mulhu
-	.global hard_div
-	.global hard_divu
-	.global hard_rem
-	.global hard_remu
-	.global stats
+	/* Load data section */
+	la a0, _data_lma
+	la a1, _data
+	la a2, _edata
+	bgeu a1, a2, 2f
+1:
+	lw t0, (a0)
+	sw t0, (a1)
+	addi a0, a0, 4
+	addi a1, a1, 4
+	bltu a1, a2, 1b
+2:
 
-reset_vec:
-	// no more than 16 bytes here !
-	j start
+	/* Clear bss section */
+	la a0, __bss_start
+	la a1, _end
+	bgeu a0, a1, 2f
+1:
+	sw zero, (a0)
+	addi a0, a0, 4
+	bltu a0, a1, 1b
+2:
 
-/* Main program
- **********************************/
+#ifndef NO_LIBC_INIT_ARRAY
+	call __libc_init_array
+#endif
 
-start:
-	/* zero-initialize all registers */
+	call main
+mainDone:
+pass:
+    j mainDone
+    nop
+fail:
+    j fail
+    nop
 
-	/* set stack pointer */
-	lui sp,((500000/4)-1)>>12
 
-	/* call main C code */
-	jal ra,main
-
-	/* trap */
-	ebreak
+	.globl _init
+_init:
+    ret
 
