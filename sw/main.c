@@ -31,13 +31,6 @@ volatile struct synth_window_mac *synth_window_mac = (volatile struct synth_wind
 #define OUT_R 0x10000020
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
 
-extern caddr_t _end; /* _end is set in the linker command file */
-/* just in case, most boards have at least some memory */
-#ifndef RAMSIZE
-#define RAMSIZE (caddr_t)0x100000
-#endif
-
-
 
 void print_chr(char ch);
 void print_str(const char *p);
@@ -68,19 +61,6 @@ void stop_verilator()
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 }
 
-void test_vector_unit()
-{
-	synth_window_mac->result = 0;
-	synth_window_mac->addr = 0;
-	synth_window_mac->index = 1;
-	// while (synth_window_mac->busy);
-
-	synth_window_mac->result = 0;
-	synth_window_mac->addr = 0;
-	synth_window_mac->index = 1;
-	// while (synth_window_mac->busy);
-	*((volatile intsample_t *)OUTPORT) = synth_window_mac->result;
-}
 
 void main(void)
 {
@@ -88,16 +68,16 @@ void main(void)
 	// stop_verilator();
 	//  for(;;);
 
-	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 51200 * 4, 0);
+	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 202752 * 4, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
 
 	int cnt = 0;
 
 	for (;;)
 	{
-		plm_samples_t *samples = plm_decode_audio(mpeg);
+		plm_frame_t *frame = plm_decode_video(mpeg);
 
-		if (samples)
+		if (frame)
 		{
 			// Give some feedback to the user that we are running
 			*((volatile uint8_t *)OUTPORT) = cnt;
@@ -111,34 +91,3 @@ void main(void)
 	}
 }
 
-uint32_t *irq(uint32_t *regs, uint32_t irqs)
-{
-}
-
-/*
- * sbrk -- changes heap size size. Get nbytes more
- *         RAM. We just increment a pointer in what's
- *         left of memory on the board.
- */
-caddr_t _sbrk(int nbytes)
-{
-	static caddr_t heap_ptr = NULL;
-	caddr_t base;
-
-	if (heap_ptr == NULL)
-	{
-		heap_ptr = (caddr_t)&_end;
-	}
-
-	if ((RAMSIZE - heap_ptr) >= 0)
-	{
-		base = heap_ptr;
-		heap_ptr += nbytes;
-		return (base);
-	}
-	else
-	{
-		errno = ENOMEM;
-		return ((caddr_t)-1);
-	}
-}

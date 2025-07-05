@@ -13,8 +13,8 @@ module top_vexii (
 
     bit fifo_nearly_empty;
 
-    bit [31:0] mpeg_audio_rom[51200];
-    initial $readmemh("fma.mem", mpeg_audio_rom);
+    bit [31:0] mpeg_video_rom[202752];
+    initial $readmemh("fmv.mem", mpeg_video_rom);
 
     bit [31:0] memory[500000];
     initial $readmemh("../sw/firmware.mem", memory);
@@ -211,7 +211,7 @@ module top_vexii (
                 4'd2: begin
                     if (!dmem_cmd_payload_write) begin
                         dmem_rsp_payload_data <=
-                            reverse_endian_32(mpeg_audio_rom[dmem_cmd_payload_address>>2]);
+                            reverse_endian_32(mpeg_video_rom[dmem_cmd_payload_address>>2]);
                     end
                 end
                 4'd1: begin

@@ -144,7 +144,7 @@ See below for detailed the API documentation.
 #define PL_MPEG_H
 
 #include <stdint.h>
-#include <math.h>
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -172,7 +172,7 @@ typedef struct plm_audio_t plm_audio_t;
 
 typedef struct {
 	int type;
-	int64_t pts;
+	double pts;
 	size_t length;
 	uint8_t *data;
 } plm_packet_t;
@@ -198,7 +198,7 @@ typedef struct {
 // different from the internal size of the 3 planes.
 
 typedef struct {
-	int32_t time;
+	double time;
 	unsigned int width;
 	unsigned int height;
 	plm_plane_t y;
@@ -223,13 +223,13 @@ typedef void(*plm_video_decode_callback)
 #define PLM_AUDIO_SAMPLES_PER_FRAME 1152
 
 typedef struct {
-	int32_t time;
+	double time;
 	unsigned int count;
 	#ifdef PLM_AUDIO_SEPARATE_CHANNELS
-	int16_t left[PLM_AUDIO_SAMPLES_PER_FRAME];
-		int16_t right[PLM_AUDIO_SAMPLES_PER_FRAME];
+		float left[PLM_AUDIO_SAMPLES_PER_FRAME];
+		float right[PLM_AUDIO_SAMPLES_PER_FRAME];
 	#else
-		int16_t interleaved[PLM_AUDIO_SAMPLES_PER_FRAME * 2];
+		float interleaved[PLM_AUDIO_SAMPLES_PER_FRAME * 2];
 	#endif
 } plm_samples_t;
 
@@ -335,12 +335,12 @@ int plm_get_num_video_streams(plm_t *self);
 
 int plm_get_width(plm_t *self);
 int plm_get_height(plm_t *self);
-int32_t plm_get_pixel_aspect_ratio(plm_t *self);
+double plm_get_pixel_aspect_ratio(plm_t *self);
 
 
 // Get the framerate of the video stream in frames per second.
 
-int32_t plm_get_framerate(plm_t *self);
+double plm_get_framerate(plm_t *self);
 
 
 // Get or set whether audio decoding is enabled. Default TRUE.
@@ -369,18 +369,18 @@ int plm_get_samplerate(plm_t *self);
 // should be set to the duration of the buffer of the audio API that you use
 // for output. E.g. for SDL2: (SDL_AudioSpec.samples / samplerate)
 
-int64_t plm_get_audio_lead_time(plm_t *self);
-void plm_set_audio_lead_time(plm_t *self, int64_t lead_time);
+double plm_get_audio_lead_time(plm_t *self);
+void plm_set_audio_lead_time(plm_t *self, double lead_time);
 
 
 // Get the current internal time in seconds.
 
-int64_t plm_get_time(plm_t *self);
+double plm_get_time(plm_t *self);
 
 
 // Get the video duration of the underlying source in seconds.
 
-int64_t plm_get_duration(plm_t *self);
+double plm_get_duration(plm_t *self);
 
 
 // Rewind all buffers back to the beginning.
@@ -419,7 +419,7 @@ void plm_set_audio_decode_callback(plm_t *self, plm_audio_decode_callback fp, vo
 // of times. A frame-skip is not implemented, i.e. everything up to current time
 // will be decoded.
 
-void plm_decode(plm_t *self, int64_t seconds);
+void plm_decode(plm_t *self, double seconds);
 
 
 // Decode and return one video frame. Returns NULL if no frame could be decoded
@@ -453,14 +453,14 @@ plm_samples_t *plm_decode_audio(plm_t *self);
 // satisfied.
 // Returns TRUE if seeking succeeded or FALSE if no frame could be found.
 
-int plm_seek(plm_t *self, int64_t time, int seek_exact);
+int plm_seek(plm_t *self, double time, int seek_exact);
 
 
 // Similar to plm_seek(), but will not call the video_decode_callback,
 // audio_decode_callback or make any attempts to sync audio.
 // Returns the found frame or NULL if no frame could be found.
 
-plm_frame_t *plm_seek_frame(plm_t *self, int64_t time, int seek_exact);
+plm_frame_t *plm_seek_frame(plm_t *self, double time, int seek_exact);
 
 
 
@@ -472,7 +472,7 @@ plm_frame_t *plm_seek_frame(plm_t *self, int64_t time, int seek_exact);
 // The default size for buffers created from files or by the high-level API
 
 #ifndef PLM_BUFFER_DEFAULT_SIZE
-#define PLM_BUFFER_DEFAULT_SIZE (4 * 1024)
+#define PLM_BUFFER_DEFAULT_SIZE (128 * 1024)
 #endif
 
 #ifndef PLM_NO_STDIO
@@ -645,20 +645,20 @@ int plm_demux_has_ended(plm_demux_t *self);
 // Note that the specified time is considered 0-based, regardless of the first 
 // PTS in the data source.
 
-plm_packet_t *plm_demux_seek(plm_demux_t *self, int64_t time, int type, int force_intra);
+plm_packet_t *plm_demux_seek(plm_demux_t *self, double time, int type, int force_intra);
 
 
 // Get the PTS of the first packet of this type. Returns PLM_PACKET_INVALID_TS
 // if not packet of this packet type can be found.
 
-int64_t plm_demux_get_start_time(plm_demux_t *self, int type);
+double plm_demux_get_start_time(plm_demux_t *self, int type);
 
 
 // Get the duration for the specified packet type - i.e. the span between the
 // the first PTS and the last PTS in the data source. This only makes sense when
 // the underlying data source is a file or fixed memory.
 
-int64_t plm_demux_get_duration(plm_demux_t *self, int type);
+double plm_demux_get_duration(plm_demux_t *self, int type);
 
 
 // Decode and return the next packet. The returned packet_t is valid until
@@ -691,8 +691,8 @@ int plm_video_has_header(plm_video_t *self);
 
 // Get the framerate in frames per second.
 
-int32_t plm_video_get_framerate(plm_video_t *self);
-int32_t plm_video_get_pixel_aspect_ratio(plm_video_t *self);
+double plm_video_get_framerate(plm_video_t *self);
+double plm_video_get_pixel_aspect_ratio(plm_video_t *self);
 
 
 // Get the display width/height.
@@ -710,14 +710,14 @@ void plm_video_set_no_delay(plm_video_t *self, int no_delay);
 
 // Get the current internal time in seconds.
 
-int64_t plm_video_get_time(plm_video_t *self);
+double plm_video_get_time(plm_video_t *self);
 
 
 // Set the current internal time in seconds. This is only useful when you
 // manipulate the underlying video buffer and want to enforce a correct
 // timestamps.
 
-void plm_video_set_time(plm_video_t *self, int64_t time);
+void plm_video_set_time(plm_video_t *self, double time);
 
 
 // Rewind the internal buffer. See plm_buffer_rewind().
@@ -780,14 +780,14 @@ int plm_audio_get_samplerate(plm_audio_t *self);
 
 // Get the current internal time in seconds.
 
-int64_t plm_audio_get_time(plm_audio_t *self);
+double plm_audio_get_time(plm_audio_t *self);
 
 
 // Set the current internal time in seconds. This is only useful when you
 // manipulate the underlying video buffer and want to enforce a correct
 // timestamps.
 
-void plm_audio_set_time(plm_audio_t *self, int64_t time);
+void plm_audio_set_time(plm_audio_t *self, double time);
 
 
 // Rewind the internal buffer. See plm_buffer_rewind().
@@ -838,10 +838,8 @@ plm_samples_t *plm_audio_decode(plm_audio_t *self);
 
 #ifndef PLM_MALLOC
 	#define PLM_MALLOC(sz) malloc(sz)
-
-	// To catch heap management, invalidate these calls
-	#define PLM_FREE(p) stop_verilator();
-	#define PLM_REALLOC(p, sz) 0;stop_verilator();
+	#define PLM_FREE(p) free(p)
+	#define PLM_REALLOC(p, sz) realloc(p, sz)
 #endif
 
 #define PLM_UNUSED(expr) (void)(expr)
@@ -854,28 +852,25 @@ plm_samples_t *plm_audio_decode(plm_audio_t *self);
 
 struct plm_t {
 	plm_demux_t *demux;
-	int64_t time;
+	double time;
 	int has_ended;
 	int loop;
 	int has_decoders;
 
-#ifdef ENABLE_VIDEO
 	int video_enabled;
 	int video_packet_type;
 	plm_buffer_t *video_buffer;
 	plm_video_t *video_decoder;
-#endif
+
 	int audio_enabled;
 	int audio_stream_index;
 	int audio_packet_type;
-	int64_t audio_lead_time;
+	double audio_lead_time;
 	plm_buffer_t *audio_buffer;
 	plm_audio_t *audio_decoder;
 
-#ifdef ENABLE_VIDEO
 	plm_video_decode_callback video_decode_callback;
 	void *video_decode_callback_user_data;
-#endif
 
 	plm_audio_decode_callback audio_decode_callback;
 	void *audio_decode_callback_user_data;
@@ -910,14 +905,11 @@ plm_t *plm_create_with_memory(uint8_t *bytes, size_t length, int free_when_done)
 }
 
 plm_t *plm_create_with_buffer(plm_buffer_t *buffer, int destroy_when_done) {
-	static plm_t plm_instance;
-	plm_t *self =&plm_instance;
+	plm_t *self = (plm_t *)PLM_MALLOC(sizeof(plm_t));
 	memset(self, 0, sizeof(plm_t));
 
 	self->demux = plm_demux_create(buffer, destroy_when_done);
-#ifdef ENABLE_VIDEO
 	self->video_enabled = TRUE;
-#endif
 	self->audio_enabled = TRUE;
 	plm_init_decoders(self);
 
@@ -933,7 +925,6 @@ int plm_init_decoders(plm_t *self) {
 		return FALSE;
 	}
 
-#ifdef ENABLE_VIDEO
 	if (plm_demux_get_num_video_streams(self->demux) > 0) {
 		if (self->video_enabled) {
 			self->video_packet_type = PLM_DEMUX_PACKET_VIDEO_1;
@@ -944,7 +935,6 @@ int plm_init_decoders(plm_t *self) {
 			self->video_decoder = plm_video_create_with_buffer(self->video_buffer, TRUE);
 		}
 	}
-#endif
 
 	if (plm_demux_get_num_audio_streams(self->demux) > 0) {
 		if (self->audio_enabled) {
@@ -962,11 +952,9 @@ int plm_init_decoders(plm_t *self) {
 }
 
 void plm_destroy(plm_t *self) {
-#ifdef ENABLE_VIDEO
 	if (self->video_decoder) {
 		plm_video_destroy(self->video_decoder);
 	}
-#endif
 	if (self->audio_decoder) {
 		plm_audio_destroy(self->audio_decoder);
 	}
@@ -989,9 +977,7 @@ int plm_has_headers(plm_t *self) {
 	}
 
 	if (
-#ifdef ENABLE_VIDEO
 		(self->video_decoder && !plm_video_has_header(self->video_decoder)) ||
-#endif
 		(self->audio_decoder && !plm_audio_has_header(self->audio_decoder))
 	) {
 		return FALSE;
@@ -1008,9 +994,7 @@ int plm_probe(plm_t *self, size_t probesize) {
 
 	// Re-init decoders
 	self->has_decoders = FALSE;
-#ifdef ENABLE_VIDEO
 	self->video_packet_type = 0;
-#endif
 	self->audio_packet_type = 0;
 	return plm_init_decoders(self);
 }
@@ -1038,7 +1022,6 @@ void plm_set_audio_stream(plm_t *self, int stream_index) {
 	plm_set_audio_enabled(self, self->audio_enabled);
 }
 
-#ifdef ENABLE_VIDEO
 int plm_get_video_enabled(plm_t *self) {
 	return self->video_enabled;
 }
@@ -1072,18 +1055,18 @@ int plm_get_height(plm_t *self) {
 		: 0;
 }
 
-int32_t plm_get_framerate(plm_t *self) {
+double plm_get_framerate(plm_t *self) {
 	return (plm_init_decoders(self) && self->video_decoder)
 		? plm_video_get_framerate(self->video_decoder)
 		: 0;
 }
 
-int32_t plm_get_pixel_aspect_ratio(plm_t *self) {
+double plm_get_pixel_aspect_ratio(plm_t *self) {
 	return (plm_init_decoders(self) && self->video_decoder)
 		? plm_video_get_pixel_aspect_ratio(self->video_decoder)
 		: 0;
 }
-#endif
+
 int plm_get_num_audio_streams(plm_t *self) {
 	return plm_demux_get_num_audio_streams(self->demux);
 }
@@ -1094,26 +1077,26 @@ int plm_get_samplerate(plm_t *self) {
 		: 0;
 }
 
+double plm_get_audio_lead_time(plm_t *self) {
+	return self->audio_lead_time;
+}
 
-void plm_set_audio_lead_time(plm_t *self, int64_t lead_time) {
+void plm_set_audio_lead_time(plm_t *self, double lead_time) {
 	self->audio_lead_time = lead_time;
 }
 
-int64_t plm_get_time(plm_t *self) {
+double plm_get_time(plm_t *self) {
 	return self->time;
 }
 
-int64_t plm_get_duration(plm_t *self) {
+double plm_get_duration(plm_t *self) {
 	return plm_demux_get_duration(self->demux, PLM_DEMUX_PACKET_VIDEO_1);
 }
 
 void plm_rewind(plm_t *self) {
-
-#ifdef ENABLE_VIDEO
 	if (self->video_decoder) {
 		plm_video_rewind(self->video_decoder);
 	}
-#endif
 
 	if (self->audio_decoder) {
 		plm_audio_rewind(self->audio_decoder);
@@ -1136,28 +1119,22 @@ int plm_has_ended(plm_t *self) {
 	return self->has_ended;
 }
 
-#ifdef ENABLE_VIDEO
 void plm_set_video_decode_callback(plm_t *self, plm_video_decode_callback fp, void *user) {
 	self->video_decode_callback = fp;
 	self->video_decode_callback_user_data = user;
 }
-#endif
 
 void plm_set_audio_decode_callback(plm_t *self, plm_audio_decode_callback fp, void *user) {
 	self->audio_decode_callback = fp;
 	self->audio_decode_callback_user_data = user;
 }
 
-void plm_decode(plm_t *self, int64_t tick) {
+void plm_decode(plm_t *self, double tick) {
 	if (!plm_init_decoders(self)) {
 		return;
 	}
 
-#ifdef ENABLE_VIDEO
 	int decode_video = (self->video_decode_callback && self->video_packet_type);
-#else
-	int decode_video = 0;
-#endif
 	int decode_audio = (self->audio_decode_callback && self->audio_packet_type);
 
 	if (!decode_video && !decode_audio) {
@@ -1169,13 +1146,12 @@ void plm_decode(plm_t *self, int64_t tick) {
 	int decode_video_failed = FALSE;
 	int decode_audio_failed = FALSE;
 
-	int64_t video_target_time = self->time + tick;
-	int64_t audio_target_time = self->time + tick + self->audio_lead_time;
+	double video_target_time = self->time + tick;
+	double audio_target_time = self->time + tick + self->audio_lead_time;
 
 	do {
 		did_decode = FALSE;
-	
-#ifdef ENABLE_VIDEO
+		
 		if (decode_video && plm_video_get_time(self->video_decoder) < video_target_time) {
 			plm_frame_t *frame = plm_video_decode(self->video_decoder);
 			if (frame) {
@@ -1186,7 +1162,7 @@ void plm_decode(plm_t *self, int64_t tick) {
 				decode_video_failed = TRUE;
 			}
 		}
-#endif
+
 		if (decode_audio && plm_audio_get_time(self->audio_decoder) < audio_target_time) {
 			plm_samples_t *samples = plm_audio_decode(self->audio_decoder);
 			if (samples) {
@@ -1212,7 +1188,6 @@ void plm_decode(plm_t *self, int64_t tick) {
 	self->time += tick;
 }
 
-#ifdef ENABLE_VIDEO
 plm_frame_t *plm_decode_video(plm_t *self) {
 	if (!plm_init_decoders(self)) {
 		return NULL;
@@ -1231,10 +1206,8 @@ plm_frame_t *plm_decode_video(plm_t *self) {
 	}
 	return frame;
 }
-#endif
 
 plm_samples_t *plm_decode_audio(plm_t *self) {
-	OUT_DEBUG = 10;
 	if (!plm_init_decoders(self)) {
 		return NULL;
 	}
@@ -1262,13 +1235,11 @@ void plm_handle_end(plm_t *self) {
 	}
 }
 
-#ifdef ENABLE_VIDEO
 void plm_read_video_packet(plm_buffer_t *buffer, void *user) {
 	PLM_UNUSED(buffer);
 	plm_t *self = (plm_t *)user;
 	plm_read_packets(self, self->video_packet_type);
 }
-#endif
 
 void plm_read_audio_packet(plm_buffer_t *buffer, void *user) {
 	PLM_UNUSED(buffer);
@@ -1279,12 +1250,10 @@ void plm_read_audio_packet(plm_buffer_t *buffer, void *user) {
 void plm_read_packets(plm_t *self, int requested_type) {
 	plm_packet_t *packet;
 	while ((packet = plm_demux_decode(self->demux))) {
-#ifdef ENABLE_VIDEO
 		if (packet->type == self->video_packet_type) {
 			plm_buffer_write(self->video_buffer, packet->data, packet->length);
 		}
-#endif
-		if (packet->type == self->audio_packet_type) {
+		else if (packet->type == self->audio_packet_type) {
 			plm_buffer_write(self->audio_buffer, packet->data, packet->length);
 		}
 
@@ -1294,19 +1263,16 @@ void plm_read_packets(plm_t *self, int requested_type) {
 	}
 
 	if (plm_demux_has_ended(self->demux)) {
-#ifdef ENABLE_VIDEO
 		if (self->video_buffer) {
 			plm_buffer_signal_end(self->video_buffer);
 		}
-#endif
 		if (self->audio_buffer) {
 			plm_buffer_signal_end(self->audio_buffer);
 		}
 	}
 }
 
-#ifdef ENABLE_VIDEO
-plm_frame_t *plm_seek_frame(plm_t *self, int64_t time, int seek_exact) {
+plm_frame_t *plm_seek_frame(plm_t *self, double time, int seek_exact) {
 	if (!plm_init_decoders(self)) {
 		return NULL;
 	}
@@ -1317,8 +1283,8 @@ plm_frame_t *plm_seek_frame(plm_t *self, int64_t time, int seek_exact) {
 
 	int type = self->video_packet_type;
 
-	int64_t start_time = plm_demux_get_start_time(self->demux, type);
-	int64_t duration = plm_demux_get_duration(self->demux, type);
+	double start_time = plm_demux_get_start_time(self->demux, type);
+	double duration = plm_demux_get_duration(self->demux, type);
 
 	if (time < 0) {
 		time = 0;
@@ -1361,7 +1327,7 @@ plm_frame_t *plm_seek_frame(plm_t *self, int64_t time, int seek_exact) {
 	return frame;
 }
 
-int plm_seek(plm_t *self, int64_t time, int seek_exact) {
+int plm_seek(plm_t *self, double time, int seek_exact) {
 	plm_frame_t *frame = plm_seek_frame(self, time, seek_exact);
 	
 	if (!frame) {
@@ -1381,12 +1347,11 @@ int plm_seek(plm_t *self, int64_t time, int seek_exact) {
 	// with a PTS greater than the current time is found. plm_decode() is then
 	// called to decode enough audio data to satisfy the audio_lead_time.
 
-	int64_t start_time = plm_demux_get_start_time(self->demux, self->video_packet_type);
+	double start_time = plm_demux_get_start_time(self->demux, self->video_packet_type);
 	plm_audio_rewind(self->audio_decoder);
 
 	plm_packet_t *packet = NULL;
 	while ((packet = plm_demux_decode(self->demux))) {
-
 		if (packet->type == self->video_packet_type) {
 			plm_buffer_write(self->video_buffer, packet->data, packet->length);
 		}
@@ -1403,7 +1368,6 @@ int plm_seek(plm_t *self, int64_t time, int seek_exact) {
 	
 	return TRUE;
 }
-#endif
 
 
 
@@ -1515,10 +1479,8 @@ plm_buffer_t *plm_buffer_create_with_callbacks(
 	return self;
 }
 
-
 plm_buffer_t *plm_buffer_create_with_memory(uint8_t *bytes, size_t length, int free_when_done) {
-	static plm_buffer_t singleton1;
-	plm_buffer_t *self = &singleton1;
+	plm_buffer_t *self = (plm_buffer_t *)PLM_MALLOC(sizeof(plm_buffer_t));
 	memset(self, 0, sizeof(plm_buffer_t));
 	self->capacity = length;
 	self->length = length;
@@ -1531,14 +1493,11 @@ plm_buffer_t *plm_buffer_create_with_memory(uint8_t *bytes, size_t length, int f
 }
 
 plm_buffer_t *plm_buffer_create_with_capacity(size_t capacity) {
-	static plm_buffer_t singleton2;
-	static uint8_t default_buffer[PLM_BUFFER_DEFAULT_SIZE];
-	plm_buffer_t *self = &singleton2;
+	plm_buffer_t *self = (plm_buffer_t *)PLM_MALLOC(sizeof(plm_buffer_t));
 	memset(self, 0, sizeof(plm_buffer_t));
 	self->capacity = capacity;
 	self->free_when_done = TRUE;
-	//self->bytes = (uint8_t *)PLM_MALLOC(capacity);
-	self->bytes = default_buffer;
+	self->bytes = (uint8_t *)PLM_MALLOC(capacity);
 	self->mode = PLM_BUFFER_MODE_RING;
 	self->discard_read_bytes = TRUE;
 	return self;
@@ -1831,12 +1790,12 @@ static const int PLM_START_SYSTEM = 0xBB;
 struct plm_demux_t {
 	plm_buffer_t *buffer;
 	int destroy_buffer_when_done;
-	int64_t system_clock_ref;
+	double system_clock_ref;
 
 	size_t last_file_size;
-	int64_t last_decoded_pts;
-	int64_t start_time;
-	int64_t duration;
+	double last_decoded_pts;
+	double start_time;
+	double duration;
 
 	int start_code;
 	int has_pack_header;
@@ -1851,13 +1810,12 @@ struct plm_demux_t {
 
 
 void plm_demux_buffer_seek(plm_demux_t *self, size_t pos);
-int64_t plm_demux_decode_time(plm_demux_t *self);
+double plm_demux_decode_time(plm_demux_t *self);
 plm_packet_t *plm_demux_decode_packet(plm_demux_t *self, int type);
 plm_packet_t *plm_demux_get_packet(plm_demux_t *self);
 
 plm_demux_t *plm_demux_create(plm_buffer_t *buffer, int destroy_when_done) {
-	static plm_demux_t instance_demux;
-	plm_demux_t *self = &instance_demux;
+	plm_demux_t *self = (plm_demux_t *)PLM_MALLOC(sizeof(plm_demux_t));
 	memset(self, 0, sizeof(plm_demux_t));
 
 	self->buffer = buffer;
@@ -2001,7 +1959,7 @@ void plm_demux_buffer_seek(plm_demux_t *self, size_t pos) {
 	self->start_code = -1;
 }
 
-int64_t plm_demux_get_start_time(plm_demux_t *self, int type) {
+double plm_demux_get_start_time(plm_demux_t *self, int type) {
 	if (self->start_time != PLM_PACKET_INVALID_TS) {
 		return self->start_time;
 	}
@@ -2026,7 +1984,7 @@ int64_t plm_demux_get_start_time(plm_demux_t *self, int type) {
 	return self->start_time;
 }
 
-int64_t plm_demux_get_duration(plm_demux_t *self, int type) {
+double plm_demux_get_duration(plm_demux_t *self, int type) {
 	size_t file_size = plm_buffer_get_size(self->buffer);
 
 	if (
@@ -2052,7 +2010,7 @@ int64_t plm_demux_get_duration(plm_demux_t *self, int type) {
 		plm_demux_buffer_seek(self, seek_pos);
 		self->current_packet.length = 0;
 
-		int64_t last_pts = PLM_PACKET_INVALID_TS;
+		double last_pts = PLM_PACKET_INVALID_TS;
 		plm_packet_t *packet = NULL;
 		while ((packet = plm_demux_decode(self))) {
 			if (packet->pts != PLM_PACKET_INVALID_TS && packet->type == type) {
@@ -2071,7 +2029,7 @@ int64_t plm_demux_get_duration(plm_demux_t *self, int type) {
 	return self->duration;
 }
 
-plm_packet_t *plm_demux_seek(plm_demux_t *self, int64_t seek_time, int type, int force_intra) {
+plm_packet_t *plm_demux_seek(plm_demux_t *self, double seek_time, int type, int force_intra) {
 	if (!plm_demux_has_headers(self)) {
 		return NULL;
 	}
@@ -2092,12 +2050,12 @@ plm_packet_t *plm_demux_seek(plm_demux_t *self, int64_t seek_time, int type, int
 	// probably something wrong with the file and we just avoid getting into an
 	// infinite loop. 32 retries should be enough for anybody.
 
-	int64_t duration = plm_demux_get_duration(self, type);
+	double duration = plm_demux_get_duration(self, type);
 	long file_size = plm_buffer_get_size(self->buffer);
 	long byterate = file_size / duration;
 
-	int64_t cur_time = self->last_decoded_pts;
-	int64_t scan_span = 1;
+	double cur_time = self->last_decoded_pts;
+	double scan_span = 1;
 
 	if (seek_time > duration) {
 		seek_time = duration;
@@ -2111,7 +2069,7 @@ plm_packet_t *plm_demux_seek(plm_demux_t *self, int64_t seek_time, int type, int
 		int found_packet_with_pts = FALSE;
 		int found_packet_in_range = FALSE;
 		long last_valid_packet_start = -1;
-		int64_t first_packet_time = PLM_PACKET_INVALID_TS;
+		double first_packet_time = PLM_PACKET_INVALID_TS;
 
 		long cur_pos = plm_buffer_tell(self->buffer);
 
@@ -2254,14 +2212,14 @@ plm_packet_t *plm_demux_decode(plm_demux_t *self) {
 	return NULL;
 }
 
-int64_t plm_demux_decode_time(plm_demux_t *self) {
+double plm_demux_decode_time(plm_demux_t *self) {
 	int64_t clock = plm_buffer_read(self->buffer, 3) << 30;
 	plm_buffer_skip(self->buffer, 1);
 	clock |= plm_buffer_read(self->buffer, 15) << 15;
 	plm_buffer_skip(self->buffer, 1);
 	clock |= plm_buffer_read(self->buffer, 15);
 	plm_buffer_skip(self->buffer, 1);
-	return clock;
+	return (double)clock / 90000.0;
 }
 
 plm_packet_t *plm_demux_decode_packet(plm_demux_t *self, int type) {
@@ -2818,7 +2776,6 @@ void plm_video_process_macroblock(plm_video_t *self, uint8_t *s, uint8_t *d, int
 void plm_video_decode_block(plm_video_t *self, int block);
 void plm_video_idct(int *block);
 
-#ifdef ENABLE_VIDEO
 plm_video_t * plm_video_create_with_buffer(plm_buffer_t *buffer, int destroy_when_done) {
 	plm_video_t *self = (plm_video_t *)PLM_MALLOC(sizeof(plm_video_t));
 	memset(self, 0, sizeof(plm_video_t));
@@ -2846,13 +2803,13 @@ void plm_video_destroy(plm_video_t *self) {
 	PLM_FREE(self);
 }
 
-int32_t plm_video_get_framerate(plm_video_t *self) {
+double plm_video_get_framerate(plm_video_t *self) {
 	return plm_video_has_header(self)
 		? self->framerate
 		: 0;
 }
 
-int32_t plm_video_get_pixel_aspect_ratio(plm_video_t *self) {
+double plm_video_get_pixel_aspect_ratio(plm_video_t *self) {
 	return plm_video_has_header(self)
 		? self->pixel_aspect_ratio
 		: 0;
@@ -2874,11 +2831,11 @@ void plm_video_set_no_delay(plm_video_t *self, int no_delay) {
 	self->assume_no_b_frames = no_delay;
 }
 
-int64_t plm_video_get_time(plm_video_t *self) {
+double plm_video_get_time(plm_video_t *self) {
 	return self->time;
 }
 
-void plm_video_set_time(plm_video_t *self, int64_t time) {
+void plm_video_set_time(plm_video_t *self, double time) {
 	self->frames_decoded = self->framerate * time;
 	self->time = time;
 }
@@ -3689,8 +3646,6 @@ PLM_DEFINE_FRAME_CONVERT_FUNCTION(plm_frame_to_argb, 4, 1, 2, 3)
 PLM_DEFINE_FRAME_CONVERT_FUNCTION(plm_frame_to_abgr, 4, 3, 2, 1)
 
 
-#endif
-
 #undef PLM_PUT_PIXEL
 #undef PLM_DEFINE_FRAME_CONVERT_FUNCTION
 
@@ -3731,98 +3686,93 @@ static const int PLM_AUDIO_SCALEFACTOR_BASE[] = {
 	0x02000000, 0x01965FEA, 0x01428A30
 };
 
-typedef int32_t intsample_t;
-#define MULTDIV 256
-#define FLOAT_TO_FIX_2(x) (x*2)
-#define FLOAT_TO_FIX_256(x) ((intsample_t)(x*MULTDIV))
-
-static const intsample_t PLM_AUDIO_SYNTHESIS_WINDOW[] = {
-	FLOAT_TO_FIX_2(     0.0),FLOAT_TO_FIX_2(     -0.5),FLOAT_TO_FIX_2(     -0.5),FLOAT_TO_FIX_2(     -0.5),FLOAT_TO_FIX_2(     -0.5),FLOAT_TO_FIX_2(     -0.5),
-	FLOAT_TO_FIX_2(    -0.5),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(     -1.5),
-	FLOAT_TO_FIX_2(    -1.5),FLOAT_TO_FIX_2(     -2.0),FLOAT_TO_FIX_2(     -2.0),FLOAT_TO_FIX_2(     -2.5),FLOAT_TO_FIX_2(     -2.5),FLOAT_TO_FIX_2(     -3.0),
-	FLOAT_TO_FIX_2(    -3.5),FLOAT_TO_FIX_2(     -3.5),FLOAT_TO_FIX_2(     -4.0),FLOAT_TO_FIX_2(     -4.5),FLOAT_TO_FIX_2(     -5.0),FLOAT_TO_FIX_2(     -5.5),
-	FLOAT_TO_FIX_2(    -6.5),FLOAT_TO_FIX_2(     -7.0),FLOAT_TO_FIX_2(     -8.0),FLOAT_TO_FIX_2(     -8.5),FLOAT_TO_FIX_2(     -9.5),FLOAT_TO_FIX_2(    -10.5),
-	FLOAT_TO_FIX_2(   -12.0),FLOAT_TO_FIX_2(    -13.0),FLOAT_TO_FIX_2(    -14.5),FLOAT_TO_FIX_2(    -15.5),FLOAT_TO_FIX_2(    -17.5),FLOAT_TO_FIX_2(    -19.0),
-	FLOAT_TO_FIX_2(   -20.5),FLOAT_TO_FIX_2(    -22.5),FLOAT_TO_FIX_2(    -24.5),FLOAT_TO_FIX_2(    -26.5),FLOAT_TO_FIX_2(    -29.0),FLOAT_TO_FIX_2(    -31.5),
-	FLOAT_TO_FIX_2(   -34.0),FLOAT_TO_FIX_2(    -36.5),FLOAT_TO_FIX_2(    -39.5),FLOAT_TO_FIX_2(    -42.5),FLOAT_TO_FIX_2(    -45.5),FLOAT_TO_FIX_2(    -48.5),
-	FLOAT_TO_FIX_2(   -52.0),FLOAT_TO_FIX_2(    -55.5),FLOAT_TO_FIX_2(    -58.5),FLOAT_TO_FIX_2(    -62.5),FLOAT_TO_FIX_2(    -66.0),FLOAT_TO_FIX_2(    -69.5),
-	FLOAT_TO_FIX_2(   -73.5),FLOAT_TO_FIX_2(    -77.0),FLOAT_TO_FIX_2(    -80.5),FLOAT_TO_FIX_2(    -84.5),FLOAT_TO_FIX_2(    -88.0),FLOAT_TO_FIX_2(    -91.5),
-	FLOAT_TO_FIX_2(   -95.0),FLOAT_TO_FIX_2(    -98.0),FLOAT_TO_FIX_2(   -101.0),FLOAT_TO_FIX_2(   -104.0),FLOAT_TO_FIX_2(    106.5),FLOAT_TO_FIX_2(    109.0),
-	FLOAT_TO_FIX_2(   111.0),FLOAT_TO_FIX_2(    112.5),FLOAT_TO_FIX_2(    113.5),FLOAT_TO_FIX_2(    114.0),FLOAT_TO_FIX_2(    114.0),FLOAT_TO_FIX_2(    113.5),
-	FLOAT_TO_FIX_2(   112.0),FLOAT_TO_FIX_2(    110.5),FLOAT_TO_FIX_2(    107.5),FLOAT_TO_FIX_2(    104.0),FLOAT_TO_FIX_2(    100.0),FLOAT_TO_FIX_2(     94.5),
-	FLOAT_TO_FIX_2(    88.5),FLOAT_TO_FIX_2(     81.5),FLOAT_TO_FIX_2(     73.0),FLOAT_TO_FIX_2(     63.5),FLOAT_TO_FIX_2(     53.0),FLOAT_TO_FIX_2(     41.5),
-	FLOAT_TO_FIX_2(    28.5),FLOAT_TO_FIX_2(     14.5),FLOAT_TO_FIX_2(     -1.0),FLOAT_TO_FIX_2(    -18.0),FLOAT_TO_FIX_2(    -36.0),FLOAT_TO_FIX_2(    -55.5),
-	FLOAT_TO_FIX_2(   -76.5),FLOAT_TO_FIX_2(    -98.5),FLOAT_TO_FIX_2(   -122.0),FLOAT_TO_FIX_2(   -147.0),FLOAT_TO_FIX_2(   -173.5),FLOAT_TO_FIX_2(   -200.5),
-	FLOAT_TO_FIX_2(  -229.5),FLOAT_TO_FIX_2(   -259.5),FLOAT_TO_FIX_2(   -290.5),FLOAT_TO_FIX_2(   -322.5),FLOAT_TO_FIX_2(   -355.5),FLOAT_TO_FIX_2(   -389.5),
-	FLOAT_TO_FIX_2(  -424.0),FLOAT_TO_FIX_2(   -459.5),FLOAT_TO_FIX_2(   -495.5),FLOAT_TO_FIX_2(   -532.0),FLOAT_TO_FIX_2(   -568.5),FLOAT_TO_FIX_2(   -605.0),
-	FLOAT_TO_FIX_2(  -641.5),FLOAT_TO_FIX_2(   -678.0),FLOAT_TO_FIX_2(   -714.0),FLOAT_TO_FIX_2(   -749.0),FLOAT_TO_FIX_2(   -783.5),FLOAT_TO_FIX_2(   -817.0),
-	FLOAT_TO_FIX_2(  -849.0),FLOAT_TO_FIX_2(   -879.5),FLOAT_TO_FIX_2(   -908.5),FLOAT_TO_FIX_2(   -935.0),FLOAT_TO_FIX_2(   -959.5),FLOAT_TO_FIX_2(   -981.0),
-	FLOAT_TO_FIX_2( -1000.5),FLOAT_TO_FIX_2(  -1016.0),FLOAT_TO_FIX_2(  -1028.5),FLOAT_TO_FIX_2(  -1037.5),FLOAT_TO_FIX_2(  -1042.5),FLOAT_TO_FIX_2(  -1043.5),
-	FLOAT_TO_FIX_2( -1040.0),FLOAT_TO_FIX_2(  -1031.5),FLOAT_TO_FIX_2(   1018.5),FLOAT_TO_FIX_2(   1000.0),FLOAT_TO_FIX_2(    976.0),FLOAT_TO_FIX_2(    946.5),
-	FLOAT_TO_FIX_2(   911.0),FLOAT_TO_FIX_2(    869.5),FLOAT_TO_FIX_2(    822.0),FLOAT_TO_FIX_2(    767.5),FLOAT_TO_FIX_2(    707.0),FLOAT_TO_FIX_2(    640.0),
-	FLOAT_TO_FIX_2(   565.5),FLOAT_TO_FIX_2(    485.0),FLOAT_TO_FIX_2(    397.0),FLOAT_TO_FIX_2(    302.5),FLOAT_TO_FIX_2(    201.0),FLOAT_TO_FIX_2(     92.5),
-	FLOAT_TO_FIX_2(   -22.5),FLOAT_TO_FIX_2(   -144.0),FLOAT_TO_FIX_2(   -272.5),FLOAT_TO_FIX_2(   -407.0),FLOAT_TO_FIX_2(   -547.5),FLOAT_TO_FIX_2(   -694.0),
-	FLOAT_TO_FIX_2(  -846.0),FLOAT_TO_FIX_2(  -1003.0),FLOAT_TO_FIX_2(  -1165.0),FLOAT_TO_FIX_2(  -1331.5),FLOAT_TO_FIX_2(  -1502.0),FLOAT_TO_FIX_2(  -1675.5),
-	FLOAT_TO_FIX_2( -1852.5),FLOAT_TO_FIX_2(  -2031.5),FLOAT_TO_FIX_2(  -2212.5),FLOAT_TO_FIX_2(  -2394.0),FLOAT_TO_FIX_2(  -2576.5),FLOAT_TO_FIX_2(  -2758.5),
-	FLOAT_TO_FIX_2( -2939.5),FLOAT_TO_FIX_2(  -3118.5),FLOAT_TO_FIX_2(  -3294.5),FLOAT_TO_FIX_2(  -3467.5),FLOAT_TO_FIX_2(  -3635.5),FLOAT_TO_FIX_2(  -3798.5),
-	FLOAT_TO_FIX_2( -3955.0),FLOAT_TO_FIX_2(  -4104.5),FLOAT_TO_FIX_2(  -4245.5),FLOAT_TO_FIX_2(  -4377.5),FLOAT_TO_FIX_2(  -4499.0),FLOAT_TO_FIX_2(  -4609.5),
-	FLOAT_TO_FIX_2( -4708.0),FLOAT_TO_FIX_2(  -4792.5),FLOAT_TO_FIX_2(  -4863.5),FLOAT_TO_FIX_2(  -4919.0),FLOAT_TO_FIX_2(  -4958.0),FLOAT_TO_FIX_2(  -4979.5),
-	FLOAT_TO_FIX_2( -4983.0),FLOAT_TO_FIX_2(  -4967.5),FLOAT_TO_FIX_2(  -4931.5),FLOAT_TO_FIX_2(  -4875.0),FLOAT_TO_FIX_2(  -4796.0),FLOAT_TO_FIX_2(  -4694.5),
-	FLOAT_TO_FIX_2( -4569.5),FLOAT_TO_FIX_2(  -4420.0),FLOAT_TO_FIX_2(  -4246.0),FLOAT_TO_FIX_2(  -4046.0),FLOAT_TO_FIX_2(  -3820.0),FLOAT_TO_FIX_2(  -3567.0),
-	FLOAT_TO_FIX_2(  3287.0),FLOAT_TO_FIX_2(   2979.5),FLOAT_TO_FIX_2(   2644.0),FLOAT_TO_FIX_2(   2280.5),FLOAT_TO_FIX_2(   1888.0),FLOAT_TO_FIX_2(   1467.5),
-	FLOAT_TO_FIX_2(  1018.5),FLOAT_TO_FIX_2(    541.0),FLOAT_TO_FIX_2(     35.0),FLOAT_TO_FIX_2(   -499.0),FLOAT_TO_FIX_2(  -1061.0),FLOAT_TO_FIX_2(  -1650.0),
-	FLOAT_TO_FIX_2( -2266.5),FLOAT_TO_FIX_2(  -2909.0),FLOAT_TO_FIX_2(  -3577.0),FLOAT_TO_FIX_2(  -4270.0),FLOAT_TO_FIX_2(  -4987.5),FLOAT_TO_FIX_2(  -5727.5),
-	FLOAT_TO_FIX_2( -6490.0),FLOAT_TO_FIX_2(  -7274.0),FLOAT_TO_FIX_2(  -8077.5),FLOAT_TO_FIX_2(  -8899.5),FLOAT_TO_FIX_2(  -9739.0),FLOAT_TO_FIX_2( -10594.5),
-	FLOAT_TO_FIX_2(-11464.5),FLOAT_TO_FIX_2( -12347.0),FLOAT_TO_FIX_2( -13241.0),FLOAT_TO_FIX_2( -14144.5),FLOAT_TO_FIX_2( -15056.0),FLOAT_TO_FIX_2( -15973.5),
-	FLOAT_TO_FIX_2(-16895.5),FLOAT_TO_FIX_2( -17820.0),FLOAT_TO_FIX_2( -18744.5),FLOAT_TO_FIX_2( -19668.0),FLOAT_TO_FIX_2( -20588.0),FLOAT_TO_FIX_2( -21503.0),
-	FLOAT_TO_FIX_2(-22410.5),FLOAT_TO_FIX_2( -23308.5),FLOAT_TO_FIX_2( -24195.0),FLOAT_TO_FIX_2( -25068.5),FLOAT_TO_FIX_2( -25926.5),FLOAT_TO_FIX_2( -26767.0),
-	FLOAT_TO_FIX_2(-27589.0),FLOAT_TO_FIX_2( -28389.0),FLOAT_TO_FIX_2( -29166.5),FLOAT_TO_FIX_2( -29919.0),FLOAT_TO_FIX_2( -30644.5),FLOAT_TO_FIX_2( -31342.0),
-	FLOAT_TO_FIX_2(-32009.5),FLOAT_TO_FIX_2( -32645.0),FLOAT_TO_FIX_2( -33247.0),FLOAT_TO_FIX_2( -33814.5),FLOAT_TO_FIX_2( -34346.0),FLOAT_TO_FIX_2( -34839.5),
-	FLOAT_TO_FIX_2(-35295.0),FLOAT_TO_FIX_2( -35710.0),FLOAT_TO_FIX_2( -36084.5),FLOAT_TO_FIX_2( -36417.5),FLOAT_TO_FIX_2( -36707.5),FLOAT_TO_FIX_2( -36954.0),
-	FLOAT_TO_FIX_2(-37156.5),FLOAT_TO_FIX_2( -37315.0),FLOAT_TO_FIX_2( -37428.0),FLOAT_TO_FIX_2( -37496.0),FLOAT_TO_FIX_2(  37519.0),FLOAT_TO_FIX_2(  37496.0),
-	FLOAT_TO_FIX_2( 37428.0),FLOAT_TO_FIX_2(  37315.0),FLOAT_TO_FIX_2(  37156.5),FLOAT_TO_FIX_2(  36954.0),FLOAT_TO_FIX_2(  36707.5),FLOAT_TO_FIX_2(  36417.5),
-	FLOAT_TO_FIX_2( 36084.5),FLOAT_TO_FIX_2(  35710.0),FLOAT_TO_FIX_2(  35295.0),FLOAT_TO_FIX_2(  34839.5),FLOAT_TO_FIX_2(  34346.0),FLOAT_TO_FIX_2(  33814.5),
-	FLOAT_TO_FIX_2( 33247.0),FLOAT_TO_FIX_2(  32645.0),FLOAT_TO_FIX_2(  32009.5),FLOAT_TO_FIX_2(  31342.0),FLOAT_TO_FIX_2(  30644.5),FLOAT_TO_FIX_2(  29919.0),
-	FLOAT_TO_FIX_2( 29166.5),FLOAT_TO_FIX_2(  28389.0),FLOAT_TO_FIX_2(  27589.0),FLOAT_TO_FIX_2(  26767.0),FLOAT_TO_FIX_2(  25926.5),FLOAT_TO_FIX_2(  25068.5),
-	FLOAT_TO_FIX_2( 24195.0),FLOAT_TO_FIX_2(  23308.5),FLOAT_TO_FIX_2(  22410.5),FLOAT_TO_FIX_2(  21503.0),FLOAT_TO_FIX_2(  20588.0),FLOAT_TO_FIX_2(  19668.0),
-	FLOAT_TO_FIX_2( 18744.5),FLOAT_TO_FIX_2(  17820.0),FLOAT_TO_FIX_2(  16895.5),FLOAT_TO_FIX_2(  15973.5),FLOAT_TO_FIX_2(  15056.0),FLOAT_TO_FIX_2(  14144.5),
-	FLOAT_TO_FIX_2( 13241.0),FLOAT_TO_FIX_2(  12347.0),FLOAT_TO_FIX_2(  11464.5),FLOAT_TO_FIX_2(  10594.5),FLOAT_TO_FIX_2(   9739.0),FLOAT_TO_FIX_2(   8899.5),
-	FLOAT_TO_FIX_2(  8077.5),FLOAT_TO_FIX_2(   7274.0),FLOAT_TO_FIX_2(   6490.0),FLOAT_TO_FIX_2(   5727.5),FLOAT_TO_FIX_2(   4987.5),FLOAT_TO_FIX_2(   4270.0),
-	FLOAT_TO_FIX_2(  3577.0),FLOAT_TO_FIX_2(   2909.0),FLOAT_TO_FIX_2(   2266.5),FLOAT_TO_FIX_2(   1650.0),FLOAT_TO_FIX_2(   1061.0),FLOAT_TO_FIX_2(    499.0),
-	FLOAT_TO_FIX_2(   -35.0),FLOAT_TO_FIX_2(   -541.0),FLOAT_TO_FIX_2(  -1018.5),FLOAT_TO_FIX_2(  -1467.5),FLOAT_TO_FIX_2(  -1888.0),FLOAT_TO_FIX_2(  -2280.5),
-	FLOAT_TO_FIX_2( -2644.0),FLOAT_TO_FIX_2(  -2979.5),FLOAT_TO_FIX_2(   3287.0),FLOAT_TO_FIX_2(   3567.0),FLOAT_TO_FIX_2(   3820.0),FLOAT_TO_FIX_2(   4046.0),
-	FLOAT_TO_FIX_2(  4246.0),FLOAT_TO_FIX_2(   4420.0),FLOAT_TO_FIX_2(   4569.5),FLOAT_TO_FIX_2(   4694.5),FLOAT_TO_FIX_2(   4796.0),FLOAT_TO_FIX_2(   4875.0),
-	FLOAT_TO_FIX_2(  4931.5),FLOAT_TO_FIX_2(   4967.5),FLOAT_TO_FIX_2(   4983.0),FLOAT_TO_FIX_2(   4979.5),FLOAT_TO_FIX_2(   4958.0),FLOAT_TO_FIX_2(   4919.0),
-	FLOAT_TO_FIX_2(  4863.5),FLOAT_TO_FIX_2(   4792.5),FLOAT_TO_FIX_2(   4708.0),FLOAT_TO_FIX_2(   4609.5),FLOAT_TO_FIX_2(   4499.0),FLOAT_TO_FIX_2(   4377.5),
-	FLOAT_TO_FIX_2(  4245.5),FLOAT_TO_FIX_2(   4104.5),FLOAT_TO_FIX_2(   3955.0),FLOAT_TO_FIX_2(   3798.5),FLOAT_TO_FIX_2(   3635.5),FLOAT_TO_FIX_2(   3467.5),
-	FLOAT_TO_FIX_2(  3294.5),FLOAT_TO_FIX_2(   3118.5),FLOAT_TO_FIX_2(   2939.5),FLOAT_TO_FIX_2(   2758.5),FLOAT_TO_FIX_2(   2576.5),FLOAT_TO_FIX_2(   2394.0),
-	FLOAT_TO_FIX_2(  2212.5),FLOAT_TO_FIX_2(   2031.5),FLOAT_TO_FIX_2(   1852.5),FLOAT_TO_FIX_2(   1675.5),FLOAT_TO_FIX_2(   1502.0),FLOAT_TO_FIX_2(   1331.5),
-	FLOAT_TO_FIX_2(  1165.0),FLOAT_TO_FIX_2(   1003.0),FLOAT_TO_FIX_2(    846.0),FLOAT_TO_FIX_2(    694.0),FLOAT_TO_FIX_2(    547.5),FLOAT_TO_FIX_2(    407.0),
-	FLOAT_TO_FIX_2(   272.5),FLOAT_TO_FIX_2(    144.0),FLOAT_TO_FIX_2(     22.5),FLOAT_TO_FIX_2(    -92.5),FLOAT_TO_FIX_2(   -201.0),FLOAT_TO_FIX_2(   -302.5),
-	FLOAT_TO_FIX_2(  -397.0),FLOAT_TO_FIX_2(   -485.0),FLOAT_TO_FIX_2(   -565.5),FLOAT_TO_FIX_2(   -640.0),FLOAT_TO_FIX_2(   -707.0),FLOAT_TO_FIX_2(   -767.5),
-	FLOAT_TO_FIX_2(  -822.0),FLOAT_TO_FIX_2(   -869.5),FLOAT_TO_FIX_2(   -911.0),FLOAT_TO_FIX_2(   -946.5),FLOAT_TO_FIX_2(   -976.0),FLOAT_TO_FIX_2(  -1000.0),
-	FLOAT_TO_FIX_2(  1018.5),FLOAT_TO_FIX_2(   1031.5),FLOAT_TO_FIX_2(   1040.0),FLOAT_TO_FIX_2(   1043.5),FLOAT_TO_FIX_2(   1042.5),FLOAT_TO_FIX_2(   1037.5),
-	FLOAT_TO_FIX_2(  1028.5),FLOAT_TO_FIX_2(   1016.0),FLOAT_TO_FIX_2(   1000.5),FLOAT_TO_FIX_2(    981.0),FLOAT_TO_FIX_2(    959.5),FLOAT_TO_FIX_2(    935.0),
-	FLOAT_TO_FIX_2(   908.5),FLOAT_TO_FIX_2(    879.5),FLOAT_TO_FIX_2(    849.0),FLOAT_TO_FIX_2(    817.0),FLOAT_TO_FIX_2(    783.5),FLOAT_TO_FIX_2(    749.0),
-	FLOAT_TO_FIX_2(   714.0),FLOAT_TO_FIX_2(    678.0),FLOAT_TO_FIX_2(    641.5),FLOAT_TO_FIX_2(    605.0),FLOAT_TO_FIX_2(    568.5),FLOAT_TO_FIX_2(    532.0),
-	FLOAT_TO_FIX_2(   495.5),FLOAT_TO_FIX_2(    459.5),FLOAT_TO_FIX_2(    424.0),FLOAT_TO_FIX_2(    389.5),FLOAT_TO_FIX_2(    355.5),FLOAT_TO_FIX_2(    322.5),
-	FLOAT_TO_FIX_2(   290.5),FLOAT_TO_FIX_2(    259.5),FLOAT_TO_FIX_2(    229.5),FLOAT_TO_FIX_2(    200.5),FLOAT_TO_FIX_2(    173.5),FLOAT_TO_FIX_2(    147.0),
-	FLOAT_TO_FIX_2(   122.0),FLOAT_TO_FIX_2(     98.5),FLOAT_TO_FIX_2(     76.5),FLOAT_TO_FIX_2(     55.5),FLOAT_TO_FIX_2(     36.0),FLOAT_TO_FIX_2(     18.0),
-	FLOAT_TO_FIX_2(     1.0),FLOAT_TO_FIX_2(    -14.5),FLOAT_TO_FIX_2(    -28.5),FLOAT_TO_FIX_2(    -41.5),FLOAT_TO_FIX_2(    -53.0),FLOAT_TO_FIX_2(    -63.5),
-	FLOAT_TO_FIX_2(   -73.0),FLOAT_TO_FIX_2(    -81.5),FLOAT_TO_FIX_2(    -88.5),FLOAT_TO_FIX_2(    -94.5),FLOAT_TO_FIX_2(   -100.0),FLOAT_TO_FIX_2(   -104.0),
-	FLOAT_TO_FIX_2(  -107.5),FLOAT_TO_FIX_2(   -110.5),FLOAT_TO_FIX_2(   -112.0),FLOAT_TO_FIX_2(   -113.5),FLOAT_TO_FIX_2(   -114.0),FLOAT_TO_FIX_2(   -114.0),
-	FLOAT_TO_FIX_2(  -113.5),FLOAT_TO_FIX_2(   -112.5),FLOAT_TO_FIX_2(   -111.0),FLOAT_TO_FIX_2(   -109.0),FLOAT_TO_FIX_2(    106.5),FLOAT_TO_FIX_2(    104.0),
-	FLOAT_TO_FIX_2(   101.0),FLOAT_TO_FIX_2(     98.0),FLOAT_TO_FIX_2(     95.0),FLOAT_TO_FIX_2(     91.5),FLOAT_TO_FIX_2(     88.0),FLOAT_TO_FIX_2(     84.5),
-	FLOAT_TO_FIX_2(    80.5),FLOAT_TO_FIX_2(     77.0),FLOAT_TO_FIX_2(     73.5),FLOAT_TO_FIX_2(     69.5),FLOAT_TO_FIX_2(     66.0),FLOAT_TO_FIX_2(     62.5),
-	FLOAT_TO_FIX_2(    58.5),FLOAT_TO_FIX_2(     55.5),FLOAT_TO_FIX_2(     52.0),FLOAT_TO_FIX_2(     48.5),FLOAT_TO_FIX_2(     45.5),FLOAT_TO_FIX_2(     42.5),
-	FLOAT_TO_FIX_2(    39.5),FLOAT_TO_FIX_2(     36.5),FLOAT_TO_FIX_2(     34.0),FLOAT_TO_FIX_2(     31.5),FLOAT_TO_FIX_2(     29.0),FLOAT_TO_FIX_2(     26.5),
-	FLOAT_TO_FIX_2(    24.5),FLOAT_TO_FIX_2(     22.5),FLOAT_TO_FIX_2(     20.5),FLOAT_TO_FIX_2(     19.0),FLOAT_TO_FIX_2(     17.5),FLOAT_TO_FIX_2(     15.5),
-	FLOAT_TO_FIX_2(    14.5),FLOAT_TO_FIX_2(     13.0),FLOAT_TO_FIX_2(     12.0),FLOAT_TO_FIX_2(     10.5),FLOAT_TO_FIX_2(      9.5),FLOAT_TO_FIX_2(      8.5),
-	FLOAT_TO_FIX_2(     8.0),FLOAT_TO_FIX_2(      7.0),FLOAT_TO_FIX_2(      6.5),FLOAT_TO_FIX_2(      5.5),FLOAT_TO_FIX_2(      5.0),FLOAT_TO_FIX_2(      4.5),
-	FLOAT_TO_FIX_2(     4.0),FLOAT_TO_FIX_2(      3.5),FLOAT_TO_FIX_2(      3.5),FLOAT_TO_FIX_2(      3.0),FLOAT_TO_FIX_2(      2.5),FLOAT_TO_FIX_2(      2.5),
-	FLOAT_TO_FIX_2(     2.0),FLOAT_TO_FIX_2(      2.0),FLOAT_TO_FIX_2(      1.5),FLOAT_TO_FIX_2(      1.5),FLOAT_TO_FIX_2(      1.0),FLOAT_TO_FIX_2(      1.0),
-	FLOAT_TO_FIX_2(     1.0),FLOAT_TO_FIX_2(      1.0),FLOAT_TO_FIX_2(      0.5),FLOAT_TO_FIX_2(      0.5),FLOAT_TO_FIX_2(      0.5),FLOAT_TO_FIX_2(      0.5),
-	FLOAT_TO_FIX_2(     0.5),FLOAT_TO_FIX_2(      0.5)
+static const float PLM_AUDIO_SYNTHESIS_WINDOW[] = {
+	     0.0,     -0.5,     -0.5,     -0.5,     -0.5,     -0.5,
+	    -0.5,     -1.0,     -1.0,     -1.0,     -1.0,     -1.5,
+	    -1.5,     -2.0,     -2.0,     -2.5,     -2.5,     -3.0,
+	    -3.5,     -3.5,     -4.0,     -4.5,     -5.0,     -5.5,
+	    -6.5,     -7.0,     -8.0,     -8.5,     -9.5,    -10.5,
+	   -12.0,    -13.0,    -14.5,    -15.5,    -17.5,    -19.0,
+	   -20.5,    -22.5,    -24.5,    -26.5,    -29.0,    -31.5,
+	   -34.0,    -36.5,    -39.5,    -42.5,    -45.5,    -48.5,
+	   -52.0,    -55.5,    -58.5,    -62.5,    -66.0,    -69.5,
+	   -73.5,    -77.0,    -80.5,    -84.5,    -88.0,    -91.5,
+	   -95.0,    -98.0,   -101.0,   -104.0,    106.5,    109.0,
+	   111.0,    112.5,    113.5,    114.0,    114.0,    113.5,
+	   112.0,    110.5,    107.5,    104.0,    100.0,     94.5,
+	    88.5,     81.5,     73.0,     63.5,     53.0,     41.5,
+	    28.5,     14.5,     -1.0,    -18.0,    -36.0,    -55.5,
+	   -76.5,    -98.5,   -122.0,   -147.0,   -173.5,   -200.5,
+	  -229.5,   -259.5,   -290.5,   -322.5,   -355.5,   -389.5,
+	  -424.0,   -459.5,   -495.5,   -532.0,   -568.5,   -605.0,
+	  -641.5,   -678.0,   -714.0,   -749.0,   -783.5,   -817.0,
+	  -849.0,   -879.5,   -908.5,   -935.0,   -959.5,   -981.0,
+	 -1000.5,  -1016.0,  -1028.5,  -1037.5,  -1042.5,  -1043.5,
+	 -1040.0,  -1031.5,   1018.5,   1000.0,    976.0,    946.5,
+	   911.0,    869.5,    822.0,    767.5,    707.0,    640.0,
+	   565.5,    485.0,    397.0,    302.5,    201.0,     92.5,
+	   -22.5,   -144.0,   -272.5,   -407.0,   -547.5,   -694.0,
+	  -846.0,  -1003.0,  -1165.0,  -1331.5,  -1502.0,  -1675.5,
+	 -1852.5,  -2031.5,  -2212.5,  -2394.0,  -2576.5,  -2758.5,
+	 -2939.5,  -3118.5,  -3294.5,  -3467.5,  -3635.5,  -3798.5,
+	 -3955.0,  -4104.5,  -4245.5,  -4377.5,  -4499.0,  -4609.5,
+	 -4708.0,  -4792.5,  -4863.5,  -4919.0,  -4958.0,  -4979.5,
+	 -4983.0,  -4967.5,  -4931.5,  -4875.0,  -4796.0,  -4694.5,
+	 -4569.5,  -4420.0,  -4246.0,  -4046.0,  -3820.0,  -3567.0,
+	  3287.0,   2979.5,   2644.0,   2280.5,   1888.0,   1467.5,
+	  1018.5,    541.0,     35.0,   -499.0,  -1061.0,  -1650.0,
+	 -2266.5,  -2909.0,  -3577.0,  -4270.0,  -4987.5,  -5727.5,
+	 -6490.0,  -7274.0,  -8077.5,  -8899.5,  -9739.0, -10594.5,
+	-11464.5, -12347.0, -13241.0, -14144.5, -15056.0, -15973.5,
+	-16895.5, -17820.0, -18744.5, -19668.0, -20588.0, -21503.0,
+	-22410.5, -23308.5, -24195.0, -25068.5, -25926.5, -26767.0,
+	-27589.0, -28389.0, -29166.5, -29919.0, -30644.5, -31342.0,
+	-32009.5, -32645.0, -33247.0, -33814.5, -34346.0, -34839.5,
+	-35295.0, -35710.0, -36084.5, -36417.5, -36707.5, -36954.0,
+	-37156.5, -37315.0, -37428.0, -37496.0,  37519.0,  37496.0,
+	 37428.0,  37315.0,  37156.5,  36954.0,  36707.5,  36417.5,
+	 36084.5,  35710.0,  35295.0,  34839.5,  34346.0,  33814.5,
+	 33247.0,  32645.0,  32009.5,  31342.0,  30644.5,  29919.0,
+	 29166.5,  28389.0,  27589.0,  26767.0,  25926.5,  25068.5,
+	 24195.0,  23308.5,  22410.5,  21503.0,  20588.0,  19668.0,
+	 18744.5,  17820.0,  16895.5,  15973.5,  15056.0,  14144.5,
+	 13241.0,  12347.0,  11464.5,  10594.5,   9739.0,   8899.5,
+	  8077.5,   7274.0,   6490.0,   5727.5,   4987.5,   4270.0,
+	  3577.0,   2909.0,   2266.5,   1650.0,   1061.0,    499.0,
+	   -35.0,   -541.0,  -1018.5,  -1467.5,  -1888.0,  -2280.5,
+	 -2644.0,  -2979.5,   3287.0,   3567.0,   3820.0,   4046.0,
+	  4246.0,   4420.0,   4569.5,   4694.5,   4796.0,   4875.0,
+	  4931.5,   4967.5,   4983.0,   4979.5,   4958.0,   4919.0,
+	  4863.5,   4792.5,   4708.0,   4609.5,   4499.0,   4377.5,
+	  4245.5,   4104.5,   3955.0,   3798.5,   3635.5,   3467.5,
+	  3294.5,   3118.5,   2939.5,   2758.5,   2576.5,   2394.0,
+	  2212.5,   2031.5,   1852.5,   1675.5,   1502.0,   1331.5,
+	  1165.0,   1003.0,    846.0,    694.0,    547.5,    407.0,
+	   272.5,    144.0,     22.5,    -92.5,   -201.0,   -302.5,
+	  -397.0,   -485.0,   -565.5,   -640.0,   -707.0,   -767.5,
+	  -822.0,   -869.5,   -911.0,   -946.5,   -976.0,  -1000.0,
+	  1018.5,   1031.5,   1040.0,   1043.5,   1042.5,   1037.5,
+	  1028.5,   1016.0,   1000.5,    981.0,    959.5,    935.0,
+	   908.5,    879.5,    849.0,    817.0,    783.5,    749.0,
+	   714.0,    678.0,    641.5,    605.0,    568.5,    532.0,
+	   495.5,    459.5,    424.0,    389.5,    355.5,    322.5,
+	   290.5,    259.5,    229.5,    200.5,    173.5,    147.0,
+	   122.0,     98.5,     76.5,     55.5,     36.0,     18.0,
+	     1.0,    -14.5,    -28.5,    -41.5,    -53.0,    -63.5,
+	   -73.0,    -81.5,    -88.5,    -94.5,   -100.0,   -104.0,
+	  -107.5,   -110.5,   -112.0,   -113.5,   -114.0,   -114.0,
+	  -113.5,   -112.5,   -111.0,   -109.0,    106.5,    104.0,
+	   101.0,     98.0,     95.0,     91.5,     88.0,     84.5,
+	    80.5,     77.0,     73.5,     69.5,     66.0,     62.5,
+	    58.5,     55.5,     52.0,     48.5,     45.5,     42.5,
+	    39.5,     36.5,     34.0,     31.5,     29.0,     26.5,
+	    24.5,     22.5,     20.5,     19.0,     17.5,     15.5,
+	    14.5,     13.0,     12.0,     10.5,      9.5,      8.5,
+	     8.0,      7.0,      6.5,      5.5,      5.0,      4.5,
+	     4.0,      3.5,      3.5,      3.0,      2.5,      2.5,
+	     2.0,      2.0,      1.5,      1.5,      1.0,      1.0,
+	     1.0,      1.0,      0.5,      0.5,      0.5,      0.5,
+	     0.5,      0.5
 };
 
 // Quantizer lookup, step 1: bitrate classes
@@ -3906,10 +3856,8 @@ static const plm_quantizer_spec_t PLM_AUDIO_QUANT_TAB[] = {
 	{ 65535, 0, 16 }   // 17
 };
 
-//#define SOFT_CONVOLVE
-
 struct plm_audio_t {
-	int32_t time;
+	double time;
 	int samples_decoded;
 	int samplerate_index;
 	int bitrate_index;
@@ -3930,11 +3878,9 @@ struct plm_audio_t {
 	int sample[2][32][3];
 
 	plm_samples_t samples;
-	intsample_t V[2][1024];
-#ifdef SOFT_CONVOLVE
-	intsample_t D[1024];
-	intsample_t U[32];
-#endif
+	float D[1024];
+	float V[2][1024];
+	float U[32];
 };
 
 int plm_audio_find_frame_sync(plm_audio_t *self);
@@ -3942,11 +3888,10 @@ int plm_audio_decode_header(plm_audio_t *self);
 void plm_audio_decode_frame(plm_audio_t *self);
 const plm_quantizer_spec_t *plm_audio_read_allocation(plm_audio_t *self, int sb, int tab3);
 void plm_audio_read_samples(plm_audio_t *self, int ch, int sb, int part); 
-void plm_audio_idct36(int s[32][3], int ss, intsample_t *d, int dp);
+void plm_audio_idct36(int s[32][3], int ss, float *d, int dp);
 
 plm_audio_t *plm_audio_create_with_buffer(plm_buffer_t *buffer, int destroy_when_done) {
-	static plm_audio_t instance_audio;
-	plm_audio_t *self = &instance_audio;
+	plm_audio_t *self = (plm_audio_t *)PLM_MALLOC(sizeof(plm_audio_t));
 	memset(self, 0, sizeof(plm_audio_t));
 
 	self->samples.count = PLM_AUDIO_SAMPLES_PER_FRAME;
@@ -3954,10 +3899,9 @@ plm_audio_t *plm_audio_create_with_buffer(plm_buffer_t *buffer, int destroy_when
 	self->destroy_buffer_when_done = destroy_when_done;
 	self->samplerate_index = 3; // Indicates 0
 
-#ifdef SOFT_CONVOLVE
-	memcpy(self->D, PLM_AUDIO_SYNTHESIS_WINDOW, 512 * sizeof(intsample_t));
-	memcpy(self->D + 512, PLM_AUDIO_SYNTHESIS_WINDOW, 512 * sizeof(intsample_t));
-#endif
+	memcpy(self->D, PLM_AUDIO_SYNTHESIS_WINDOW, 512 * sizeof(float));
+	memcpy(self->D + 512, PLM_AUDIO_SYNTHESIS_WINDOW, 512 * sizeof(float));
+
 	// Attempt to decode first header
 	self->next_frame_data_size = plm_audio_decode_header(self);
 
@@ -3986,11 +3930,11 @@ int plm_audio_get_samplerate(plm_audio_t *self) {
 		: 0;
 }
 
-int64_t plm_audio_get_time(plm_audio_t *self) {
+double plm_audio_get_time(plm_audio_t *self) {
 	return self->time;
 }
 
-void plm_audio_set_time(plm_audio_t *self, int64_t time) {
+void plm_audio_set_time(plm_audio_t *self, double time) {
 	self->samples_decoded = time * 
 		(double)PLM_AUDIO_SAMPLE_RATE[self->samplerate_index];
 	self->time = time;
@@ -4029,8 +3973,8 @@ plm_samples_t *plm_audio_decode(plm_audio_t *self) {
 	self->samples.time = self->time;
 
 	self->samples_decoded += PLM_AUDIO_SAMPLES_PER_FRAME;
-	self->time = self->samples_decoded / 
-		PLM_AUDIO_SAMPLE_RATE[self->samplerate_index];
+	self->time = (double)self->samples_decoded / 
+		(double)PLM_AUDIO_SAMPLE_RATE[self->samplerate_index];
 	
 	return &self->samples;
 }
@@ -4136,8 +4080,6 @@ int plm_audio_decode_header(plm_audio_t *self) {
 }
 
 void plm_audio_decode_frame(plm_audio_t *self) {
-	OUT_DEBUG = 11;
-
 	// Prepare the quantizer table lookups
 	int tab3 = 0;
 	int sblimit = 0;
@@ -4151,7 +4093,6 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 	if (self->bound > sblimit) {
 		self->bound = sblimit;
 	}
-	OUT_DEBUG = 12;
 
 	// Read the allocation information
 	for (int sb = 0; sb < self->bound; sb++) {
@@ -4164,7 +4105,6 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 			self->allocation[1][sb] =
 			plm_audio_read_allocation(self, sb, tab3);
 	}
-	OUT_DEBUG = 13;
 
 	// Read scale factor selector information
 	int channels = (self->mode == PLM_AUDIO_MODE_MONO) ? 1 : 2;
@@ -4178,7 +4118,6 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 			self->scale_factor_info[1][sb] = self->scale_factor_info[0][sb];
 		}
 	}
-	OUT_DEBUG = 14;
 
 	// Read scale factors
 	for (int sb = 0; sb < sblimit; sb++) {
@@ -4220,7 +4159,6 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 	int out_pos = 0;
 	for (int part = 0; part < 3; part++) {
 		for (int granule = 0; granule < 4; granule++) {
-			OUT_DEBUG = 15;
 
 			// Read the samples
 			for (int sb = 0; sb < self->bound; sb++) {
@@ -4242,8 +4180,6 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 				self->sample[1][sb][2] = 0;
 			}
 
-			OUT_DEBUG = 16;
-
 			// Synthesis loop
 			for (int p = 0; p < 3; p++) {
 				// Shifting step
@@ -4252,46 +4188,8 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 				for (int ch = 0; ch < 2; ch++) {
 					plm_audio_idct36(self->sample[ch], p, self->V[ch], self->v_pos);
 
-					OUT_DEBUG = 3;
-
-					// Using hardware
-					intsample_t hw_U[32];
-
-					{
-						for (int i = 0; i < 32; ++i) {
-							//*((volatile intsample_t *)OUTPORT)=i;
-
-							int d_index = 512 - (self->v_pos >> 1);
-							int v_index = (self->v_pos % 128) >> 1;
-
-							// calculate the first 8
-							synth_window_mac->result=0;
-							synth_window_mac->addr = &self->V[ch][v_index+i];
-							synth_window_mac->index = d_index+i;
-
-							// step forward
-							v_index += 128*8;
-							d_index += 64*8;
-
-							// second 8 samples
-							d_index -= (512 - 32);
-							v_index = (128 - 32 + 1024) - v_index;
-							// CPU will stall here probably
-							synth_window_mac->addr = &self->V[ch][v_index+i];
-							synth_window_mac->index = d_index+i;
-							// CPU will stall here probably
-
-							hw_U[i] = synth_window_mac->result;
-							//*((volatile intsample_t *)OUTPORT)=hw_U[i];
-						}
-					}
-
-#ifdef SOFT_CONVOLVE
-
-					// With software for reference
 					// Build U, windowing, calculate output
 					memset(self->U, 0, sizeof(self->U));
-					OUT_DEBUG = 3;
 
 					int d_index = 512 - (self->v_pos >> 1);
 					int v_index = (self->v_pos % 128) >> 1;
@@ -4299,10 +4197,10 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 						for (int i = 0; i < 32; ++i) {
 							self->U[i] += self->D[d_index++] * self->V[ch][v_index++];
 						}
+
 						v_index += 128 - 32;
 						d_index += 64 - 32;
 					}
-					OUT_DEBUG = 4;
 
 					d_index -= (512 - 32);
 					v_index = (128 - 32 + 1024) - v_index;
@@ -4315,28 +4213,20 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 						d_index += 64 - 32;
 					}
 
-					// Verify hardware results against software results
-					if (memcmp(hw_U, self->U,sizeof(hw_U)))
-					{
-						*((volatile uint8_t *)OUTPORT)=0x42;
-						//*((volatile uint8_t *)OUTPORT)=0x42;
-						for (int i = 0; i < 32; ++i) {
-							*((volatile uint32_t *)OUTPORT_L)=hw_U[i];
-							*((volatile uint32_t *)OUTPORT_R)=self->U[i];
-						}
-
-						for(;;);
-					}
-#endif
-					OUT_DEBUG = 5;
-					{
-						volatile int16_t *out_channel = ch == 0
-						?((volatile int16_t *)OUT_L) 
-						: ((volatile int16_t *)OUT_R) ;
+					// Output samples
+					#ifdef PLM_AUDIO_SEPARATE_CHANNELS
+						float *out_channel = ch == 0
+							? self->samples.left
+							: self->samples.right;
 						for (int j = 0; j < 32; j++) {
-							*out_channel = hw_U[j] / (0x10000);
+							out_channel[out_pos + j] = self->U[j] / -1090519040.0f;
 						}
-					}
+					#else
+						for (int j = 0; j < 32; j++) {
+							self->samples.interleaved[((out_pos + j) << 1) + ch] = 
+								self->U[j] / -1090519040.0f;
+						}
+					#endif
 				} // End of synthesis channel loop
 				out_pos += 32;
 			} // End of synthesis sub-block loop
@@ -4405,223 +4295,110 @@ void plm_audio_read_samples(plm_audio_t *self, int ch, int sb, int part) {
 	sample[2] = (val * (sf >> 12) + ((val * (sf & 4095) + 2048) >> 12)) >> 12;
 }
 
-void plm_audio_idct36(int s[32][3], int ss, intsample_t *d, int dp)
-{
-	int32_t t01, t02, t03, t04, t05, t06, t07, t08, t09, t10, t11, t12,
+void plm_audio_idct36(int s[32][3], int ss, float *d, int dp) {
+	float t01, t02, t03, t04, t05, t06, t07, t08, t09, t10, t11, t12,
 		t13, t14, t15, t16, t17, t18, t19, t20, t21, t22, t23, t24,
 		t25, t26, t27, t28, t29, t30, t31, t32, t33;
-	OUT_DEBUG=1;
 
-	t01 = (s[0][ss] + s[31][ss]);
-	t02 = (s[0][ss] - s[31][ss]) * FLOAT_TO_FIX_256(0.500602998235f) / MULTDIV;
-	t03 = (s[1][ss] + s[30][ss]);
-	t04 = (s[1][ss] - s[30][ss]) * FLOAT_TO_FIX_256(0.505470959898f) / MULTDIV;
-	t05 = (s[2][ss] + s[29][ss]);
-	t06 = (s[2][ss] - s[29][ss]) * FLOAT_TO_FIX_256(0.515447309923f) / MULTDIV;
-	t07 = (s[3][ss] + s[28][ss]);
-	t08 = (s[3][ss] - s[28][ss]) * FLOAT_TO_FIX_256(0.53104259109f) / MULTDIV;
-	t09 = (s[4][ss] + s[27][ss]);
-	t10 = (s[4][ss] - s[27][ss]) * FLOAT_TO_FIX_256(0.553103896034f) / MULTDIV;
-	t11 = (s[5][ss] + s[26][ss]);
-	t12 = (s[5][ss] - s[26][ss]) * FLOAT_TO_FIX_256(0.582934968206f) / MULTDIV;
-	t13 = (s[6][ss] + s[25][ss]);
-	t14 = (s[6][ss] - s[25][ss]) * FLOAT_TO_FIX_256(0.622504123036f) / MULTDIV;
-	t15 = (s[7][ss] + s[24][ss]);
-	t16 = (s[7][ss] - s[24][ss]) * FLOAT_TO_FIX_256(0.674808341455f) / MULTDIV;
-	t17 = (s[8][ss] + s[23][ss]);
-	t18 = (s[8][ss] - s[23][ss]) * FLOAT_TO_FIX_256(0.744536271002f) / MULTDIV;
-	t19 = (s[9][ss] + s[22][ss]);
-	t20 = (s[9][ss] - s[22][ss]) * FLOAT_TO_FIX_256(0.839349645416f) / MULTDIV;
-	t21 = (s[10][ss] + s[21][ss]);
-	t22 = (s[10][ss] - s[21][ss]) * FLOAT_TO_FIX_256(0.972568237862f) / MULTDIV;
-	t23 = (s[11][ss] + s[20][ss]);
-	t24 = (s[11][ss] - s[20][ss]) * FLOAT_TO_FIX_256(1.16943993343f) / MULTDIV;
-	t25 = (s[12][ss] + s[19][ss]);
-	t26 = (s[12][ss] - s[19][ss]) * FLOAT_TO_FIX_256(1.48416461631f) / MULTDIV;
-	t27 = (s[13][ss] + s[18][ss]);
-	t28 = (s[13][ss] - s[18][ss]) * FLOAT_TO_FIX_256(2.05778100995f) / MULTDIV;
-	t29 = (s[14][ss] + s[17][ss]);
-	t30 = (s[14][ss] - s[17][ss]) * FLOAT_TO_FIX_256(3.40760841847f) / MULTDIV;
-	t31 = (s[15][ss] + s[16][ss]);
-	t32 = (s[15][ss] - s[16][ss]) * FLOAT_TO_FIX_256(10.1900081235f) / MULTDIV;
+	t01 = (float)(s[0][ss] + s[31][ss]); t02 = (float)(s[0][ss] - s[31][ss]) * 0.500602998235f;
+	t03 = (float)(s[1][ss] + s[30][ss]); t04 = (float)(s[1][ss] - s[30][ss]) * 0.505470959898f;
+	t05 = (float)(s[2][ss] + s[29][ss]); t06 = (float)(s[2][ss] - s[29][ss]) * 0.515447309923f;
+	t07 = (float)(s[3][ss] + s[28][ss]); t08 = (float)(s[3][ss] - s[28][ss]) * 0.53104259109f;
+	t09 = (float)(s[4][ss] + s[27][ss]); t10 = (float)(s[4][ss] - s[27][ss]) * 0.553103896034f;
+	t11 = (float)(s[5][ss] + s[26][ss]); t12 = (float)(s[5][ss] - s[26][ss]) * 0.582934968206f;
+	t13 = (float)(s[6][ss] + s[25][ss]); t14 = (float)(s[6][ss] - s[25][ss]) * 0.622504123036f;
+	t15 = (float)(s[7][ss] + s[24][ss]); t16 = (float)(s[7][ss] - s[24][ss]) * 0.674808341455f;
+	t17 = (float)(s[8][ss] + s[23][ss]); t18 = (float)(s[8][ss] - s[23][ss]) * 0.744536271002f;
+	t19 = (float)(s[9][ss] + s[22][ss]); t20 = (float)(s[9][ss] - s[22][ss]) * 0.839349645416f;
+	t21 = (float)(s[10][ss] + s[21][ss]); t22 = (float)(s[10][ss] - s[21][ss]) * 0.972568237862f;
+	t23 = (float)(s[11][ss] + s[20][ss]); t24 = (float)(s[11][ss] - s[20][ss]) * 1.16943993343f;
+	t25 = (float)(s[12][ss] + s[19][ss]); t26 = (float)(s[12][ss] - s[19][ss]) * 1.48416461631f;
+	t27 = (float)(s[13][ss] + s[18][ss]); t28 = (float)(s[13][ss] - s[18][ss]) * 2.05778100995f;
+	t29 = (float)(s[14][ss] + s[17][ss]); t30 = (float)(s[14][ss] - s[17][ss]) * 3.40760841847f;
+	t31 = (float)(s[15][ss] + s[16][ss]); t32 = (float)(s[15][ss] - s[16][ss]) * 10.1900081235f;
 
-	t33 = t01 + t31;
-	t31 = (t01 - t31) * FLOAT_TO_FIX_256(0.502419286188f) / MULTDIV;
-	t01 = t03 + t29;
-	t29 = (t03 - t29) * FLOAT_TO_FIX_256(0.52249861494f) / MULTDIV;
-	t03 = t05 + t27;
-	t27 = (t05 - t27) * FLOAT_TO_FIX_256(0.566944034816f) / MULTDIV;
-	t05 = t07 + t25;
-	t25 = (t07 - t25) * FLOAT_TO_FIX_256(0.64682178336f) / MULTDIV;
-	t07 = t09 + t23;
-	t23 = (t09 - t23) * FLOAT_TO_FIX_256(0.788154623451f) / MULTDIV;
-	t09 = t11 + t21;
-	t21 = (t11 - t21) * FLOAT_TO_FIX_256(1.06067768599f) / MULTDIV;
-	t11 = t13 + t19;
-	t19 = (t13 - t19) * FLOAT_TO_FIX_256(1.72244709824f) / MULTDIV;
-	t13 = t15 + t17;
-	t17 = (t15 - t17) * FLOAT_TO_FIX_256(5.10114861869f) / MULTDIV;
-	t15 = t33 + t13;
-	t13 = (t33 - t13) * FLOAT_TO_FIX_256(0.509795579104f) / MULTDIV;
-	t33 = t01 + t11;
-	t01 = (t01 - t11) * FLOAT_TO_FIX_256(0.601344886935f) / MULTDIV;
-	t11 = t03 + t09;
-	t09 = (t03 - t09) * FLOAT_TO_FIX_256(0.899976223136f) / MULTDIV;
-	t03 = t05 + t07;
-	t07 = (t05 - t07) * FLOAT_TO_FIX_256(2.56291544774f) / MULTDIV;
-	t05 = t15 + t03;
-	t15 = (t15 - t03) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
-	t03 = t33 + t11;
-	t11 = (t33 - t11) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
-	t33 = t05 + t03;
-	t05 = (t05 - t03) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t03 = t15 + t11;
-	t15 = (t15 - t11) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t33 = t01 + t31; t31 = (t01 - t31) * 0.502419286188f;
+	t01 = t03 + t29; t29 = (t03 - t29) * 0.52249861494f;
+	t03 = t05 + t27; t27 = (t05 - t27) * 0.566944034816f;
+	t05 = t07 + t25; t25 = (t07 - t25) * 0.64682178336f;
+	t07 = t09 + t23; t23 = (t09 - t23) * 0.788154623451f;
+	t09 = t11 + t21; t21 = (t11 - t21) * 1.06067768599f;
+	t11 = t13 + t19; t19 = (t13 - t19) * 1.72244709824f;
+	t13 = t15 + t17; t17 = (t15 - t17) * 5.10114861869f;
+	t15 = t33 + t13; t13 = (t33 - t13) * 0.509795579104f;
+	t33 = t01 + t11; t01 = (t01 - t11) * 0.601344886935f;
+	t11 = t03 + t09; t09 = (t03 - t09) * 0.899976223136f;
+	t03 = t05 + t07; t07 = (t05 - t07) * 2.56291544774f;
+	t05 = t15 + t03; t15 = (t15 - t03) * 0.541196100146f;
+	t03 = t33 + t11; t11 = (t33 - t11) * 1.30656296488f;
+	t33 = t05 + t03; t05 = (t05 - t03) * 0.707106781187f;
+	t03 = t15 + t11; t15 = (t15 - t11) * 0.707106781187f;
 	t03 += t15;
-	t11 = t13 + t07;
-	t13 = (t13 - t07) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
-	t07 = t01 + t09;
-	t09 = (t01 - t09) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
-	t01 = t11 + t07;
-	t07 = (t11 - t07) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t11 = t13 + t09;
-	t13 = (t13 - t09) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t11 += t13;
-	t01 += t11;
-	t11 += t07;
-	t07 += t13;
-	t09 = t31 + t17;
-	t31 = (t31 - t17) * FLOAT_TO_FIX_256(0.509795579104f) / MULTDIV;
-	t17 = t29 + t19;
-	t29 = (t29 - t19) * FLOAT_TO_FIX_256(0.601344886935f) / MULTDIV;
-	t19 = t27 + t21;
-	t21 = (t27 - t21) * FLOAT_TO_FIX_256(0.899976223136f) / MULTDIV;
-	t27 = t25 + t23;
-	t23 = (t25 - t23) * FLOAT_TO_FIX_256(2.56291544774f) / MULTDIV;
-	t25 = t09 + t27;
-	t09 = (t09 - t27) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
-	t27 = t17 + t19;
-	t19 = (t17 - t19) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
-	t17 = t25 + t27;
-	t27 = (t25 - t27) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t25 = t09 + t19;
-	t19 = (t09 - t19) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t11 = t13 + t07; t13 = (t13 - t07) * 0.541196100146f;
+	t07 = t01 + t09; t09 = (t01 - t09) * 1.30656296488f;
+	t01 = t11 + t07; t07 = (t11 - t07) * 0.707106781187f;
+	t11 = t13 + t09; t13 = (t13 - t09) * 0.707106781187f;
+	t11 += t13; t01 += t11;
+	t11 += t07; t07 += t13;
+	t09 = t31 + t17; t31 = (t31 - t17) * 0.509795579104f;
+	t17 = t29 + t19; t29 = (t29 - t19) * 0.601344886935f;
+	t19 = t27 + t21; t21 = (t27 - t21) * 0.899976223136f;
+	t27 = t25 + t23; t23 = (t25 - t23) * 2.56291544774f;
+	t25 = t09 + t27; t09 = (t09 - t27) * 0.541196100146f;
+	t27 = t17 + t19; t19 = (t17 - t19) * 1.30656296488f;
+	t17 = t25 + t27; t27 = (t25 - t27) * 0.707106781187f;
+	t25 = t09 + t19; t19 = (t09 - t19) * 0.707106781187f;
 	t25 += t19;
-	t09 = t31 + t23;
-	t31 = (t31 - t23) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
-	t23 = t29 + t21;
-	t21 = (t29 - t21) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
-	t29 = t09 + t23;
-	t23 = (t09 - t23) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t09 = t31 + t21;
-	t31 = (t31 - t21) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t09 += t31;
-	t29 += t09;
-	t09 += t23;
-	t23 += t31;
-	t17 += t29;
-	t29 += t25;
-	t25 += t09;
-	t09 += t27;
-	t27 += t23;
-	t23 += t19;
-	t19 += t31;
-	t21 = t02 + t32;
-	t02 = (t02 - t32) * FLOAT_TO_FIX_256(0.502419286188f) / MULTDIV;
-	t32 = t04 + t30;
-	t04 = (t04 - t30) * FLOAT_TO_FIX_256(0.52249861494f) / MULTDIV;
-	t30 = t06 + t28;
-	t28 = (t06 - t28) * FLOAT_TO_FIX_256(0.566944034816f) / MULTDIV;
-	t06 = t08 + t26;
-	t08 = (t08 - t26) * FLOAT_TO_FIX_256(0.64682178336f) / MULTDIV;
-	t26 = t10 + t24;
-	t10 = (t10 - t24) * FLOAT_TO_FIX_256(0.788154623451f) / MULTDIV;
-	t24 = t12 + t22;
-	t22 = (t12 - t22) * FLOAT_TO_FIX_256(1.06067768599f) / MULTDIV;
-	t12 = t14 + t20;
-	t20 = (t14 - t20) * FLOAT_TO_FIX_256(1.72244709824f) / MULTDIV;
-	t14 = t16 + t18;
-	t16 = (t16 - t18) * FLOAT_TO_FIX_256(5.10114861869f) / MULTDIV;
-	t18 = t21 + t14;
-	t14 = (t21 - t14) * FLOAT_TO_FIX_256(0.509795579104f) / MULTDIV;
-	t21 = t32 + t12;
-	t32 = (t32 - t12) * FLOAT_TO_FIX_256(0.601344886935f) / MULTDIV;
-	t12 = t30 + t24;
-	t24 = (t30 - t24) * FLOAT_TO_FIX_256(0.899976223136f) / MULTDIV;
-	t30 = t06 + t26;
-	t26 = (t06 - t26) * FLOAT_TO_FIX_256(2.56291544774f) / MULTDIV;
-	t06 = t18 + t30;
-	t18 = (t18 - t30) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
-	t30 = t21 + t12;
-	t12 = (t21 - t12) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
-	t21 = t06 + t30;
-	t30 = (t06 - t30) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t06 = t18 + t12;
-	t12 = (t18 - t12) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t09 = t31 + t23; t31 = (t31 - t23) * 0.541196100146f;
+	t23 = t29 + t21; t21 = (t29 - t21) * 1.30656296488f;
+	t29 = t09 + t23; t23 = (t09 - t23) * 0.707106781187f;
+	t09 = t31 + t21; t31 = (t31 - t21) * 0.707106781187f;
+	t09 += t31;	t29 += t09;	t09 += t23;	t23 += t31;
+	t17 += t29;	t29 += t25;	t25 += t09;	t09 += t27;
+	t27 += t23;	t23 += t19; t19 += t31;
+	t21 = t02 + t32; t02 = (t02 - t32) * 0.502419286188f;
+	t32 = t04 + t30; t04 = (t04 - t30) * 0.52249861494f;
+	t30 = t06 + t28; t28 = (t06 - t28) * 0.566944034816f;
+	t06 = t08 + t26; t08 = (t08 - t26) * 0.64682178336f;
+	t26 = t10 + t24; t10 = (t10 - t24) * 0.788154623451f;
+	t24 = t12 + t22; t22 = (t12 - t22) * 1.06067768599f;
+	t12 = t14 + t20; t20 = (t14 - t20) * 1.72244709824f;
+	t14 = t16 + t18; t16 = (t16 - t18) * 5.10114861869f;
+	t18 = t21 + t14; t14 = (t21 - t14) * 0.509795579104f;
+	t21 = t32 + t12; t32 = (t32 - t12) * 0.601344886935f;
+	t12 = t30 + t24; t24 = (t30 - t24) * 0.899976223136f;
+	t30 = t06 + t26; t26 = (t06 - t26) * 2.56291544774f;
+	t06 = t18 + t30; t18 = (t18 - t30) * 0.541196100146f;
+	t30 = t21 + t12; t12 = (t21 - t12) * 1.30656296488f;
+	t21 = t06 + t30; t30 = (t06 - t30) * 0.707106781187f;
+	t06 = t18 + t12; t12 = (t18 - t12) * 0.707106781187f;
 	t06 += t12;
-	t18 = t14 + t26;
-	t26 = (t14 - t26) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
-	t14 = t32 + t24;
-	t24 = (t32 - t24) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
-	t32 = t18 + t14;
-	t14 = (t18 - t14) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t18 = t26 + t24;
-	t24 = (t26 - t24) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t18 += t24;
-	t32 += t18;
-	t18 += t14;
-	t26 = t14 + t24;
-	t14 = t02 + t16;
-	t02 = (t02 - t16) * FLOAT_TO_FIX_256(0.509795579104f) / MULTDIV;
-	t16 = t04 + t20;
-	t04 = (t04 - t20) * FLOAT_TO_FIX_256(0.601344886935f) / MULTDIV;
-	t20 = t28 + t22;
-	t22 = (t28 - t22) * FLOAT_TO_FIX_256(0.899976223136f) / MULTDIV;
-	t28 = t08 + t10;
-	t10 = (t08 - t10) * FLOAT_TO_FIX_256(2.56291544774f) / MULTDIV;
-	t08 = t14 + t28;
-	t14 = (t14 - t28) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
-	t28 = t16 + t20;
-	t20 = (t16 - t20) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
-	t16 = t08 + t28;
-	t28 = (t08 - t28) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t08 = t14 + t20;
-	t20 = (t14 - t20) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
+	t18 = t14 + t26; t26 = (t14 - t26) * 0.541196100146f;
+	t14 = t32 + t24; t24 = (t32 - t24) * 1.30656296488f;
+	t32 = t18 + t14; t14 = (t18 - t14) * 0.707106781187f;
+	t18 = t26 + t24; t24 = (t26 - t24) * 0.707106781187f;
+	t18 += t24; t32 += t18;
+	t18 += t14; t26 = t14 + t24;
+	t14 = t02 + t16; t02 = (t02 - t16) * 0.509795579104f;
+	t16 = t04 + t20; t04 = (t04 - t20) * 0.601344886935f;
+	t20 = t28 + t22; t22 = (t28 - t22) * 0.899976223136f;
+	t28 = t08 + t10; t10 = (t08 - t10) * 2.56291544774f;
+	t08 = t14 + t28; t14 = (t14 - t28) * 0.541196100146f;
+	t28 = t16 + t20; t20 = (t16 - t20) * 1.30656296488f;
+	t16 = t08 + t28; t28 = (t08 - t28) * 0.707106781187f;
+	t08 = t14 + t20; t20 = (t14 - t20) * 0.707106781187f;
 	t08 += t20;
-	t14 = t02 + t10;
-	t02 = (t02 - t10) * FLOAT_TO_FIX_256(0.541196100146f) / MULTDIV;
-	t10 = t04 + t22;
-	t22 = (t04 - t22) * FLOAT_TO_FIX_256(1.30656296488f) / MULTDIV;
-	t04 = t14 + t10;
-	t10 = (t14 - t10) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t14 = t02 + t22;
-	t02 = (t02 - t22) * FLOAT_TO_FIX_256(0.707106781187f) / MULTDIV;
-	t14 += t02;
-	t04 += t14;
-	t14 += t10;
-	t10 += t02;
-	t16 += t04;
-	t04 += t08;
-	t08 += t14;
-	t14 += t28;
-	t28 += t10;
-	t10 += t20;
-	t20 += t02;
-	t21 += t16;
-	t16 += t32;
-	t32 += t04;
-	t04 += t06;
-	t06 += t08;
-	t08 += t18;
-	t18 += t14;
-	t14 += t30;
-	t30 += t28;
-	t28 += t26;
-	t26 += t10;
-	t10 += t12;
-	t12 += t20;
-	t20 += t24;
-	t24 += t02;
+	t14 = t02 + t10; t02 = (t02 - t10) * 0.541196100146f;
+	t10 = t04 + t22; t22 = (t04 - t22) * 1.30656296488f;
+	t04 = t14 + t10; t10 = (t14 - t10) * 0.707106781187f;
+	t14 = t02 + t22; t02 = (t02 - t22) * 0.707106781187f;
+	t14 += t02;	t04 += t14;	t14 += t10;	t10 += t02;
+	t16 += t04;	t04 += t08;	t08 += t14;	t14 += t28;
+	t28 += t10;	t10 += t20;	t20 += t02;	t21 += t16;
+	t16 += t32;	t32 += t04;	t04 += t06;	t06 += t08;
+	t08 += t18;	t18 += t14;	t14 += t30;	t30 += t28;
+	t28 += t26;	t26 += t10;	t10 += t12;	t12 += t20;
+	t20 += t24;	t24 += t02;
 
 	d[dp + 48] = -t33;
 	d[dp + 49] = d[dp + 47] = -t21;
@@ -4640,40 +4417,23 @@ void plm_audio_idct36(int s[32][3], int ss, intsample_t *d, int dp)
 	d[dp + 62] = d[dp + 34] = -t09;
 	d[dp + 63] = d[dp + 33] = -t14;
 	d[dp + 32] = -t05;
-	d[dp + 0] = t05;
-	d[dp + 31] = -t30;
-	d[dp + 1] = t30;
-	d[dp + 30] = -t27;
-	d[dp + 2] = t27;
-	d[dp + 29] = -t28;
-	d[dp + 3] = t28;
-	d[dp + 28] = -t07;
-	d[dp + 4] = t07;
-	d[dp + 27] = -t26;
-	d[dp + 5] = t26;
-	d[dp + 26] = -t23;
-	d[dp + 6] = t23;
-	d[dp + 25] = -t10;
-	d[dp + 7] = t10;
-	d[dp + 24] = -t15;
-	d[dp + 8] = t15;
-	d[dp + 23] = -t12;
-	d[dp + 9] = t12;
-	d[dp + 22] = -t19;
-	d[dp + 10] = t19;
-	d[dp + 21] = -t20;
-	d[dp + 11] = t20;
-	d[dp + 20] = -t13;
-	d[dp + 12] = t13;
-	d[dp + 19] = -t24;
-	d[dp + 13] = t24;
-	d[dp + 18] = -t31;
-	d[dp + 14] = t31;
-	d[dp + 17] = -t02;
-	d[dp + 15] = t02;
-	d[dp + 16] = 0.0;
-
-	OUT_DEBUG=2;
+	d[dp + 0] = t05; d[dp + 31] = -t30;
+	d[dp + 1] = t30; d[dp + 30] = -t27;
+	d[dp + 2] = t27; d[dp + 29] = -t28;
+	d[dp + 3] = t28; d[dp + 28] = -t07;
+	d[dp + 4] = t07; d[dp + 27] = -t26;
+	d[dp + 5] = t26; d[dp + 26] = -t23;
+	d[dp + 6] = t23; d[dp + 25] = -t10;
+	d[dp + 7] = t10; d[dp + 24] = -t15;
+	d[dp + 8] = t15; d[dp + 23] = -t12;
+	d[dp + 9] = t12; d[dp + 22] = -t19;
+	d[dp + 10] = t19; d[dp + 21] = -t20;
+	d[dp + 11] = t20; d[dp + 20] = -t13;
+	d[dp + 12] = t13; d[dp + 19] = -t24;
+	d[dp + 13] = t24; d[dp + 18] = -t31;
+	d[dp + 14] = t31; d[dp + 17] = -t02;
+	d[dp + 15] = t02; d[dp + 16] = 0.0;
 }
+
 
 #endif // PL_MPEG_IMPLEMENTATION

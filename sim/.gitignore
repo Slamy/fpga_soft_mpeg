@@ -6,3 +6,5 @@
 /audio.wav
 *.mp3
 *.mpg
+*.mov
+*.mov.idxb

@@ -23,7 +23,7 @@
 #include <verilated_vcd_c.h>
 #include <csignal>
 
-//#define TRACE
+#define TRACE
 
 volatile sig_atomic_t status = 0;
 
