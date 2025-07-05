@@ -7,16 +7,16 @@ module top_vexii (
     input resetn
 );
 
-    bit signed [34:0] fifo_water_level[2];
+    bit signed [34:0] fifo_water_level;
     bit [34:0] ticks_since_playback_started;
-    bit [34:0] samples_decoded;
+    bit [34:0] frames_decoded;
 
     bit fifo_nearly_empty;
 
     bit [31:0] mpeg_video_rom[202752];
     initial $readmemh("fmv.mem", mpeg_video_rom);
 
-    bit [31:0] memory[500000];
+    bit [31:0] memory[500000] /*verilator public_flat_rd*/;
     initial $readmemh("../sw/firmware.mem", memory);
 
     // sbt "Test/runMain vexiiriscv.Generate --with-rvm --with-rvc --region base=00000000,size=80000000,main=1,exe=1 --allow-bypass-from=0"
@@ -81,9 +81,8 @@ module top_vexii (
 
     bit debugflag = 0;
 
-    wire [31:0] sample  /*verilator public_flat_rd*/ = dmem_cmd_payload_data;
-    wire sample_left_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000010 && dmem_cmd_payload_write && dmem_cmd_valid) ;
-    wire sample_right_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000020 && dmem_cmd_payload_write&& dmem_cmd_valid) ;
+    wire [31:0] frame_adr /*verilator public_flat_rd*/ = dmem_cmd_payload_data;
+    wire expose_frame /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000010 && dmem_cmd_payload_write && dmem_cmd_valid) ;
     bit [31:0] soft_state = 0;
 
 
@@ -152,8 +151,8 @@ module top_vexii (
         if (dmem_cmd_payload_address[31:28] == 4'd3) dmem_cmd_ready = !mac_state;
     end
 
-    // Assuming 30 MHz clock rate and 44100 Hz sample rate
-    localparam TICKS_PER_SAMPLE = 680;
+    // Assuming 30 MHz clock rate and 25 Hz frame rate
+    localparam TICKS_PER_FRAME = 1200000;
 
     always_ff @(posedge clk) begin
         debugflag <= 0;
@@ -166,28 +165,29 @@ module top_vexii (
             soft_state <= dmem_cmd_payload_data;
 
         if (draining_fifo) begin
-            fifo_water_level[0] <= fifo_water_level[0] - 1;
-            fifo_water_level[1] <= fifo_water_level[1] - 1;
+            fifo_water_level <= fifo_water_level - 1;
             ticks_since_playback_started <= ticks_since_playback_started + 1;
         end
 
-        if (sample_left_write) fifo_water_level[0] <= fifo_water_level[0] + TICKS_PER_SAMPLE;
-        if (sample_right_write) fifo_water_level[1] <= fifo_water_level[1] + TICKS_PER_SAMPLE;
-        if (sample_left_write) samples_decoded <= samples_decoded + 1;
+        if (expose_frame) begin
+            fifo_water_level <= fifo_water_level + TICKS_PER_FRAME;
+            frames_decoded <= frames_decoded + 1;
+        end
 
-        fifo_nearly_empty <= (fifo_water_level[0] < (TICKS_PER_SAMPLE*4)) || (fifo_water_level[1] < (TICKS_PER_SAMPLE*4));
+        fifo_nearly_empty <= (fifo_water_level < (TICKS_PER_FRAME / 2));
 
-        // With 40 samples available, we start the playback
-        if (fifo_water_level[0] > (TICKS_PER_SAMPLE * 40)) draining_fifo <= 1;
+        // With 2 frames available, we start the playback
+        if (fifo_water_level >= (TICKS_PER_FRAME * 2)) draining_fifo <= 1;
 
         if (dmem_cmd_payload_address == 32'h10000000 && dmem_cmd_valid && dmem_cmd_payload_write)
             $display(
-                "Debug out %x  Waterlevel: %d %d Samples decoded: %d  Samples played: %d  Load: %d %%",
+                "Debug out %x  Waterlevel: %d Samples decoded: %d  Samples played: %d  Load: %d %%",
                 dmem_cmd_payload_data,
-                fifo_water_level[0] / TICKS_PER_SAMPLE,
-                fifo_water_level[1] / TICKS_PER_SAMPLE, samples_decoded,
-                ticks_since_playback_started / TICKS_PER_SAMPLE,
-                (ticks_since_playback_started / TICKS_PER_SAMPLE) * 100 / samples_decoded);
+                fifo_water_level / TICKS_PER_FRAME,
+                frames_decoded,
+                ticks_since_playback_started / TICKS_PER_FRAME,
+                (ticks_since_playback_started / TICKS_PER_FRAME) * 100 / frames_decoded
+            );
 
         if (dmem_cmd_valid && dmem_cmd_ready) begin
             dmem_rsp_payload_id <= dmem_cmd_payload_id;
@@ -222,16 +222,16 @@ module top_vexii (
                 4'd0: begin
                     if (dmem_cmd_payload_write) begin
                         if (dmem_cmd_payload_mask[0])
-                            memory[dmem_cmd_payload_address>>2][31:24] <= dmem_cmd_payload_data[7:0];
+                            memory[dmem_cmd_payload_address>>2][7:0] <= dmem_cmd_payload_data[7:0];
                         if (dmem_cmd_payload_mask[1])
-                            memory[dmem_cmd_payload_address>>2][23:16] <= dmem_cmd_payload_data[15:8];
+                            memory[dmem_cmd_payload_address>>2][15:8] <= dmem_cmd_payload_data[15:8];
                         if (dmem_cmd_payload_mask[2])
-                            memory[dmem_cmd_payload_address>>2][15:8] <= dmem_cmd_payload_data[23:16];
+                            memory[dmem_cmd_payload_address>>2][23:16] <= dmem_cmd_payload_data[23:16];
                         if (dmem_cmd_payload_mask[3])
-                            memory[dmem_cmd_payload_address>>2][7:0] <= dmem_cmd_payload_data[31:24];
+                            memory[dmem_cmd_payload_address>>2][31:24] <= dmem_cmd_payload_data[31:24];
                     end else begin
                         dmem_rsp_payload_data <=
-                            reverse_endian_32(memory[dmem_cmd_payload_address>>2]);
+                            memory[dmem_cmd_payload_address>>2];
                     end
                 end
                 default: ;
@@ -241,7 +241,7 @@ module top_vexii (
         if (imem_cmd_valid) begin
             imem_rsp_valid <= 1;
             imem_rsp_payload_id <= imem_cmd_payload_id;
-            imem_rsp_payload_word <= reverse_endian_32(memory[imem_cmd_payload_address>>2]);
+            imem_rsp_payload_word <= memory[imem_cmd_payload_address>>2];
         end
     end
 endmodule
