@@ -2856,7 +2856,8 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 	if (!plm_video_has_header(self)) {
 		return NULL;
 	}
-	
+	OUT_DEBUG = 2;
+
 	plm_frame_t *frame = NULL;
 	do {
 		if (self->start_code != PLM_START_PICTURE) {
@@ -3038,6 +3039,8 @@ void plm_video_init_frame(plm_video_t *self, plm_frame_t *frame, uint8_t *base) 
 }
 
 void plm_video_decode_picture(plm_video_t *self) {
+	OUT_DEBUG = 3;
+
 	plm_buffer_skip(self->buffer, 10); // skip temporalReference
 	self->picture_type = plm_buffer_read(self->buffer, 3);
 	plm_buffer_skip(self->buffer, 16); // skip vbv_delay
@@ -3385,6 +3388,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 
 	int n = 0;
 	uint8_t *quant_matrix;
+	OUT_DEBUG = 5;
 
 	// Decode DC coefficient of intra-coded blocks
 	if (self->macroblock_intra) {
@@ -3426,6 +3430,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 	// Decode AC coefficients (+DC for non-intra)
 	int level = 0;
 	while (TRUE) {
+		OUT_DEBUG = 30;
 		int run = 0;
 		uint16_t coeff = plm_buffer_read_vlc_uint(self->buffer, PLM_VIDEO_DCT_COEFF);
 
@@ -3460,6 +3465,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 			return; // invalid
 		}
 
+		OUT_DEBUG = 31;
 		int de_zig_zagged = PLM_VIDEO_ZIG_ZAG[n];
 		n++;
 
@@ -3482,6 +3488,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 		// Save premultiplied coefficient
 		self->block_data[de_zig_zagged] = level * PLM_VIDEO_PREMULTIPLIER_MATRIX[de_zig_zagged];
 	}
+	OUT_DEBUG = 6;
 
 	// Move block to its place
 	uint8_t *d;
@@ -3533,12 +3540,16 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 			memset(self->block_data, 0, sizeof(self->block_data));
 		}
 	}
+	OUT_DEBUG = 12;
+
 }
 
 void plm_video_idct(int *block) {
 	int
 		b1, b3, b4, b6, b7, tmp1, tmp2, m0,
 		x0, x1, x2, x3, x4, y3, y4, y5, y6, y7;
+
+	OUT_DEBUG = 10;
 
 	// Transform columns
 	for (int i = 0; i < 8; ++i) {
@@ -3599,6 +3610,9 @@ void plm_video_idct(int *block) {
 		block[6 + i] = (y3 - x4 + 128) >> 8;
 		block[7 + i] = (y4 - b7 + 128) >> 8;
 	}
+
+	OUT_DEBUG = 11;
+
 }
 
 // YCbCr conversion following the BT.601 standard:
