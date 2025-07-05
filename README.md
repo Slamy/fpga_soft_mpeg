@@ -62,26 +62,37 @@ to ensure that the hardware calculated results are correct.
 
 The md5sum of the result files are expected as
 
-    79760cffd1c68a6fdf274914e0615345  audio_left.bin
-    2b3c0967edf05c3f25052cd4ed69d34c  audio_right.bin
+b67bb1b9852c4a398c4421da4d8a71e1  000000.bmp
+c133cca150ce192cb4c7ab84fc08e5f2  000001.bmp
+d6a6127baa36a3c76e78a8e20a673785  000002.bmp
+60c286f412d1aacec860f859845999d3  000003.bmp
+d42defd97f3309d6131c3d5f3ead4fd9  000004.bmp
+dbeb8d885aa6b30ac728fac6e77fe3c3  000005.bmp
+4bfd5f723b0839aad760f5a74424a52f  000006.bmp
+a8883c94d5243ff1e3b4e3a2906e3cbe  000007.bmp
+b11d6545a70b233706b45411d748157a  000008.bmp
+7213f070a21117a1575fb556077d3716  000009.bmp
+4fee8c20cff8d5d29f7d31d96db91337  000010.bmp
+99bc8d1437bbda60bdf2934a4af8079f  000011.bmp
+90a15172dc61e379e9434dd1f1642991  000012.bmp
+d290f5e879589467ed3dbba455bb09c5  000013.bmp
+c61b6f5b0d210f0c9b890dd1b3aa67fb  000014.bmp
+376419974f425c8f0c6a3dde00546145  000015.bmp
+5cc44b079c1f2d21af773e75bb357e88  000016.bmp
+265e26344119f0a7d134cb096888ddea  000017.bmp
+4e03ddf84d23028043de7331902d232b  000018.bmp
 
-### Benchmarks with vector math acceleration unit
+Laptop
 
-After some evaluation, it turns out that VexiiRiscv with TileLink is the most efficient solution, since only 47% of the clock ticks were
-required to keep up with the incoming data stream.
-Picorv32 is too slow, even with hardware acceleration.
+b67bb1b9852c4a398c4421da4d8a71e1  000000.bmp
+869d23413a83b63826ed53a478b5e7e7  000001.bmp
+24c5deef6a16e5b30c551886c3f19a21  000002.bmp
+a185d9be0a0d3bc0dd60b69f55bd4c73  000003.bmp
+8a5f1f2664974df8ebd45d438d045d17  000004.bmp
+416649bf88e6640f6d10025d111c054f  000005.bmp
+08c275f3b44ca5f8fec45284f6e7880a  000006.bmp
 
-    Debug out a1a1a1a1  Waterlevel:        98008        98008 Samples decoded:      186624  Samples played:       88889  Load:          47 %   vexii
-    Debug out a1a1a1a1  Waterlevel:        61851        61851 Samples decoded:      186624  Samples played:      125047  Load:          67 %   vexiiwb
-    Debug out a1a1a1a1  Waterlevel:       -76603       -76603 Samples decoded:      186624  Samples played:      263501  Load:         141 %   picorv32
+### Benchmarks
 
-### Benchmarks using only the soft core
-
-Running pl_mpeg without any modifications, shows how inefficient the RISC V implementations are when it comes to execute Multiply-Accumulate operations.
-It might be possible that a RISC V with vector instructions and the correct compiler can fix this problem though.
-
-    Debug out a1a1a1a1  Waterlevel:       -22333       -22333 Samples decoded:      186624  Samples played:      209231  Load:         112 %   vexii
-    Debug out a1a1a1a1  Waterlevel:      -125639      -125639 Samples decoded:      186624  Samples played:      312537  Load:         167 %   vexiiwb
-    Debug out a1a1a1a1  Waterlevel:      -444427      -444427 Samples decoded:      186624  Samples played:      631325  Load:         338 %   picorv32
-
+Debug out 62626262  Waterlevel:         -382 Samples decoded:          99  Samples played:         481  Load:         485 %
 

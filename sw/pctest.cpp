@@ -9,11 +9,42 @@
 #include <filesystem>
 
 #define PL_MPEG_IMPLEMENTATION
-#include "pl_mpeg/pl_mpeg.h"
+#include "pl_mpeg.h"
+
+int write_bmp(const char *path, int width, int height, uint8_t *pixels)
+{
+	FILE *fh = fopen(path, "wb");
+	if (!fh)
+	{
+		return 0;
+	}
+
+	int padded_width = (width * 3 + 3) & (~3);
+	int padding = padded_width - (width * 3);
+	int data_size = padded_width * height;
+	int file_size = 54 + data_size;
+
+	fwrite("BM", 1, 2, fh);
+	fwrite(&file_size, 1, 4, fh);
+	fwrite("\x00\x00\x00\x00\x36\x00\x00\x00\x28\x00\x00\x00", 1, 12, fh);
+	fwrite(&width, 1, 4, fh);
+	fwrite(&height, 1, 4, fh);
+	fwrite("\x01\x00\x18\x00\x00\x00\x00\x00", 1, 8, fh); // planes, bpp, compression
+	fwrite(&data_size, 1, 4, fh);
+	fwrite("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 1, 16, fh);
+
+	for (int y = height - 1; y >= 0; y--)
+	{
+		fwrite(pixels + y * width * 3, 3, width, fh);
+		fwrite("\x00\x00\x00\x00", 1, padding, fh);
+	}
+	fclose(fh);
+	return file_size;
+}
 
 int main(void)
 {
-	const char *path = "../sim/fma.bin";
+	const char *path = "../sim/fmv.mpg";
 	// const char *path = "/home/andre/GIT/MPEG1_Handbook/bunny.mp2";
 
 #if 1
@@ -33,36 +64,44 @@ int main(void)
 	assert(buffer);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
 	assert(mpeg);
-	//plm_audio_t *mpeg_audio = plm_audio_create_with_buffer(buffer, 0);
-	//assert(mpeg_audio);
+	// plm_audio_t *mpeg_audio = plm_audio_create_with_buffer(buffer, 0);
+	// assert(mpeg_audio);
+	plm_set_audio_enabled(mpeg, FALSE);
+
+	int w = plm_get_width(mpeg);
+	int h = plm_get_height(mpeg);
+	uint8_t *pixels = (uint8_t *)malloc(w * h * 3);
+
 #else
 	plm_t *mpeg = plm_create_with_filename(path);
 
 #endif
 	FILE *outfile = fopen("samples.bin", "wb");
+	char bmp_name[16];
+	int cnt = 0;
 
 	for (;;)
 	{
 
-#if 0
-		plm_samples_t *samples = plm_audio_decode(mpeg_audio);
-#else
-		plm_samples_t *samples = plm_decode_audio(mpeg);
-#endif
-		if (samples)
+		plm_frame_t *frame = plm_decode_video(mpeg);
+
+		if (frame)
 		{
-			fwrite(samples->interleaved, sizeof(int16_t), samples->count * 2, outfile);
-			// printf("Samples %d\n", samples->count);
+			// Give some feedback to the user that we are running
+			plm_frame_to_bgr(frame, pixels, w * 3); // BMP expects BGR ordering
+
+			sprintf(bmp_name, "%06d.bmp", cnt);
+			printf("Writing %s\n", bmp_name);
+			write_bmp(bmp_name, w, h, pixels);
+			cnt++;
 		}
 		else
 		{
-			printf("Underflow!\n");
+			// End simulation since the MPEG stream has ended
 			break;
 		}
 	}
-	// aplay -f float_le samples.bin  -r 44100 -c2
 	// g++ -g pctest.cpp  && ./a.out
-	// g++ -g pctest.cpp  && ./a.out && aplay -f cd samples.bin
 	fclose(outfile);
 
 	return 0;

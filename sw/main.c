@@ -23,21 +23,16 @@ struct synth_window_mac
 volatile struct synth_window_mac *synth_window_mac = (volatile struct synth_window_mac *)0x30000000;
 
 #define OUTPORT 0x10000000
-#define OUTPORT_L 0x10000004
-#define OUTPORT_R 0x10000008
 #define OUTPORT_END 0x1000000c
-
-#define OUT_L 0x10000010
-#define OUT_R 0x10000020
+#define OUTPORT_FRAME 0x10000010
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
 
 extern caddr_t _end; /* _end is set in the linker command file */
+extern caddr_t _sp;	 /* _end is set in the linker command file */
 /* just in case, most boards have at least some memory */
 #ifndef RAMSIZE
-#define RAMSIZE (caddr_t)0x100000
+#define RAMSIZE (caddr_t)(1024 * 1024 * 4)
 #endif
-
-
 
 void print_chr(char ch);
 void print_str(const char *p);
@@ -48,7 +43,6 @@ void stop_verilator();
 #define PL_MPEG_IMPLEMENTATION
 #define PLM_NO_STDIO
 #include "pl_mpeg.h"
-
 
 void print_chr(char ch)
 {
@@ -64,22 +58,7 @@ void print_str(const char *p)
 void stop_verilator()
 {
 	print_str("Nope\n");
-
 	*((volatile uint8_t *)OUTPORT_END) = 0;
-}
-
-void test_vector_unit()
-{
-	synth_window_mac->result = 0;
-	synth_window_mac->addr = 0;
-	synth_window_mac->index = 1;
-	// while (synth_window_mac->busy);
-
-	synth_window_mac->result = 0;
-	synth_window_mac->addr = 0;
-	synth_window_mac->index = 1;
-	// while (synth_window_mac->busy);
-	*((volatile intsample_t *)OUTPORT) = synth_window_mac->result;
 }
 
 void main(void)
@@ -88,19 +67,26 @@ void main(void)
 	// stop_verilator();
 	//  for(;;);
 
-	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 51200 * 4, 0);
+	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 202752 * 4, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
 
 	int cnt = 0;
 
 	for (;;)
 	{
-		plm_samples_t *samples = plm_decode_audio(mpeg);
+		plm_frame_t *frame = plm_decode_video(mpeg);
 
-		if (samples)
+		if (frame)
 		{
 			// Give some feedback to the user that we are running
 			*((volatile uint8_t *)OUTPORT) = cnt;
+
+			//*((volatile uint32_t *)OUTPORT) = frame->width;
+			//*((volatile uint32_t *)OUTPORT) = frame->height;
+			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->y.data;
+			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->cr.data;
+			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->cb.data;
+			*((volatile plm_frame_t **)OUTPORT_FRAME) = frame;
 			cnt++;
 		}
 		else
@@ -109,10 +95,6 @@ void main(void)
 			*((volatile uint8_t *)OUTPORT_END) = 0;
 		}
 	}
-}
-
-uint32_t *irq(uint32_t *regs, uint32_t irqs)
-{
 }
 
 /*
@@ -127,7 +109,7 @@ caddr_t _sbrk(int nbytes)
 
 	if (heap_ptr == NULL)
 	{
-		heap_ptr = (caddr_t)&_end;
+		heap_ptr = (caddr_t)&_sp;
 	}
 
 	if ((RAMSIZE - heap_ptr) >= 0)

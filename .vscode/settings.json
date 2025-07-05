@@ -46,6 +46,8 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "variant": "c",
-        "csignal": "cpp"
+        "csignal": "cpp",
+        "array": "cpp",
+        "span": "cpp"
     }
 }
