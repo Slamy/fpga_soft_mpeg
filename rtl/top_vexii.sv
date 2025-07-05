@@ -16,7 +16,7 @@ module top_vexii (
     bit [31:0] mpeg_video_rom[202752];
     initial $readmemh("fmv.mem", mpeg_video_rom);
 
-    bit [31:0] memory[500000] /*verilator public_flat_rd*/;
+    bit [31:0] memory[500000]  /*verilator public_flat_rd*/;
     initial $readmemh("../sw/firmware.mem", memory);
 
     // sbt "Test/runMain vexiiriscv.Generate --with-rvm --with-rvc --region base=00000000,size=80000000,main=1,exe=1 --allow-bypass-from=0"
@@ -81,7 +81,7 @@ module top_vexii (
 
     bit debugflag = 0;
 
-    wire [31:0] frame_adr /*verilator public_flat_rd*/ = dmem_cmd_payload_data;
+    wire [31:0] frame_adr  /*verilator public_flat_rd*/ = dmem_cmd_payload_data;
     wire expose_frame /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000010 && dmem_cmd_payload_write && dmem_cmd_valid) ;
     bit [31:0] soft_state = 0;
 
@@ -171,7 +171,7 @@ module top_vexii (
 
         if (expose_frame) begin
             fifo_water_level <= fifo_water_level + TICKS_PER_FRAME;
-            frames_decoded <= frames_decoded + 1;
+            frames_decoded   <= frames_decoded + 1;
         end
 
         fifo_nearly_empty <= (fifo_water_level < (TICKS_PER_FRAME / 2));
@@ -230,8 +230,7 @@ module top_vexii (
                         if (dmem_cmd_payload_mask[3])
                             memory[dmem_cmd_payload_address>>2][31:24] <= dmem_cmd_payload_data[31:24];
                     end else begin
-                        dmem_rsp_payload_data <=
-                            memory[dmem_cmd_payload_address>>2];
+                        dmem_rsp_payload_data <= memory[dmem_cmd_payload_address>>2];
                     end
                 end
                 default: ;

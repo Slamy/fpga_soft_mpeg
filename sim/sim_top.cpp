@@ -68,27 +68,26 @@ int write_bmp(const char *path, int width, int height, uint8_t *pixels)
     return file_size;
 }
 
-typedef struct {
-	unsigned int width;
-	unsigned int height;
-	uint32_t adr;
+typedef struct
+{
+    unsigned int width;
+    unsigned int height;
+    uint32_t adr;
 } plm_plane2_t;
-
 
 // Decoded Video Frame
 // width and height denote the desired display size of the frame. This may be
 // different from the internal size of the 3 planes.
 
-typedef struct {
-	double time;
-	unsigned int width;
-	unsigned int height;
-	plm_plane2_t y;
-	plm_plane2_t cr;
-	plm_plane2_t cb;
+typedef struct
+{
+    double time;
+    unsigned int width;
+    unsigned int height;
+    plm_plane2_t y;
+    plm_plane2_t cr;
+    plm_plane2_t cb;
 } plm_frame2_t;
-
-
 
 class Machine
 {
@@ -166,19 +165,19 @@ public:
         {
 
             uint32_t addr = dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__frame_adr);
-            uint8_t *mem = (uint8_t*)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__memory);
+            uint8_t *mem = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__memory);
             plm_frame2_t frame = *(plm_frame2_t *)(mem + addr);
 
-            //printf("%d %d %x %x %x\n", frame.width, frame.height, frame.y.data, frame.cr.data, frame.cb.data);
+            // printf("%d %d %x %x %x\n", frame.width, frame.height, frame.y.data, frame.cr.data, frame.cb.data);
 
             plm_frame_t frame_convert;
             frame_convert.y.data = &mem[frame.y.adr];
             frame_convert.y.height = frame.y.height;
             frame_convert.y.width = frame.y.width;
-            frame_convert.cr.data =  &mem[frame.cr.adr];
+            frame_convert.cr.data = &mem[frame.cr.adr];
             frame_convert.cr.height = frame.cr.height;
             frame_convert.cr.width = frame.cr.width;
-            frame_convert.cb.data =  &mem[frame.cb.adr];
+            frame_convert.cb.data = &mem[frame.cb.adr];
             frame_convert.cb.height = frame.cb.height;
             frame_convert.cb.width = frame.cb.width;
             frame_convert.width = frame.width;
