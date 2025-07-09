@@ -71,14 +71,31 @@ After some evaluation, it turns out that VexiiRiscv with TileLink is the most ef
 required to keep up with the incoming data stream.
 Picorv32 is too slow, even with hardware acceleration.
 
+These results are based on compiling the software with -O3 and a bitrate of 387 kb/s and a sample rate of 44100 Hz:
+
     Debug out a1a1a1a1  Waterlevel:        98008        98008 Samples decoded:      186624  Samples played:       88889  Load:          47 %   vexii
     Debug out a1a1a1a1  Waterlevel:        61851        61851 Samples decoded:      186624  Samples played:      125047  Load:          67 %   vexiiwb
     Debug out a1a1a1a1  Waterlevel:       -76603       -76603 Samples decoded:      186624  Samples played:      263501  Load:         141 %   picorv32
+
+Reducing the bit rate to 224 kb/s to align it with VideoCD results into a slightly better performance:
+
+    Debug out a1a1a1a1  Waterlevel:       105441       105441 Samples decoded:      186624  Samples played:       81456  Load:          43 %   vexii
+    Debug out a1a1a1a1  Waterlevel:        74385        74385 Samples decoded:      186624  Samples played:      112513  Load:          60 %   vexiiwb
+    Debug out a1a1a1a1  Waterlevel:       -58413       -58413 Samples decoded:      186624  Samples played:      245312  Load:         131 %   picorv32
+
+Compiling the software with -Os decreases the number of instruction words from 3101 to 1929 but also decreases performance.
+These are still results using 224 kb/s:
+
+    Debug out a1a1a1a1  Waterlevel:        49404        49404 Samples decoded:      186624  Samples played:      137493  Load:          73 %   vexii
+    Debug out a1a1a1a1  Waterlevel:        22340        22340 Samples decoded:      186624  Samples played:      164557  Load:          88 %   vexiiwb
+    Debug out a1a1a1a1  Waterlevel:      -137554      -137554 Samples decoded:      186624  Samples played:      324453  Load:         173 %   picorv32
 
 ### Benchmarks using only the soft core
 
 Running pl_mpeg without any modifications, shows how inefficient the RISC V implementations are when it comes to execute Multiply-Accumulate operations.
 It might be possible that a RISC V with vector instructions and the correct compiler can fix this problem though.
+
+These results are based on compiling the software with -O3 and a bitrate of 387 kb/s and a sample rate of 44100 Hz:
 
     Debug out a1a1a1a1  Waterlevel:       -22333       -22333 Samples decoded:      186624  Samples played:      209231  Load:         112 %   vexii
     Debug out a1a1a1a1  Waterlevel:      -125639      -125639 Samples decoded:      186624  Samples played:      312537  Load:         167 %   vexiiwb
