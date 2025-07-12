@@ -4,22 +4,103 @@
 
 module top_vexii (
     input clk,
-    input resetn
+    input reset,
+    output signed [15:0] audio_left,
+    output signed [15:0] audio_right,
+    output bit sample_tick
 );
 
-    bit signed [34:0] fifo_water_level[2];
-    bit [34:0] ticks_since_playback_started;
-    bit [34:0] samples_decoded;
-
-    bit fifo_nearly_empty;
-
-    bit [31:0] mpeg_audio_rom[51200];
+    localparam SIZE = 30208;
+    bit [31:0] mpeg_audio_rom[SIZE];
     initial $readmemh("fma.mem", mpeg_audio_rom);
 
-    bit [31:0] memory[500000];
+    bit [15:0] data_word;
+    bit data_strobe;
+    wire fifo_full;
+
+    wire playback_active;
+
+    // Assuming 30 MHz clock rate and 44100 Hz sample rate
+    localparam TICKS_PER_SAMPLE = 680;
+
+    mpeg_audio audio (
+        .clk,
+        .reset,
+        .data_word,
+        .data_strobe,
+        .fifo_full,
+        .audio_left,
+        .audio_right,
+        .sample_tick44(sample_tick),
+        .playback_active
+    );
+
+    bit provide_lower_word = 0;
+    bit [14:0] mpeg_stream_address = 0;
+
+    always_ff @(posedge clk) begin
+        data_strobe <= 0;
+        if (!fifo_full && !reset && mpeg_stream_address <= (SIZE + 10)) begin
+            data_strobe <= 1;
+            provide_lower_word <= !provide_lower_word;
+            if (provide_lower_word) mpeg_stream_address <= mpeg_stream_address + 1;
+            data_word <= provide_lower_word ? mpeg_audio_rom[mpeg_stream_address][15:0] : mpeg_audio_rom[mpeg_stream_address][31:16];
+        end
+    end
+
+endmodule
+
+module mpeg_audio (
+    input clk,
+    input reset,
+
+    input [15:0] data_word,
+    input data_strobe,
+    output fifo_full,
+
+    output bit signed [15:0] audio_left,
+    output bit signed [15:0] audio_right,
+    input sample_tick44,
+    output bit playback_active
+);
+
+    // 4kB of MPEG stream memory to fill from outside
+    bit [31:0] mpeg_stream_fifo[1024];
+
+    // Word Address
+    bit [27:0] mpeg_stream_fifo_write_adr;
+    bit [31:0] mpeg_stream_bit_index;
+    wire [28:0] mpeg_stream_byte_index = mpeg_stream_bit_index[31:3];
+
+    // Word address
+    wire [27:0] mpeg_stream_fifo_read_adr = mpeg_stream_byte_index[28:1];
+
+    assign fifo_full = mpeg_stream_fifo_write_adr > (mpeg_stream_fifo_read_adr + 28'd2000);
+
+    always_ff @(posedge clk) begin
+        if (data_strobe) begin
+            mpeg_stream_fifo_write_adr <= mpeg_stream_fifo_write_adr + 1;
+            if (!mpeg_stream_fifo_write_adr[0])
+                mpeg_stream_fifo[mpeg_stream_fifo_write_adr[10:1]][31:16] <= data_word;
+            if (mpeg_stream_fifo_write_adr[0])
+                mpeg_stream_fifo[mpeg_stream_fifo_write_adr[10:1]][15:0] <= data_word;
+        end
+
+        if (dmem_cmd_payload_write && dmem_cmd_valid) begin
+            if (dmem_cmd_payload_address == 32'h10002000)
+                mpeg_stream_fifo_write_adr <= dmem_cmd_payload_data[27:0];
+            if (dmem_cmd_payload_address == 32'h10002004)
+                mpeg_stream_bit_index <= dmem_cmd_payload_data;
+        end
+    end
+
+
+    // 28000 byte of memory are required
+    bit [31:0] memory[40000/4];
     initial $readmemh("../sw/firmware.mem", memory);
 
-    // sbt "Test/runMain vexiiriscv.Generate --with-rvm --with-rvc --region base=00000000,size=80000000,main=1,exe=1 --allow-bypass-from=0"
+    // sbt "Test/runMain vexiiriscv.Generate --with-rvm --with-rvc 
+    // --region base=00000000,size=80000000,main=1,exe=1 --allow-bypass-from=0"
 
     wire        imem_cmd_valid;
     bit         imem_cmd_ready;
@@ -75,15 +156,13 @@ module top_vexii (
         .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error),
         .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data),
         .clk(clk),
-        .reset(!resetn)
+        .reset(reset)
     );
     /*verilator tracing_on*/
 
-    bit debugflag = 0;
-
     wire [31:0] sample  /*verilator public_flat_rd*/ = dmem_cmd_payload_data;
     wire sample_left_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000010 && dmem_cmd_payload_write && dmem_cmd_valid) ;
-    wire sample_right_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000020 && dmem_cmd_payload_write&& dmem_cmd_valid) ;
+    wire sample_right_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000020 && dmem_cmd_payload_write && dmem_cmd_valid) ;
     bit [31:0] soft_state = 0;
 
 
@@ -115,18 +194,18 @@ module top_vexii (
 
         case (mac_state)
             IDLE: begin
-                if (dmem_cmd_payload_address == 32'h30000000 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready) begin
+                if (dmem_cmd_payload_address == 32'h10001000 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready) begin
                     mac_vector_addr <= dmem_cmd_payload_data;
                     //$display("Vector Adr %x", dmem_cmd_payload_data);
                 end
-                if (dmem_cmd_payload_address == 32'h30000004 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready) begin
+                if (dmem_cmd_payload_address == 32'h10001004 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready) begin
                     mac_vector_index <= dmem_cmd_payload_data[8:0];
                     mac_vector_cnt <= 8;
                     mac_state <= FETCH;
                     //$display("Vector Index %x", dmem_cmd_payload_data[8:0]);
 
                 end
-                if (dmem_cmd_payload_address == 32'h30000008 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready)
+                if (dmem_cmd_payload_address == 32'h10001008 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready)
                     mac_vector_accu <= dmem_cmd_payload_data;
             end
             FETCH: begin
@@ -141,82 +220,51 @@ module top_vexii (
         endcase
     end
 
-    bit fail;
-    bit draining_fifo = 0;
-    bit [31:0] debug_l_storage;
-
     always_comb begin
         imem_cmd_ready = 1;
 
         dmem_cmd_ready = 1;
-        if (dmem_cmd_payload_address[31:28] == 4'd3) dmem_cmd_ready = !mac_state;
+        if (dmem_cmd_payload_address[31:28] == 4'd1) dmem_cmd_ready = !mac_state;
     end
 
-    // Assuming 30 MHz clock rate and 44100 Hz sample rate
-    localparam TICKS_PER_SAMPLE = 680;
+    bit [31:0] debug_l_storage;
 
     always_ff @(posedge clk) begin
-        debugflag <= 0;
         imem_rsp_valid <= 0;
         dmem_rsp_valid <= 0;
 
-        if (dmem_cmd_payload_address == 32'h1000000c && dmem_cmd_payload_write && dmem_cmd_valid)
-            $finish();
-        if (dmem_cmd_payload_address == 32'h10000030 && dmem_cmd_payload_write && dmem_cmd_valid)
-            soft_state <= dmem_cmd_payload_data;
+        if (dmem_cmd_payload_write && dmem_cmd_valid) begin
+            if (dmem_cmd_payload_address == 32'h1000000c) $finish();
+            if (dmem_cmd_payload_address == 32'h10000030) soft_state <= dmem_cmd_payload_data;
+            if (dmem_cmd_payload_address == 32'h10000000)
+                $display("Debug out %x", dmem_cmd_payload_data);
+            if (dmem_cmd_payload_address == 32'h10000040)
+                $display("Debug A %x", dmem_cmd_payload_data);
+            if (dmem_cmd_payload_address == 32'h10000044)
+                $display("Debug B %x", dmem_cmd_payload_data);
 
-        if (draining_fifo) begin
-            fifo_water_level[0] <= fifo_water_level[0] - 1;
-            fifo_water_level[1] <= fifo_water_level[1] - 1;
-            ticks_since_playback_started <= ticks_since_playback_started + 1;
+            if (dmem_cmd_payload_address == 32'h10002004)
+                mpeg_stream_bit_index <= dmem_cmd_payload_data;
+
+            if (dmem_cmd_payload_address == 32'h10000004) debug_l_storage <= dmem_cmd_payload_data;
+            if (dmem_cmd_payload_address == 32'h10000008)
+                $display("Debug %d %d", signed'(debug_l_storage), signed'(dmem_cmd_payload_data));
         end
-
-        if (sample_left_write) fifo_water_level[0] <= fifo_water_level[0] + TICKS_PER_SAMPLE;
-        if (sample_right_write) fifo_water_level[1] <= fifo_water_level[1] + TICKS_PER_SAMPLE;
-        if (sample_left_write) samples_decoded <= samples_decoded + 1;
-
-        fifo_nearly_empty <= (fifo_water_level[0] < (TICKS_PER_SAMPLE*4)) || (fifo_water_level[1] < (TICKS_PER_SAMPLE*4));
-
-        // With 40 samples available, we start the playback
-        if (fifo_water_level[0] > (TICKS_PER_SAMPLE * 40)) draining_fifo <= 1;
-
-        if (dmem_cmd_payload_address == 32'h10000000 && dmem_cmd_valid && dmem_cmd_payload_write)
-            $display(
-                "Debug out %x  Waterlevel: %d %d Samples decoded: %d  Samples played: %d  Load: %d %%",
-                dmem_cmd_payload_data,
-                fifo_water_level[0] / TICKS_PER_SAMPLE,
-                fifo_water_level[1] / TICKS_PER_SAMPLE, samples_decoded,
-                ticks_since_playback_started / TICKS_PER_SAMPLE,
-                (ticks_since_playback_started / TICKS_PER_SAMPLE) * 100 / samples_decoded);
 
         if (dmem_cmd_valid && dmem_cmd_ready) begin
             dmem_rsp_payload_id <= dmem_cmd_payload_id;
             dmem_rsp_valid <= 1;
 
-            //if (dmem_cmd_payload_write) $display("CPU Write at %x", dmem_cmd_payload_address);
-            // else $display("CPU Read at %x", dmem_cmd_payload_address);
-
             case (dmem_cmd_payload_address[31:28])
-                4'd3: begin
-                    if (!dmem_cmd_payload_write) begin
-                        if (dmem_cmd_payload_address == 32'h30000008)
-                            dmem_rsp_payload_data <= mac_vector_accu;
-                        if (dmem_cmd_payload_address == 32'h3000000c)
-                            dmem_rsp_payload_data <= mac_state ? 1 : 0;
-
-                        //if (mac_state != IDLE) fail <= 1;
-                        //assert (mac_state == IDLE || dmem_cmd_payload_address[]);
-                    end
-                end
-                4'd2: begin
-                    if (!dmem_cmd_payload_write) begin
-                        dmem_rsp_payload_data <=
-                            reverse_endian_32(mpeg_audio_rom[dmem_cmd_payload_address>>2]);
-                    end
-                end
                 4'd1: begin
-                    if (dmem_cmd_payload_write) begin
-                        debugflag <= 1;
+                    // I/O Area
+                    if (!dmem_cmd_payload_write) begin
+                        if (dmem_cmd_payload_address == 32'h10001008)
+                            dmem_rsp_payload_data <= mac_vector_accu;
+                        if (dmem_cmd_payload_address == 32'h10002000)
+                            dmem_rsp_payload_data <= {3'b000, mpeg_stream_fifo_write_adr, 1'b0};
+                        if (dmem_cmd_payload_address == 32'h10002004)
+                            dmem_rsp_payload_data <= mpeg_stream_bit_index;
                     end
                 end
                 4'd0: begin
@@ -234,7 +282,12 @@ module top_vexii (
                             reverse_endian_32(memory[dmem_cmd_payload_address>>2]);
                     end
                 end
-                default: ;
+                default: begin
+                    // Assign the rest of the memory to the MPEG FIFO to fake a real big file
+                    dmem_rsp_payload_data <= reverse_endian_32(
+                        mpeg_stream_fifo[dmem_cmd_payload_address>>2]
+                    );
+                end
             endcase
         end
 
@@ -244,4 +297,90 @@ module top_vexii (
             imem_rsp_payload_word <= reverse_endian_32(memory[imem_cmd_payload_address>>2]);
         end
     end
+
+    audiostream xa_fifo_out[2] ();
+    audiostream xa_fifo_in[2] ();
+
+    wire [1:0] fifo_nearly_full;
+    wire [1:0] fifo_nearly_empty;
+
+    audiofifo fifo_left (
+        .clk,
+        .reset,
+        .in(xa_fifo_in[0]),
+        .out(xa_fifo_out[0]),
+        .nearly_full(fifo_nearly_full[0]),
+        .nearly_empty(fifo_nearly_empty[0])
+    );
+    audiofifo fifo_right (
+        .clk,
+        .reset,
+        .in(xa_fifo_in[1]),
+        .out(xa_fifo_out[1]),
+        .nearly_full(fifo_nearly_full[1]),
+        .nearly_empty(fifo_nearly_empty[1])
+    );
+
+    always_comb begin
+        xa_fifo_in[0].sample = dmem_cmd_payload_data[31:16];
+        xa_fifo_in[1].sample = dmem_cmd_payload_data[31:16];
+        xa_fifo_in[0].write = (dmem_cmd_payload_address == 32'h10000010 && dmem_cmd_payload_write && dmem_cmd_valid);
+        xa_fifo_in[1].write = (dmem_cmd_payload_address == 32'h10000020 && dmem_cmd_payload_write && dmem_cmd_valid);
+    end
+
+    // Used to reduce the speed of zeroing after playback has ended
+    bit dc_bias_cnt;
+    bit audio_fifo_output_enabled = 0;
+
+    bit strobe_fifo;
+    always_comb begin
+        strobe_fifo = 0;
+        if (audio_fifo_output_enabled) begin
+            if (sample_tick44) strobe_fifo = 1;
+        end
+    end
+
+
+    always_ff @(posedge clk) begin
+        dc_bias_cnt <= !dc_bias_cnt;
+
+        xa_fifo_out[0].strobe <= 0;
+        xa_fifo_out[1].strobe <= 0;
+
+        if (reset) begin
+            audio_fifo_output_enabled <= 0;
+            xa_fifo_out[0].strobe <= 0;
+            xa_fifo_out[1].strobe <= 0;
+        end else begin
+
+            if (fifo_nearly_full == 2'b11 && sample_tick44) begin
+                audio_fifo_output_enabled <= 1;
+            end
+
+            if (xa_fifo_out[0].write == 0 && xa_fifo_out[0].write == 0) begin
+                audio_fifo_output_enabled <= 0;
+            end
+
+            if (audio_fifo_output_enabled) begin
+                if (strobe_fifo) begin
+                    xa_fifo_out[0].strobe <= 1;
+                    xa_fifo_out[1].strobe <= 1;
+
+                    audio_left <= xa_fifo_out[0].sample;
+                    audio_right <= xa_fifo_out[1].sample;
+                end
+            end else if (dc_bias_cnt) begin
+                // Slowly move the current sample to zero
+                // to remove pops when playing the next samples
+
+                if (audio_left > 0) audio_left <= audio_left - 1;
+                else if (audio_left < 0) audio_left <= audio_left + 1;
+
+                if (audio_right > 0) audio_right <= audio_right - 1;
+                else if (audio_right < 0) audio_right <= audio_right + 1;
+            end
+        end
+    end
+
+
 endmodule

@@ -17,10 +17,17 @@ struct synth_window_mac
 	uint32_t *addr;
 	uint32_t index;
 	uint32_t result;
-	uint32_t busy;
 };
 
-volatile struct synth_window_mac *synth_window_mac = (volatile struct synth_window_mac *)0x30000000;
+struct fifo_control
+{
+	uint32_t write_byte_index;
+	uint32_t read_bit_index;
+};
+
+volatile struct synth_window_mac * const synth_window_mac = (volatile struct synth_window_mac *)0x10001000;
+
+volatile struct fifo_control * const fifo_ctrl = (volatile struct fifo_control *)0x10002000;
 
 #define OUTPORT 0x10000000
 #define OUTPORT_L 0x10000004
@@ -31,19 +38,11 @@ volatile struct synth_window_mac *synth_window_mac = (volatile struct synth_wind
 #define OUT_R 0x10000020
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
 
-extern caddr_t _end; /* _end is set in the linker command file */
-/* just in case, most boards have at least some memory */
-#ifndef RAMSIZE
-#define RAMSIZE (caddr_t)0x100000
-#endif
-
-
-
 void print_chr(char ch);
 void print_str(const char *p);
 void stop_verilator();
 
-// #define SOFT_CONVOLVE
+//#define SOFT_CONVOLVE
 
 #define PL_MPEG_IMPLEMENTATION
 #define PLM_NO_STDIO
@@ -88,7 +87,7 @@ void main(void)
 	// stop_verilator();
 	//  for(;;);
 
-	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 51200 * 4, 0);
+	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700*1024*1024, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
 
 	int cnt = 0;
@@ -106,39 +105,11 @@ void main(void)
 		else
 		{
 			// End simulation since the MPEG stream has ended
-			*((volatile uint8_t *)OUTPORT_END) = 0;
+			//*((volatile uint8_t *)OUTPORT_END) = 0;
 		}
 	}
 }
 
 uint32_t *irq(uint32_t *regs, uint32_t irqs)
 {
-}
-
-/*
- * sbrk -- changes heap size size. Get nbytes more
- *         RAM. We just increment a pointer in what's
- *         left of memory on the board.
- */
-caddr_t _sbrk(int nbytes)
-{
-	static caddr_t heap_ptr = NULL;
-	caddr_t base;
-
-	if (heap_ptr == NULL)
-	{
-		heap_ptr = (caddr_t)&_end;
-	}
-
-	if ((RAMSIZE - heap_ptr) >= 0)
-	{
-		base = heap_ptr;
-		heap_ptr += nbytes;
-		return (base);
-	}
-	else
-	{
-		errno = ENOMEM;
-		return ((caddr_t)-1);
-	}
 }

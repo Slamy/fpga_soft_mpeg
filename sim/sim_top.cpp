@@ -48,7 +48,6 @@ public:
     FILE *f_audio_right{nullptr};
     char filename[100];
     uint64_t sim_time = 0;
-    bool first_sample_provided{false};
 
     virtual ~Machine()
     {
@@ -74,12 +73,12 @@ public:
         // aplay -f float_le audio_left.bin  -r 44100
         // aplay -f float_le audio_right.bin  -r 44100
 
-        dut.resetn = 0;
+        dut.reset = 1;
         for (int i = 0; i < 10; i++)
         {
             modelstep();
         }
-        dut.resetn = 1;
+        dut.reset = 0;
     }
 
     void modelstep()
@@ -105,15 +104,10 @@ public:
         }
         */
 
-        if (!first_sample_provided && (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample_left_write) || dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample_right_write)))
-        {
-            first_sample_provided = true;
-            printf("First sample at %d\n", sim_time);
-        }
-        if (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample_left_write))
-            fwrite(&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample), sizeof(int16_t), 1, f_audio_left);
-        if (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample_right_write))
-            fwrite(&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__sample), sizeof(int16_t), 1, f_audio_right);
+        if (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__audio__DOT__sample_left_write))
+            fwrite(&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__audio__DOT__sample), sizeof(int16_t), 1, f_audio_left);
+        if (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__audio__DOT__sample_right_write))
+            fwrite(&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__audio__DOT__sample), sizeof(int16_t), 1, f_audio_right);
     }
 };
 
@@ -139,16 +133,16 @@ int main(int argc, char **argv, char **env)
     fprintf(stderr, "Closing...\n");
     fflush(stdout);
     /*
-        int maxi = 0;
-        for (int i = 0; i < 128000; i++)
-        {
-            if (memory_heatmap[i])
-                maxi = i;
-        }
+    int maxi = 0;
+    for (int i = 0; i < 128000; i++)
+    {
+        if (memory_heatmap[i])
+            maxi = i;
+    }
 
-        for (int i = 0; i < maxi; i++)
-        {
-            printf("%08x %x\n", i * 4, memory_heatmap[i]);
-        }
-            */
+    for (int i = 0; i < maxi; i++)
+    {
+        printf("%08x %x\n", i * 4, memory_heatmap[i]);
+    }
+    */
 }
