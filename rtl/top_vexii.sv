@@ -17,12 +17,29 @@ module top_vexii (
     bit [15:0] data_word;
     bit data_strobe;
     wire fifo_full;
-
     wire playback_active;
 
     // Assuming 30 MHz clock rate and 44100 Hz sample rate
     localparam TICKS_PER_SAMPLE = 680;
+    bit [10:0] sample_tick_cnt = 0;
 
+    always_ff @(posedge clk) begin
+        sample_tick_cnt <= sample_tick_cnt + 1;
+        sample_tick <= 0;
+        if (sample_tick_cnt == TICKS_PER_SAMPLE - 1) begin
+            sample_tick_cnt <= 0;
+            sample_tick <= 1;
+        end
+    end
+
+    bit playback_active_q;
+    always_ff @(posedge clk) begin
+        // MPEG Audio has stopped.
+        playback_active_q <= playback_active;
+        if (playback_active_q && !playback_active)
+            $finish();
+    end
+    
     mpeg_audio audio (
         .clk,
         .reset,
@@ -61,7 +78,7 @@ module mpeg_audio (
     output bit signed [15:0] audio_left,
     output bit signed [15:0] audio_right,
     input sample_tick44,
-    output bit playback_active
+    output playback_active
 );
 
     // 4kB of MPEG stream memory to fill from outside
@@ -160,12 +177,6 @@ module mpeg_audio (
     );
     /*verilator tracing_on*/
 
-    wire [31:0] sample  /*verilator public_flat_rd*/ = dmem_cmd_payload_data;
-    wire sample_left_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000010 && dmem_cmd_payload_write && dmem_cmd_valid) ;
-    wire sample_right_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000020 && dmem_cmd_payload_write && dmem_cmd_valid) ;
-    bit [31:0] soft_state = 0;
-
-
     bit signed [31:0] mac_vector_accu = 0;
     bit signed [17:0] mac_vector_temp1 = 0;
     bit signed [31:0] mac_vector_temp2 = 0;
@@ -224,7 +235,9 @@ module mpeg_audio (
         imem_cmd_ready = 1;
 
         dmem_cmd_ready = 1;
-        if (dmem_cmd_payload_address[31:28] == 4'd1) dmem_cmd_ready = !mac_state;
+        if (dmem_cmd_payload_address[31:28] == 4'd1) begin
+            dmem_cmd_ready = !mac_state && fifo_nearly_full == 0;
+        end
     end
 
     bit [31:0] debug_l_storage;
@@ -302,7 +315,7 @@ module mpeg_audio (
     audiostream xa_fifo_in[2] ();
 
     wire [1:0] fifo_nearly_full;
-    wire [1:0] fifo_nearly_empty;
+    wire [1:0] fifo_half_full;
 
     audiofifo fifo_left (
         .clk,
@@ -310,7 +323,7 @@ module mpeg_audio (
         .in(xa_fifo_in[0]),
         .out(xa_fifo_out[0]),
         .nearly_full(fifo_nearly_full[0]),
-        .nearly_empty(fifo_nearly_empty[0])
+        .half_full(fifo_half_full[0])
     );
     audiofifo fifo_right (
         .clk,
@@ -318,19 +331,25 @@ module mpeg_audio (
         .in(xa_fifo_in[1]),
         .out(xa_fifo_out[1]),
         .nearly_full(fifo_nearly_full[1]),
-        .nearly_empty(fifo_nearly_empty[1])
+        .half_full(fifo_half_full[1])
     );
 
+    wire [15:0] sample  /*verilator public_flat_rd*/ = dmem_cmd_payload_data[15:0];
+    wire sample_left_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10003000 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready) ;
+    wire sample_right_write /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10004000 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready) ;
+    bit [31:0] soft_state = 0;
+
     always_comb begin
-        xa_fifo_in[0].sample = dmem_cmd_payload_data[31:16];
-        xa_fifo_in[1].sample = dmem_cmd_payload_data[31:16];
-        xa_fifo_in[0].write = (dmem_cmd_payload_address == 32'h10000010 && dmem_cmd_payload_write && dmem_cmd_valid);
-        xa_fifo_in[1].write = (dmem_cmd_payload_address == 32'h10000020 && dmem_cmd_payload_write && dmem_cmd_valid);
+        xa_fifo_in[0].sample = sample;
+        xa_fifo_in[1].sample = sample;
+        xa_fifo_in[0].write  = sample_left_write;
+        xa_fifo_in[1].write  = sample_right_write;
     end
 
     // Used to reduce the speed of zeroing after playback has ended
     bit dc_bias_cnt;
     bit audio_fifo_output_enabled = 0;
+    assign playback_active = audio_fifo_output_enabled;
 
     bit strobe_fifo;
     always_comb begin
@@ -353,7 +372,7 @@ module mpeg_audio (
             xa_fifo_out[1].strobe <= 0;
         end else begin
 
-            if (fifo_nearly_full == 2'b11 && sample_tick44) begin
+            if (fifo_half_full == 2'b11 && sample_tick44) begin
                 audio_fifo_output_enabled <= 1;
             end
 

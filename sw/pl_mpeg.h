@@ -4075,11 +4075,11 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 					}
 #endif
 					{
-						volatile int16_t *out_channel = ch == 0
-						?((volatile int16_t *)OUT_L) 
-						: ((volatile int16_t *)OUT_R) ;
+						volatile struct io_audio_out *out_channel = (ch == 0)
+						? io_audio_out_left
+						: io_audio_out_right;
 						for (int j = 0; j < 32; j++) {
-							*out_channel = hw_U[j] / (0x10000);
+							out_channel->sample = hw_U[j] / (0x10000);
 						}
 					}
 				} // End of synthesis channel loop

@@ -6,14 +6,14 @@ module audiofifo (
     audiostream.sink in,
     audiostream.source out,
     output nearly_full,
-    output nearly_empty
+    output half_full
 );
 
-    bit signed [15:0] mem[64];
-    bit [5:0] read_index_d;
-    bit [5:0] read_index_q;
-    bit [5:0] write_index;
-    bit [6:0] count;
+    bit signed [15:0] mem[128];
+    bit [6:0] read_index_d;
+    bit [6:0] read_index_q;
+    bit [6:0] write_index;
+    bit [7:0] count;
 
     // The memory introduces one cycle delay. This is an issue
     // when the FIFO is empty. We want to avoid using the memory readout
@@ -22,12 +22,12 @@ module audiofifo (
     bit indizes_equal_during_write_q;
 
     assign out.write = count != 0 && !reset && !indizes_equal_during_write_q;
-    assign in.strobe = count < 60 && !reset && in.write;
+    assign in.strobe = count < 126 && !reset && in.write;
 
-    // Always a minimum of 28 XA samples per block
-    // We go for 48 just to be safe
-    assign nearly_full = count >= 48;
-    assign nearly_empty = count <= 3;
+    // Every MPEG synthesis will create 32 samples
+    // Let's have at least 70 samples to not starve during frame change
+    assign nearly_full = count >= 126;
+    assign half_full = count >= 70;
 
     always_comb begin
         read_index_d = read_index_q;

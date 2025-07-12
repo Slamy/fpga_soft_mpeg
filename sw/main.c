@@ -12,30 +12,35 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-struct synth_window_mac
+struct io_synth_window_mac
 {
 	uint32_t *addr;
 	uint32_t index;
 	uint32_t result;
 };
 
-struct fifo_control
+struct io_fifo_control
 {
 	uint32_t write_byte_index;
 	uint32_t read_bit_index;
 };
 
-volatile struct synth_window_mac * const synth_window_mac = (volatile struct synth_window_mac *)0x10001000;
+struct io_audio_out
+{
+	uint32_t sample;
+	uint32_t fifo_full;
+};
 
-volatile struct fifo_control * const fifo_ctrl = (volatile struct fifo_control *)0x10002000;
+volatile struct io_synth_window_mac * const synth_window_mac = (volatile struct io_synth_window_mac *)0x10001000;
+volatile struct io_fifo_control * const fifo_ctrl = (volatile struct io_fifo_control *)0x10002000;
+volatile struct io_audio_out * const io_audio_out_left = (volatile struct io_audio_out *)0x10003000;
+volatile struct io_audio_out * const io_audio_out_right = (volatile struct io_audio_out *)0x10004000;
 
 #define OUTPORT 0x10000000
 #define OUTPORT_L 0x10000004
 #define OUTPORT_R 0x10000008
 #define OUTPORT_END 0x1000000c
 
-#define OUT_L 0x10000010
-#define OUT_R 0x10000020
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
 
 void print_chr(char ch);
