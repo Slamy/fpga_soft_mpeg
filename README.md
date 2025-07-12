@@ -62,8 +62,13 @@ to ensure that the hardware calculated results are correct.
 
 The md5sum of the result files are expected as
 
-    79760cffd1c68a6fdf274914e0615345  audio_left.bin
-    2b3c0967edf05c3f25052cd4ed69d34c  audio_right.bin
+    543719782627495400e583fd571ddc18  audio_left.bin
+    3afaa5556843e8fc99ccc6e8a542e8dd  audio_right.bin
+
+Just to be sure, the input files have these md5sum
+
+    b1a53b51752ca0b3dc92c6f83bbd99c1  Arpent.mp3
+    eb87dddfa689ce122cb1bfe606e2f9e5  fma.mpg
 
 ### Benchmarks with vector math acceleration unit
 
