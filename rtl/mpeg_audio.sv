@@ -30,19 +30,25 @@ module mpeg_audio (
     assign fifo_full = mpeg_stream_fifo_write_adr > (mpeg_stream_fifo_read_adr + 28'd2000);
 
     always_ff @(posedge clk) begin
-        if (data_strobe) begin
-            mpeg_stream_fifo_write_adr <= mpeg_stream_fifo_write_adr + 1;
-            if (!mpeg_stream_fifo_write_adr[0])
-                mpeg_stream_fifo[mpeg_stream_fifo_write_adr[10:1]][31:16] <= data_word;
-            if (mpeg_stream_fifo_write_adr[0])
-                mpeg_stream_fifo[mpeg_stream_fifo_write_adr[10:1]][15:0] <= data_word;
-        end
 
-        if (dmem_cmd_payload_write && dmem_cmd_valid) begin
-            if (dmem_cmd_payload_address == 32'h10002000)
-                mpeg_stream_fifo_write_adr <= dmem_cmd_payload_data[27:0];
-            if (dmem_cmd_payload_address == 32'h10002004)
-                mpeg_stream_bit_index <= dmem_cmd_payload_data;
+        if (reset) begin
+            mpeg_stream_fifo_write_adr <= 0;
+            mpeg_stream_bit_index <= 0;
+        end else begin
+            if (data_strobe) begin
+                mpeg_stream_fifo_write_adr <= mpeg_stream_fifo_write_adr + 1;
+                if (!mpeg_stream_fifo_write_adr[0])
+                    mpeg_stream_fifo[mpeg_stream_fifo_write_adr[10:1]][31:16] <= data_word;
+                if (mpeg_stream_fifo_write_adr[0])
+                    mpeg_stream_fifo[mpeg_stream_fifo_write_adr[10:1]][15:0] <= data_word;
+            end
+
+            if (dmem_cmd_payload_write && dmem_cmd_valid) begin
+                if (dmem_cmd_payload_address == 32'h10002000)
+                    mpeg_stream_fifo_write_adr <= dmem_cmd_payload_data[27:0];
+                if (dmem_cmd_payload_address == 32'h10002004)
+                    mpeg_stream_bit_index <= dmem_cmd_payload_data;
+            end
         end
     end
 
@@ -293,7 +299,6 @@ module mpeg_audio (
             if (sample_tick44) strobe_fifo = 1;
         end
     end
-
 
     always_ff @(posedge clk) begin
         dc_bias_cnt <= !dc_bias_cnt;
