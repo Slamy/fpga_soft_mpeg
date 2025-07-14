@@ -86,8 +86,28 @@ void test_vector_unit()
 	*((volatile intsample_t *)OUTPORT) = synth_window_mac->result;
 }
 
+volatile union{
+	volatile uint32_t int32;
+	volatile uint8_t int8[4];
+} testenv;
+
+void test_memory(){
+	testenv.int32=0x1234;
+	*((volatile uint32_t *)OUTPORT) = testenv.int32;
+	testenv.int8[0]=0x42;
+	*((volatile uint32_t *)OUTPORT) = testenv.int32;
+	*((volatile uint32_t *)OUTPORT) = testenv.int8[0];
+	testenv.int8[1]=0xaf;
+	*((volatile uint32_t *)OUTPORT) = testenv.int32;
+	*((volatile uint32_t *)OUTPORT) = testenv.int8[0];
+	*((volatile uint32_t *)OUTPORT) = testenv.int8[1];
+	stop_verilator();
+}
 void main(void)
 {
+	//test_memory();
+	//print_str("hello world\n");
+
 	// test_vector_unit();
 	// stop_verilator();
 	//  for(;;);

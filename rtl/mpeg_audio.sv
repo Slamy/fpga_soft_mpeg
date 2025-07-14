@@ -63,6 +63,7 @@ module mpeg_audio (
     wire [31:0] memory_out;
     wire [31:0] memory_b_out;
     assign imem_rsp_payload_word = reverse_endian_32(memory_b_out);
+
     firmware_memory mem (
         .clk,
         .addr_b(imem_cmd_payload_address[12:2]),
@@ -70,7 +71,12 @@ module mpeg_audio (
         .addr_a(dmem_cmd_payload_address[12:2]),
         .data_a(dmem_cmd_payload_data),
         .we_a(dmem_cmd_payload_address[31:28]==0 && dmem_cmd_valid && dmem_cmd_ready && dmem_cmd_payload_write),
-        .be_a(dmem_cmd_payload_mask),
+        .be_a({
+            dmem_cmd_payload_mask[0],
+            dmem_cmd_payload_mask[1],
+            dmem_cmd_payload_mask[2],
+            dmem_cmd_payload_mask[3]
+        }),
         .q_a(memory_out)
     );
 
@@ -287,8 +293,8 @@ module mpeg_audio (
 
         if (imem_cmd_valid) begin
             imem_rsp_valid <= 1;
+            imem_rsp_payload_id <= imem_cmd_payload_id;
         end
-
     end
 
     audiostream xa_fifo_out[2] ();
