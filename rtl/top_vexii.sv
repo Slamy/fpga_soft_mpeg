@@ -34,10 +34,12 @@ module top_vexii (
     always_ff @(posedge clk) begin
         // MPEG Audio has stopped.
         playback_active_q <= playback_active;
-        if (playback_active_q && !playback_active)
+        if (playback_active_q && !playback_active) begin
+            $display("Playback has finished!");
             $finish();
+        end
     end
-    
+
     mpeg_audio audio (
         .clk,
         .reset,

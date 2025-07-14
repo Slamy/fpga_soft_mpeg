@@ -47,7 +47,7 @@ void print_chr(char ch);
 void print_str(const char *p);
 void stop_verilator();
 
-// #define SOFT_CONVOLVE
+//#define SOFT_CONVOLVE
 
 #define PL_MPEG_IMPLEMENTATION
 #define PLM_NO_STDIO
@@ -58,7 +58,7 @@ void print_chr(char ch)
 	*((volatile uint8_t *)OUTPORT) = ch;
 }
 
-void __attribute__ ((noinline)) print_str(const char *p)
+void print_str(const char *p)
 {
 	while (*p != 0)
 		*((volatile uint8_t *)OUTPORT) = *(p++);
@@ -66,6 +66,7 @@ void __attribute__ ((noinline)) print_str(const char *p)
 
 void stop_verilator()
 {
+	print_str("Nope\n");
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 }
 

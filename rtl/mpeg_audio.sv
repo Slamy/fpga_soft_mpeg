@@ -66,9 +66,9 @@ module mpeg_audio (
 
     firmware_memory mem (
         .clk,
-        .addr_b(imem_cmd_payload_address[16:2]),
+        .addr_b(imem_cmd_payload_address[17:2]),
         .q_b(memory_b_out),
-        .addr_a(dmem_cmd_payload_address[16:2]),
+        .addr_a(mac_state==FETCH ? mac_vector_addr[17:2] : dmem_cmd_payload_address[17:2]),
         .data_a(reverse_endian_32(dmem_cmd_payload_data)),
         .we_a(dmem_cmd_payload_address[31:28]==0 && dmem_cmd_valid && dmem_cmd_ready && dmem_cmd_payload_write),
         .be_a({
@@ -143,7 +143,9 @@ module mpeg_audio (
 
     bit signed [31:0] mac_vector_accu = 0;
     bit signed [17:0] mac_vector_temp1 = 0;
-    bit signed [31:0] mac_vector_temp2 = 0;
+
+    // shared with CPU bus. Careful!
+    wire signed [31:0] mac_vector_temp2 = reverse_endian_32(memory_out);
 
     bit [31:0] mac_vector_addr;
     bit [8:0] mac_vector_index;
@@ -429,7 +431,7 @@ module firmware_memory (
     output bit [31:0] q_b
 );
 
-    parameter ADDRESS_WIDTH = 15;
+    parameter ADDRESS_WIDTH = 16;
     parameter DEPTH = 2 ** ADDRESS_WIDTH;
     parameter BYTE_WIDTH = 8;
     parameter NUM_BYTES = 4;
