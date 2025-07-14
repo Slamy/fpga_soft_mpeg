@@ -66,9 +66,9 @@ module mpeg_audio (
 
     firmware_memory mem (
         .clk,
-        .addr_b(imem_cmd_payload_address[12:2]),
+        .addr_b(imem_cmd_payload_address[16:2]),
         .q_b(memory_b_out),
-        .addr_a(dmem_cmd_payload_address[12:2]),
+        .addr_a(dmem_cmd_payload_address[16:2]),
         .data_a(reverse_endian_32(dmem_cmd_payload_data)),
         .we_a(dmem_cmd_payload_address[31:28]==0 && dmem_cmd_valid && dmem_cmd_ready && dmem_cmd_payload_write),
         .be_a({
@@ -236,11 +236,11 @@ module mpeg_audio (
 
         imem_cmd_payload_address_q <= imem_cmd_payload_address;
         if (imem_rsp_valid) begin
-            $display("IMEM %x %x", imem_cmd_payload_address_q, imem_rsp_payload_word);
+            //$display("IMEM %x %x", imem_cmd_payload_address_q, imem_rsp_payload_word);
         end
 
         if (dmem_rsp_valid) begin
-           $display("DMEM %x %x", dmem_cmd_payload_address_q, dmem_rsp_payload_data);
+           //$display("DMEM %x %x", dmem_cmd_payload_address_q, dmem_rsp_payload_data);
         end
     end
 `endif
@@ -429,7 +429,7 @@ module firmware_memory (
     output bit [31:0] q_b
 );
 
-    parameter ADDRESS_WIDTH = 11;
+    parameter ADDRESS_WIDTH = 15;
     parameter DEPTH = 2 ** ADDRESS_WIDTH;
     parameter BYTE_WIDTH = 8;
     parameter NUM_BYTES = 4;

@@ -58,7 +58,7 @@ void print_chr(char ch)
 	*((volatile uint8_t *)OUTPORT) = ch;
 }
 
-void print_str(const char *p)
+void __attribute__ ((noinline)) print_str(const char *p)
 {
 	while (*p != 0)
 		*((volatile uint8_t *)OUTPORT) = *(p++);
@@ -66,8 +66,6 @@ void print_str(const char *p)
 
 void stop_verilator()
 {
-	print_str("Nope\n");
-
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 }
 
@@ -108,16 +106,27 @@ void test_memory()
 	stop_verilator();
 }
 
+void test_mpegmemory()
+{
+
+	stop_verilator();
+}
+
 void main(void)
 {
-	// print_str("hello world\n");
 
 	// test_vector_unit();
 	// stop_verilator();
 	//  for(;;);
 
+	*((volatile uint32_t *)OUTPORT) = *(uint32_t *)0x20000000;
+	*((volatile uint32_t *)OUTPORT) = *(uint32_t *)0x20000004;
+	stop_verilator();
+
+
 	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
+
 
 	int cnt = 0;
 
