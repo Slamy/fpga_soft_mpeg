@@ -17,11 +17,22 @@ module mpeg_audio (
 );
 
     // 4kB of MPEG stream memory to fill from outside
-    bit [31:0] mpeg_stream_fifo[1024];
+    wire [31:0] mpeg_in_fifo_out;
+
+    mpeg_input_stream_fifo in_fifo (
+        .clk,
+        // In (from 16 Bit CD data)
+        .waddr(mpeg_stream_fifo_write_adr[10:0]),
+        .wdata(data_word),
+        .we(data_strobe),
+        // Out (32 bit CPU interface)
+        .raddr(dmem_cmd_payload_address[11:2]),
+        .q(mpeg_in_fifo_out)
+    );
 
     // Word Address
-    bit [27:0] mpeg_stream_fifo_write_adr;
-    bit [31:0] mpeg_stream_bit_index;
+    bit  [27:0] mpeg_stream_fifo_write_adr;
+    bit  [31:0] mpeg_stream_bit_index;
     wire [28:0] mpeg_stream_byte_index = mpeg_stream_bit_index[31:3];
 
     // Word address
@@ -37,10 +48,6 @@ module mpeg_audio (
         end else begin
             if (data_strobe) begin
                 mpeg_stream_fifo_write_adr <= mpeg_stream_fifo_write_adr + 1;
-                if (!mpeg_stream_fifo_write_adr[0])
-                    mpeg_stream_fifo[mpeg_stream_fifo_write_adr[10:1]][31:16] <= data_word;
-                if (mpeg_stream_fifo_write_adr[0])
-                    mpeg_stream_fifo[mpeg_stream_fifo_write_adr[10:1]][15:0] <= data_word;
             end
 
             if (dmem_cmd_payload_write && dmem_cmd_valid) begin
@@ -52,10 +59,19 @@ module mpeg_audio (
         end
     end
 
-
     // 28000 byte of memory are required
-    bit [31:0] memory[40000/4];
-    initial $readmemh("../sw/firmware.mem", memory);
+    wire [31:0] memory_out;
+
+    firmware_memory mem(
+        .clk,
+        .addr_b(imem_cmd_payload_address[12:2]),
+        .q_b(imem_rsp_payload_word),
+        .addr_a(dmem_cmd_payload_address[12:2]),
+        .data_a(dmem_cmd_payload_data),
+        .we_a(dmem_cmd_payload_address[31:28]==0 && dmem_cmd_valid && dmem_cmd_ready && dmem_cmd_payload_write),
+        .be_a(dmem_cmd_payload_mask),
+        .q_a(memory_out)
+    );
 
     // sbt "Test/runMain vexiiriscv.Generate --with-rvm --with-rvc 
     // --region base=00000000,size=80000000,main=1,exe=1 --allow-bypass-from=0"
@@ -162,7 +178,7 @@ module mpeg_audio (
             end
             FETCH: begin
                 mac_vector_temp1 <= PLM_AUDIO_SYNTHESIS_WINDOW(mac_vector_index);
-                mac_vector_temp2 <= reverse_endian_32(memory[mac_vector_addr>>2]);
+                //mac_vector_temp2 <= reverse_endian_32(memory[mac_vector_addr>>2]);
                 mac_vector_index <= mac_vector_index + 64;
                 mac_vector_addr  <= mac_vector_addr + 128 * 4;
                 mac_vector_cnt   <= mac_vector_cnt - 1;
@@ -179,13 +195,49 @@ module mpeg_audio (
         if (dmem_cmd_payload_address[31:28] == 4'd1) begin
             dmem_cmd_ready = !mac_state && fifo_nearly_full == 0;
         end
+
+
+        dmem_rsp_payload_data = mpeg_in_fifo_out;
+
+        if (dmem_cmd_valid_q && dmem_cmd_ready_q) begin
+            case (dmem_cmd_payload_address_q[31:28])
+                4'd1: begin
+                    // I/O Area
+                    if (!dmem_cmd_payload_write_q) begin
+                        if (dmem_cmd_payload_address_q == 32'h10001008)
+                            dmem_rsp_payload_data = mac_vector_accu;
+                        if (dmem_cmd_payload_address_q == 32'h10002000)
+                            dmem_rsp_payload_data = {3'b000, mpeg_stream_fifo_write_adr, 1'b0};
+                        if (dmem_cmd_payload_address_q == 32'h10002004)
+                            dmem_rsp_payload_data = mpeg_stream_bit_index;
+                    end
+                end
+                4'd0: begin
+                    dmem_rsp_payload_data = memory_out;
+                end
+                default: begin
+                    // Assign the rest of the memory to the MPEG FIFO to fake a real big file
+                    dmem_rsp_payload_data = mpeg_in_fifo_out;
+                end
+            endcase
+
+        end
     end
 
     bit [31:0] debug_l_storage;
+    bit [31:0] dmem_cmd_payload_address_q;
+    bit dmem_cmd_valid_q;
+    bit dmem_cmd_ready_q;
+    bit dmem_cmd_payload_write_q;
 
     always_ff @(posedge clk) begin
         imem_rsp_valid <= 0;
         dmem_rsp_valid <= 0;
+
+        dmem_cmd_payload_address_q <= dmem_cmd_payload_address;
+        dmem_cmd_valid_q <= dmem_cmd_valid;
+        dmem_cmd_ready_q <= dmem_cmd_ready;
+        dmem_cmd_payload_write_q <= dmem_cmd_payload_write;
 
         if (dmem_cmd_payload_write && dmem_cmd_valid) begin
             if (dmem_cmd_payload_address == 32'h1000000c) $finish();
@@ -196,9 +248,6 @@ module mpeg_audio (
                 $display("Debug A %x", dmem_cmd_payload_data);
             if (dmem_cmd_payload_address == 32'h10000044)
                 $display("Debug B %x", dmem_cmd_payload_data);
-
-            if (dmem_cmd_payload_address == 32'h10002004)
-                mpeg_stream_bit_index <= dmem_cmd_payload_data;
 
             if (dmem_cmd_payload_address == 32'h10000004) debug_l_storage <= dmem_cmd_payload_data;
             if (dmem_cmd_payload_address == 32'h10000008)
@@ -212,48 +261,24 @@ module mpeg_audio (
             case (dmem_cmd_payload_address[31:28])
                 4'd1: begin
                     // I/O Area
-                    if (!dmem_cmd_payload_write) begin
-                        if (dmem_cmd_payload_address == 32'h10001008)
-                            dmem_rsp_payload_data <= mac_vector_accu;
-                        if (dmem_cmd_payload_address == 32'h10002000)
-                            dmem_rsp_payload_data <= {3'b000, mpeg_stream_fifo_write_adr, 1'b0};
-                        if (dmem_cmd_payload_address == 32'h10002004)
-                            dmem_rsp_payload_data <= mpeg_stream_bit_index;
-                    end
                 end
                 4'd0: begin
-                    if (dmem_cmd_payload_write) begin
-                        if (dmem_cmd_payload_mask[0])
-                            memory[dmem_cmd_payload_address>>2][31:24] <= dmem_cmd_payload_data[7:0];
-                        if (dmem_cmd_payload_mask[1])
-                            memory[dmem_cmd_payload_address>>2][23:16] <= dmem_cmd_payload_data[15:8];
-                        if (dmem_cmd_payload_mask[2])
-                            memory[dmem_cmd_payload_address>>2][15:8] <= dmem_cmd_payload_data[23:16];
-                        if (dmem_cmd_payload_mask[3])
-                            memory[dmem_cmd_payload_address>>2][7:0] <= dmem_cmd_payload_data[31:24];
-                    end else begin
-                        dmem_rsp_payload_data <=
-                            reverse_endian_32(memory[dmem_cmd_payload_address>>2]);
-                    end
+                    
                 end
                 default: begin
-                    // Assign the rest of the memory to the MPEG FIFO to fake a real big file
-                    dmem_rsp_payload_data <= reverse_endian_32(
-                        mpeg_stream_fifo[dmem_cmd_payload_address>>2]
-                    );
                 end
             endcase
-        end
-
-        if (imem_cmd_valid) begin
-            imem_rsp_valid <= 1;
-            imem_rsp_payload_id <= imem_cmd_payload_id;
-            imem_rsp_payload_word <= reverse_endian_32(memory[imem_cmd_payload_address>>2]);
         end
     end
 
     audiostream xa_fifo_out[2] ();
     audiostream xa_fifo_in[2] ();
+
+`ifdef VERILATOR
+    wire signed [15:0] fifo_out_left  /*verilator public_flat_rd*/ = xa_fifo_out[0].sample;
+    wire signed [15:0] fifo_out_right  /*verilator public_flat_rd*/ = xa_fifo_out[1].sample;
+    wire fifo_out_valid  /*verilator public_flat_rd*/ = xa_fifo_out[0].strobe;
+`endif
 
     wire [1:0] fifo_nearly_full;
     wire [1:0] fifo_half_full;
@@ -343,3 +368,66 @@ module mpeg_audio (
 
 
 endmodule
+
+
+// https://www.intel.com/content/www/us/en/docs/programmable/683082/21-3/mixed-width-dual-port-ram.html
+// 512x16 write and 1024x32 read
+module mpeg_input_stream_fifo (
+    input [10:0] waddr,
+    input [15:0] wdata,
+    input we,
+    input clk,
+    input [9:0] raddr,
+    output logic [31:0] q
+);
+    logic [1:0][15:0] ram[0:1023];
+    always_ff @(posedge clk) begin
+        if (we) ram[waddr[10:1]][waddr[0]] <= wdata;
+        q <= ram[raddr];
+    end
+endmodule : mpeg_input_stream_fifo
+
+
+// According to
+// https://www.intel.com/content/www/us/en/docs/programmable/683082/22-1/true-dual-port-synchronous-ram.html
+// to ensure that this is indeed a True Dual-Port RAM with Single Clock
+module firmware_memory (
+    input clk,
+    input [31:0] data_a,
+    input [ADDRESS_WIDTH-1:0] addr_a,
+    input [ADDRESS_WIDTH-1:0] addr_b,
+    input we_a,
+    input [NUM_BYTES-1:0] be_a,  // 4 bytes per word
+
+    output bit [31:0] q_a,
+    output bit [31:0] q_b
+);
+
+    parameter ADDRESS_WIDTH = 11;
+    parameter DEPTH = 2 ** ADDRESS_WIDTH;
+    parameter BYTE_WIDTH = 8;
+    parameter NUM_BYTES = 4;
+
+    // use a multi-dimensional packed array
+    //to model individual bytes within the word
+    logic [NUM_BYTES-1:0][BYTE_WIDTH-1:0] ram[0:DEPTH-1];
+    // # words = 1 << address width
+
+    initial $readmemh("../sw/firmware.mem", ram);
+
+    // Port A - Reading and Writing
+    always @(posedge clk) begin
+        if (we_a) begin
+            for (int i = 0; i < NUM_BYTES; i = i + 1) begin
+                if (be_a[i]) ram[addr_a][i] <= data_a[i*BYTE_WIDTH+:BYTE_WIDTH];
+            end
+        end
+        q_a <= ram[addr_a];
+    end
+
+    // Port B - Only reading
+    always @(posedge clk) begin
+        q_b <= ram[addr_b];
+    end
+endmodule
+
