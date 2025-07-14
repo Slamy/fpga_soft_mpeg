@@ -66,9 +66,9 @@ module mpeg_audio (
 
     firmware_memory mem (
         .clk,
-        .addr_b(imem_cmd_payload_address[17:2]),
+        .addr_b(imem_cmd_payload_address[16:2]),
         .q_b(memory_b_out),
-        .addr_a(mac_state==FETCH ? mac_vector_addr[17:2] : dmem_cmd_payload_address[17:2]),
+        .addr_a(mac_state==FETCH ? mac_vector_addr[16:2] : dmem_cmd_payload_address[16:2]),
         .data_a(reverse_endian_32(dmem_cmd_payload_data)),
         .we_a(dmem_cmd_payload_address[31:28]==0 && dmem_cmd_valid && dmem_cmd_ready && dmem_cmd_payload_write),
         .be_a({
@@ -417,7 +417,8 @@ endmodule : mpeg_input_stream_fifo
 
 
 // According to
-// https://www.intel.com/content/www/us/en/docs/programmable/683082/22-1/true-dual-port-synchronous-ram.html
+// https://www.intel.com/content/www/us/en/docs/programmable/683082/21-3/true-dual-port-synchronous-ram.html
+// https://www.intel.com/content/www/us/en/docs/programmable/683082/21-3/ram-with-byte-enable-signals.html
 // to ensure that this is indeed a True Dual-Port RAM with Single Clock
 module firmware_memory (
     input clk,
@@ -431,7 +432,7 @@ module firmware_memory (
     output bit [31:0] q_b
 );
 
-    parameter ADDRESS_WIDTH = 16;
+    parameter ADDRESS_WIDTH = 15;
     parameter DEPTH = 2 ** ADDRESS_WIDTH;
     parameter BYTE_WIDTH = 8;
     parameter NUM_BYTES = 4;
@@ -447,7 +448,7 @@ module firmware_memory (
     always @(posedge clk) begin
         if (we_a) begin
             for (int i = 0; i < NUM_BYTES; i = i + 1) begin
-                if (be_a[i]) ram[addr_a][i] <= data_a[i*BYTE_WIDTH+:BYTE_WIDTH];
+                if (be_a[i]) ram[addr_a][i] = data_a[i*BYTE_WIDTH+:BYTE_WIDTH];
             end
         end
         q_a <= ram[addr_a];
