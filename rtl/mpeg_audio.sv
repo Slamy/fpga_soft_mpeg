@@ -61,11 +61,12 @@ module mpeg_audio (
 
     // 28000 byte of memory are required
     wire [31:0] memory_out;
-
-    firmware_memory mem(
+    wire [31:0] memory_b_out;
+    assign imem_rsp_payload_word = reverse_endian_32(memory_b_out);
+    firmware_memory mem (
         .clk,
         .addr_b(imem_cmd_payload_address[12:2]),
-        .q_b(imem_rsp_payload_word),
+        .q_b(memory_b_out),
         .addr_a(dmem_cmd_payload_address[12:2]),
         .data_a(dmem_cmd_payload_data),
         .we_a(dmem_cmd_payload_address[31:28]==0 && dmem_cmd_valid && dmem_cmd_ready && dmem_cmd_payload_write),
@@ -196,8 +197,7 @@ module mpeg_audio (
             dmem_cmd_ready = !mac_state && fifo_nearly_full == 0;
         end
 
-
-        dmem_rsp_payload_data = mpeg_in_fifo_out;
+        dmem_rsp_payload_data = reverse_endian_32(mpeg_in_fifo_out);
 
         if (dmem_cmd_valid_q && dmem_cmd_ready_q) begin
             case (dmem_cmd_payload_address_q[31:28])
@@ -213,16 +213,31 @@ module mpeg_audio (
                     end
                 end
                 4'd0: begin
-                    dmem_rsp_payload_data = memory_out;
+                    dmem_rsp_payload_data = reverse_endian_32(memory_out);
                 end
                 default: begin
                     // Assign the rest of the memory to the MPEG FIFO to fake a real big file
-                    dmem_rsp_payload_data = mpeg_in_fifo_out;
+                    dmem_rsp_payload_data = reverse_endian_32(mpeg_in_fifo_out);
                 end
             endcase
 
         end
     end
+
+`ifdef VERILATOR
+    bit [31:0] imem_cmd_payload_address_q;
+    always_ff @(posedge clk) begin
+
+        imem_cmd_payload_address_q <= imem_cmd_payload_address;
+        if (imem_rsp_valid) begin
+            $display("IMEM %x %x", imem_cmd_payload_address_q, imem_rsp_payload_word);
+        end
+
+        if (dmem_rsp_valid) begin
+            $display("DMEM %x %x", dmem_cmd_payload_address_q, dmem_rsp_payload_data);
+        end
+    end
+`endif
 
     bit [31:0] debug_l_storage;
     bit [31:0] dmem_cmd_payload_address_q;
@@ -263,12 +278,17 @@ module mpeg_audio (
                     // I/O Area
                 end
                 4'd0: begin
-                    
+
                 end
                 default: begin
                 end
             endcase
         end
+
+        if (imem_cmd_valid) begin
+            imem_rsp_valid <= 1;
+        end
+
     end
 
     audiostream xa_fifo_out[2] ();
