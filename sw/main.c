@@ -110,7 +110,6 @@ void test_memory()
 
 void main(void)
 {
-	test_memory();
 	// print_str("hello world\n");
 
 	// test_vector_unit();

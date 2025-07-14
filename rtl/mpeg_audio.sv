@@ -236,11 +236,11 @@ module mpeg_audio (
 
         imem_cmd_payload_address_q <= imem_cmd_payload_address;
         if (imem_rsp_valid) begin
-            //$display("IMEM %x %x", imem_cmd_payload_address_q, imem_rsp_payload_word);
+            $display("IMEM %x %x", imem_cmd_payload_address_q, imem_rsp_payload_word);
         end
 
         if (dmem_rsp_valid) begin
-           // $display("DMEM %x %x", dmem_cmd_payload_address_q, dmem_rsp_payload_data);
+           $display("DMEM %x %x", dmem_cmd_payload_address_q, dmem_rsp_payload_data);
         end
     end
 `endif
