@@ -22,7 +22,7 @@ module mpeg_audio (
     mpeg_input_stream_fifo in_fifo (
         .clk,
         // In (from 16 Bit CD data)
-        .waddr(mpeg_stream_fifo_write_adr[10:0]),
+        .waddr(mpeg_stream_fifo_write_adr[10:0] ^ 1),
         .wdata(data_word),
         .we(data_strobe),
         // Out (32 bit CPU interface)
@@ -240,7 +240,7 @@ module mpeg_audio (
         end
 
         if (dmem_rsp_valid) begin
-           //$display("DMEM %x %x", dmem_cmd_payload_address_q, dmem_rsp_payload_data);
+            //$display("DMEM %x %x", dmem_cmd_payload_address_q, dmem_rsp_payload_data);
         end
     end
 `endif

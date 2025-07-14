@@ -108,25 +108,18 @@ void test_memory()
 
 void test_mpegmemory()
 {
-
+	// expect
+	// Debug out ba010000
+	// Debug out 00010021
+	*((volatile uint32_t *)OUTPORT) = *(uint32_t *)0x20000000;
+	*((volatile uint32_t *)OUTPORT) = *(uint32_t *)0x20000004;
 	stop_verilator();
 }
 
 void main(void)
 {
-
-	// test_vector_unit();
-	// stop_verilator();
-	//  for(;;);
-
-	*((volatile uint32_t *)OUTPORT) = *(uint32_t *)0x20000000;
-	*((volatile uint32_t *)OUTPORT) = *(uint32_t *)0x20000004;
-	stop_verilator();
-
-
 	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
-
 
 	int cnt = 0;
 
