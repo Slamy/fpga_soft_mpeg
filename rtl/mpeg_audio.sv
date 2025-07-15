@@ -66,18 +66,21 @@ module mpeg_audio (
 
     firmware_memory mem (
         .clk,
-        .addr_b(imem_cmd_payload_address[16:2]),
-        .q_b(memory_b_out),
-        .addr_a(mac_state==FETCH ? mac_vector_addr[16:2] : dmem_cmd_payload_address[16:2]),
-        .data_a(reverse_endian_32(dmem_cmd_payload_data)),
-        .we_a(dmem_cmd_payload_address[31:28]==0 && dmem_cmd_valid && dmem_cmd_ready && dmem_cmd_payload_write),
-        .be_a({
+        .addr2(imem_cmd_payload_address[14:2]),
+        .data_out2(memory_b_out),
+        .be2(0),
+        .we2(0),
+        .data_in2(0),
+        .addr1(mac_state == FETCH ? mac_vector_addr[14:2] : dmem_cmd_payload_address[14:2]),
+        .data_in1(reverse_endian_32(dmem_cmd_payload_data)),
+        .we1(dmem_cmd_payload_address[31:28]==0 && dmem_cmd_valid && dmem_cmd_ready && dmem_cmd_payload_write),
+        .be1({
             dmem_cmd_payload_mask[0],
             dmem_cmd_payload_mask[1],
             dmem_cmd_payload_mask[2],
             dmem_cmd_payload_mask[3]
         }),
-        .q_a(memory_out)
+        .data_out1(memory_out)
     );
 
     // sbt "Test/runMain vexiiriscv.Generate --with-rvm --with-rvc 
@@ -408,6 +411,7 @@ module mpeg_input_stream_fifo (
     input [9:0] raddr,
     output logic [31:0] q
 );
+    
     logic [1:0][15:0] ram[0:1023];
     always_ff @(posedge clk) begin
         if (we) ram[waddr[10:1]][waddr[0]] <= wdata;
@@ -415,48 +419,75 @@ module mpeg_input_stream_fifo (
     end
 endmodule : mpeg_input_stream_fifo
 
+integer i;
 
-// According to
-// https://www.intel.com/content/www/us/en/docs/programmable/683082/21-3/true-dual-port-synchronous-ram.html
-// https://www.intel.com/content/www/us/en/docs/programmable/683082/21-3/ram-with-byte-enable-signals.html
-// to ensure that this is indeed a True Dual-Port RAM with Single Clock
-module firmware_memory (
-    input clk,
-    input [31:0] data_a,
-    input [ADDRESS_WIDTH-1:0] addr_a,
-    input [ADDRESS_WIDTH-1:0] addr_b,
-    input we_a,
-    input [NUM_BYTES-1:0] be_a,  // 4 bytes per word
 
-    output bit [31:0] q_a,
-    output bit [31:0] q_b
-);
+// Quartus Prime SystemVerilog Template
+//
+// True Dual-Port RAM with different read/write addresses and single read/write clock
+// and with a control for writing single bytes into the memory word; byte enable
 
-    parameter ADDRESS_WIDTH = 15;
-    parameter DEPTH = 2 ** ADDRESS_WIDTH;
-    parameter BYTE_WIDTH = 8;
-    parameter NUM_BYTES = 4;
+// Read during write produces old data on ports A and B and old data on mixed ports
+// For device families that do not support this mode (e.g. Stratix V) the ram is not inferred
 
-    // use a multi-dimensional packed array
-    //to model individual bytes within the word
-    logic [NUM_BYTES-1:0][BYTE_WIDTH-1:0] ram[0:DEPTH-1];
-    // # words = 1 << address width
+module firmware_memory
+	#(
+		parameter int
+		BYTE_WIDTH = 8,
+		ADDRESS_WIDTH = 13,
+		BYTES = 4,
+		DATA_WIDTH_R = BYTE_WIDTH * BYTES
+)
+(
+	input [ADDRESS_WIDTH-1:0] addr1,
+	input [ADDRESS_WIDTH-1:0] addr2,
+	input [BYTES-1:0] be1,
+	input [BYTES-1:0] be2,
+	input [DATA_WIDTH_R-1:0] data_in1, 
+	input [DATA_WIDTH_R-1:0] data_in2, 
+	input we1, we2, clk,
+	output [DATA_WIDTH_R-1:0] data_out1,
+	output [DATA_WIDTH_R-1:0] data_out2);
+	localparam RAM_DEPTH = 1 << ADDRESS_WIDTH;
+
+	// model the RAM with two dimensional packed array
+	logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1];
 
     initial $readmemh("../sw/firmware.mem", ram);
 
-    // Port A - Reading and Writing
-    always @(posedge clk) begin
-        if (we_a) begin
-            for (int i = 0; i < NUM_BYTES; i = i + 1) begin
-                if (be_a[i]) ram[addr_a][i] = data_a[i*BYTE_WIDTH+:BYTE_WIDTH];
-            end
-        end
-        q_a <= ram[addr_a];
-    end
+	reg [DATA_WIDTH_R-1:0] data_reg1;
+	reg [DATA_WIDTH_R-1:0] data_reg2;
 
-    // Port B - Only reading
-    always @(posedge clk) begin
-        q_b <= ram[addr_b];
-    end
-endmodule
+	// port A
+	always@(posedge clk)
+	begin
+		if(we1) begin
+		// edit this code if using other than four bytes per word
+			if(be1[0]) ram[addr1][0] <= data_in1[7:0];
+			if(be1[1]) ram[addr1][1] <= data_in1[15:8];
+			if(be1[2]) ram[addr1][2] <= data_in1[23:16];
+			if(be1[3]) ram[addr1][3] <= data_in1[31:24];
+		end
+	data_reg1 <= ram[addr1];
+	end
+
+	assign data_out1 = data_reg1;
+   
+	// port B
+	always@(posedge clk)
+	begin
+		if(we2) begin
+		// edit this code if using other than four bytes per word
+			if(be2[0]) ram[addr2][0] <= data_in2[7:0];
+			if(be2[1]) ram[addr2][1] <= data_in2[15:8];
+			if(be2[2]) ram[addr2][2] <= data_in2[23:16];
+			if(be2[3]) ram[addr2][3] <= data_in2[31:24];
+		end
+	data_reg2 <= ram[addr2];
+	end
+
+	assign data_out2 = data_reg2;
+
+endmodule : firmware_memory
+
 
