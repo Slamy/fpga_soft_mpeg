@@ -2011,8 +2011,6 @@ int64_t plm_demux_decode_time(plm_demux_t *self) {
 	plm_dma_buffer_skip(self->buffer, 1);
 	clock |= plm_dma_buffer_read(self->buffer, 15);
 	plm_dma_buffer_skip(self->buffer, 1);
-
-	//*((volatile uint32_t *)OUTPORT) = clock;
 	return clock;
 }
 
