@@ -226,12 +226,6 @@ typedef void(*plm_video_decode_callback)
 typedef struct {
 	int32_t time;
 	unsigned int count;
-	#ifdef PLM_AUDIO_SEPARATE_CHANNELS
-	int16_t left[PLM_AUDIO_SAMPLES_PER_FRAME];
-		int16_t right[PLM_AUDIO_SAMPLES_PER_FRAME];
-	#else
-		int16_t interleaved[PLM_AUDIO_SAMPLES_PER_FRAME * 2];
-	#endif
 } plm_samples_t;
 
 
@@ -1858,7 +1852,6 @@ struct plm_demux_t {
 
 	size_t last_file_size;
 	int64_t last_decoded_pts;
-	int64_t start_time;
 	int64_t duration;
 
 	int start_code;
@@ -1886,7 +1879,6 @@ plm_demux_t *plm_demux_create(plm_dma_buffer_t *buffer, int destroy_when_done) {
 	self->buffer = buffer;
 	self->destroy_buffer_when_done = destroy_when_done;
 
-	self->start_time = PLM_PACKET_INVALID_TS;
 	self->duration = PLM_PACKET_INVALID_TS;
 	self->start_code = -1;
 
@@ -2019,6 +2011,8 @@ int64_t plm_demux_decode_time(plm_demux_t *self) {
 	plm_dma_buffer_skip(self->buffer, 1);
 	clock |= plm_dma_buffer_read(self->buffer, 15);
 	plm_dma_buffer_skip(self->buffer, 1);
+
+	//*((volatile uint32_t *)OUTPORT) = clock;
 	return clock;
 }
 

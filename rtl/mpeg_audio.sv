@@ -269,7 +269,7 @@ module mpeg_audio (
             if (dmem_cmd_payload_address == 32'h1000000c) $finish();
             if (dmem_cmd_payload_address == 32'h10000030) soft_state <= dmem_cmd_payload_data;
             if (dmem_cmd_payload_address == 32'h10000000)
-                $display("Debug out %x", dmem_cmd_payload_data);
+                $display("Debug out %x %d    %x", dmem_cmd_payload_data,dmem_cmd_payload_data,mpeg_stream_byte_index);
             if (dmem_cmd_payload_address == 32'h10000040)
                 $display("Debug A %x", dmem_cmd_payload_data);
             if (dmem_cmd_payload_address == 32'h10000044)
@@ -402,7 +402,8 @@ endmodule
 
 
 // https://www.intel.com/content/www/us/en/docs/programmable/683082/21-3/mixed-width-dual-port-ram.html
-// 512x16 write and 1024x32 read
+// 2048x16 write and 1024x32 read
+// So, this is 4KB of memory
 module mpeg_input_stream_fifo (
     input [10:0] waddr,
     input [15:0] wdata,
