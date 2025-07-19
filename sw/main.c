@@ -31,12 +31,10 @@ struct io_audio_out
 	uint32_t fifo_full;
 };
 
-struct io_fifo_control localtest;
-
-static volatile struct io_synth_window_mac *const synth_window_mac = (volatile struct io_synth_window_mac *)0x10001000;
-static volatile struct io_fifo_control *fifo_ctrl = &localtest;
-static volatile struct io_audio_out *const io_audio_out_left = (volatile struct io_audio_out *)0x10003000;
-static volatile struct io_audio_out *const io_audio_out_right = (volatile struct io_audio_out *)0x10004000;
+volatile struct io_synth_window_mac *const synth_window_mac = (volatile struct io_synth_window_mac *)0x10001000;
+volatile struct io_fifo_control *const fifo_ctrl = (volatile struct io_fifo_control *)0x10002000;
+volatile struct io_audio_out *const io_audio_out_left = (volatile struct io_audio_out *)0x10003000;
+volatile struct io_audio_out *const io_audio_out_right = (volatile struct io_audio_out *)0x10004000;
 
 #define OUTPORT 0x10000000
 #define OUTPORT_L 0x10000004
@@ -49,7 +47,7 @@ void print_chr(char ch);
 void print_str(const char *p);
 void stop_verilator();
 
-//#define SOFT_CONVOLVE
+// #define SOFT_CONVOLVE
 
 #define PL_MPEG_IMPLEMENTATION
 #define PLM_NO_STDIO
@@ -121,27 +119,19 @@ void test_mpegmemory()
 
 void main(void)
 {
-	localtest.read_bit_index=0;
-	localtest.write_byte_index=0;
-
 	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
 	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
 
 	int cnt = 0;
 
-	*((volatile uint32_t *)OUTPORT) = mpeg->time;
-	*((volatile uint32_t *)OUTPORT) = mpeg->demux->system_clock_ref;
-	*((volatile uint32_t *)OUTPORT) = mpeg->demux->last_decoded_pts;
-	
-	fifo_ctrl = (volatile struct io_fifo_control *)0x10002000;
-
 	// Wait until we have some data
-	while (!plm_init_decoders(mpeg));
+	while (!plm_init_decoders(mpeg))
+		;
 
-	*((volatile uint32_t *)OUTPORT) = mpeg->time;
-	*((volatile uint32_t *)OUTPORT) = mpeg->demux->system_clock_ref;
-	*((volatile uint32_t *)OUTPORT) = mpeg->demux->last_decoded_pts;
-	
+	// Get the first presentation time
+	int64_t last_decoded_pts = mpeg->demux->last_decoded_pts;
+	// TODO And actually use it...
+	*((volatile uint32_t *)OUTPORT) = last_decoded_pts;
 
 	for (;;)
 	{
@@ -149,8 +139,6 @@ void main(void)
 
 		if (samples)
 		{
-			*((volatile uint32_t *)OUTPORT) = mpeg->time;
-			*((volatile uint32_t *)OUTPORT) = mpeg->demux->system_clock_ref;
 			*((volatile uint32_t *)OUTPORT) = mpeg->demux->last_decoded_pts;
 			// Give some feedback to the user that we are running
 			cnt++;

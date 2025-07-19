@@ -22,11 +22,11 @@ module mpeg_audio (
     mpeg_input_stream_fifo in_fifo (
         .clk,
         // In (from 16 Bit CD data)
-        .waddr(mpeg_stream_fifo_write_adr[10:0] ^ 1),
+        .waddr(mpeg_stream_fifo_write_adr[12:0] ^ 1),
         .wdata(data_word),
         .we(data_strobe),
         // Out (32 bit CPU interface)
-        .raddr(dmem_cmd_payload_address[11:2]),
+        .raddr(dmem_cmd_payload_address[13:2]),
         .q(mpeg_in_fifo_out)
     );
 
@@ -38,7 +38,8 @@ module mpeg_audio (
     // Word address
     wire [27:0] mpeg_stream_fifo_read_adr = mpeg_stream_byte_index[28:1];
 
-    assign fifo_full = mpeg_stream_fifo_write_adr > (mpeg_stream_fifo_read_adr + 28'd2000);
+    wire [27:0] fifo_level = mpeg_stream_fifo_write_adr - mpeg_stream_fifo_read_adr;
+    assign fifo_full = mpeg_stream_fifo_write_adr > (mpeg_stream_fifo_read_adr + 28'd7000);
 
     always_ff @(posedge clk) begin
 
@@ -144,7 +145,15 @@ module mpeg_audio (
     );
     /*verilator tracing_on*/
 
-    bit signed [31:0] mac_vector_accu = 0;
+    bit signed [32:0] mac_vector_accu = 0;
+    bit signed [31:0] mac_vector_accu_saturated;
+
+    always_comb begin
+        if (mac_vector_accu > signed'(33'h7fffffff)) mac_vector_accu_saturated = 32'h7fffffff;
+        else if (mac_vector_accu < signed'(-33'h7fffffff)) mac_vector_accu_saturated = -32'h7fffffff;
+        else mac_vector_accu_saturated = mac_vector_accu[31:0];
+    end
+
     bit signed [17:0] mac_vector_temp1 = 0;
 
     // shared with CPU bus. Careful!
@@ -186,7 +195,7 @@ module mpeg_audio (
 
                 end
                 if (dmem_cmd_payload_address == 32'h10001008 && dmem_cmd_payload_write && dmem_cmd_valid && dmem_cmd_ready)
-                    mac_vector_accu <= dmem_cmd_payload_data;
+                    mac_vector_accu <= {1'b0, dmem_cmd_payload_data};
             end
             FETCH: begin
                 mac_vector_temp1 <= PLM_AUDIO_SYNTHESIS_WINDOW(mac_vector_index);
@@ -216,7 +225,7 @@ module mpeg_audio (
                     // I/O Area
                     if (!dmem_cmd_payload_write_q) begin
                         if (dmem_cmd_payload_address_q == 32'h10001008)
-                            dmem_rsp_payload_data = mac_vector_accu;
+                            dmem_rsp_payload_data = mac_vector_accu_saturated;
                         if (dmem_cmd_payload_address_q == 32'h10002000)
                             dmem_rsp_payload_data = {3'b000, mpeg_stream_fifo_write_adr, 1'b0};
                         if (dmem_cmd_payload_address_q == 32'h10002004)
@@ -269,7 +278,12 @@ module mpeg_audio (
             if (dmem_cmd_payload_address == 32'h1000000c) $finish();
             if (dmem_cmd_payload_address == 32'h10000030) soft_state <= dmem_cmd_payload_data;
             if (dmem_cmd_payload_address == 32'h10000000)
-                $display("Debug out %x %d    %x", dmem_cmd_payload_data,dmem_cmd_payload_data,mpeg_stream_byte_index);
+                $display(
+                    "Debug out %x %d    %x",
+                    dmem_cmd_payload_data,
+                    dmem_cmd_payload_data,
+                    mpeg_stream_byte_index
+                );
             if (dmem_cmd_payload_address == 32'h10000040)
                 $display("Debug A %x", dmem_cmd_payload_data);
             if (dmem_cmd_payload_address == 32'h10000044)
@@ -402,20 +416,20 @@ endmodule
 
 
 // https://www.intel.com/content/www/us/en/docs/programmable/683082/21-3/mixed-width-dual-port-ram.html
-// 2048x16 write and 1024x32 read
-// So, this is 4KB of memory
+// 4096x16 write and 2048x32 read
+// So, this is 8KB of memory
 module mpeg_input_stream_fifo (
-    input [10:0] waddr,
+    input [12:0] waddr,
     input [15:0] wdata,
     input we,
     input clk,
-    input [9:0] raddr,
+    input [11:0] raddr,
     output logic [31:0] q
 );
     
-    logic [1:0][15:0] ram[0:1023];
+    logic [1:0][15:0] ram[4096];
     always_ff @(posedge clk) begin
-        if (we) ram[waddr[10:1]][waddr[0]] <= wdata;
+        if (we) ram[waddr[12:1]][waddr[0]] <= wdata;
         q <= ram[raddr];
     end
 endmodule : mpeg_input_stream_fifo
@@ -431,63 +445,61 @@ integer i;
 // Read during write produces old data on ports A and B and old data on mixed ports
 // For device families that do not support this mode (e.g. Stratix V) the ram is not inferred
 
-module firmware_memory
-	#(
-		parameter int
-		BYTE_WIDTH = 8,
-		ADDRESS_WIDTH = 13,
-		BYTES = 4,
-		DATA_WIDTH_R = BYTE_WIDTH * BYTES
-)
-(
-	input [ADDRESS_WIDTH-1:0] addr1,
-	input [ADDRESS_WIDTH-1:0] addr2,
-	input [BYTES-1:0] be1,
-	input [BYTES-1:0] be2,
-	input [DATA_WIDTH_R-1:0] data_in1, 
-	input [DATA_WIDTH_R-1:0] data_in2, 
-	input we1, we2, clk,
-	output [DATA_WIDTH_R-1:0] data_out1,
-	output [DATA_WIDTH_R-1:0] data_out2);
-	localparam RAM_DEPTH = 1 << ADDRESS_WIDTH;
+module firmware_memory #(
+    parameter int BYTE_WIDTH = 8,
+    ADDRESS_WIDTH = 13,
+    BYTES = 4,
+    DATA_WIDTH_R = BYTE_WIDTH * BYTES
+) (
+    input [ADDRESS_WIDTH-1:0] addr1,
+    input [ADDRESS_WIDTH-1:0] addr2,
+    input [BYTES-1:0] be1,
+    input [BYTES-1:0] be2,
+    input [DATA_WIDTH_R-1:0] data_in1,
+    input [DATA_WIDTH_R-1:0] data_in2,
+    input we1,
+    we2,
+    clk,
+    output [DATA_WIDTH_R-1:0] data_out1,
+    output [DATA_WIDTH_R-1:0] data_out2
+);
+    localparam RAM_DEPTH = 1 << ADDRESS_WIDTH;
 
-	// model the RAM with two dimensional packed array
-	logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1];
+    // model the RAM with two dimensional packed array
+    logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1];
 
     initial $readmemh("../sw/firmware.mem", ram);
 
-	reg [DATA_WIDTH_R-1:0] data_reg1;
-	reg [DATA_WIDTH_R-1:0] data_reg2;
+    reg [DATA_WIDTH_R-1:0] data_reg1;
+    reg [DATA_WIDTH_R-1:0] data_reg2;
 
-	// port A
-	always@(posedge clk)
-	begin
-		if(we1) begin
-		// edit this code if using other than four bytes per word
-			if(be1[0]) ram[addr1][0] <= data_in1[7:0];
-			if(be1[1]) ram[addr1][1] <= data_in1[15:8];
-			if(be1[2]) ram[addr1][2] <= data_in1[23:16];
-			if(be1[3]) ram[addr1][3] <= data_in1[31:24];
-		end
-	data_reg1 <= ram[addr1];
-	end
+    // port A
+    always @(posedge clk) begin
+        if (we1) begin
+            // edit this code if using other than four bytes per word
+            if (be1[0]) ram[addr1][0] <= data_in1[7:0];
+            if (be1[1]) ram[addr1][1] <= data_in1[15:8];
+            if (be1[2]) ram[addr1][2] <= data_in1[23:16];
+            if (be1[3]) ram[addr1][3] <= data_in1[31:24];
+        end
+        data_reg1 <= ram[addr1];
+    end
 
-	assign data_out1 = data_reg1;
-   
-	// port B
-	always@(posedge clk)
-	begin
-		if(we2) begin
-		// edit this code if using other than four bytes per word
-			if(be2[0]) ram[addr2][0] <= data_in2[7:0];
-			if(be2[1]) ram[addr2][1] <= data_in2[15:8];
-			if(be2[2]) ram[addr2][2] <= data_in2[23:16];
-			if(be2[3]) ram[addr2][3] <= data_in2[31:24];
-		end
-	data_reg2 <= ram[addr2];
-	end
+    assign data_out1 = data_reg1;
 
-	assign data_out2 = data_reg2;
+    // port B
+    always @(posedge clk) begin
+        if (we2) begin
+            // edit this code if using other than four bytes per word
+            if (be2[0]) ram[addr2][0] <= data_in2[7:0];
+            if (be2[1]) ram[addr2][1] <= data_in2[15:8];
+            if (be2[2]) ram[addr2][2] <= data_in2[23:16];
+            if (be2[3]) ram[addr2][3] <= data_in2[31:24];
+        end
+        data_reg2 <= ram[addr2];
+    end
+
+    assign data_out2 = data_reg2;
 
 endmodule : firmware_memory
 

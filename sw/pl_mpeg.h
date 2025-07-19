@@ -4005,8 +4005,6 @@ void plm_audio_decode_frame(plm_audio_t *self) {
 
 							// calculate the first 8
 							synth_window_mac->result=0;
-							//*((volatile intsample_t *)OUTPORT)=self->V[ch][v_index+i];
-							//*((volatile intsample_t **)OUTPORT)=&self->V[ch][v_index+i];
 							synth_window_mac->addr = &self->V[ch][v_index+i];
 							synth_window_mac->index = d_index+i;
 

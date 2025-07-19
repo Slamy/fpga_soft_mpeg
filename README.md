@@ -62,7 +62,7 @@ to ensure that the hardware calculated results are correct.
 
 The md5sum of the result files are expected as
 
-    543719782627495400e583fd571ddc18  audio_left.bin
+    03fc21ac8959764cde1b5df560d064c1  audio_left.bin
     3afaa5556843e8fc99ccc6e8a542e8dd  audio_right.bin
 
 Just to be sure, the input files have these md5sum
