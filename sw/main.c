@@ -23,6 +23,9 @@ struct io_fifo_control
 {
 	uint32_t write_byte_index;
 	uint32_t read_bit_index;
+	uint32_t signal_decoding_started;
+	uint32_t signal_frame_decoded;
+	uint32_t signal_underflow;
 };
 
 struct io_audio_out
@@ -128,27 +131,21 @@ void main(void)
 	while (!plm_init_decoders(mpeg))
 		;
 
-	// Get the first presentation time
-	int64_t last_decoded_pts = mpeg->demux->last_decoded_pts;
-	// TODO And actually use it...
-	*((volatile uint32_t *)OUTPORT) = last_decoded_pts;
+	fifo_ctrl->signal_decoding_started = 1;
 
-	for (;;)
+	plm_samples_t *samples;
+	while (samples = plm_decode_audio(mpeg))
 	{
-		plm_samples_t *samples = plm_decode_audio(mpeg);
-
-		if (samples)
-		{
-			*((volatile uint32_t *)OUTPORT) = mpeg->demux->last_decoded_pts;
-			// Give some feedback to the user that we are running
-			cnt++;
-		}
-		else
-		{
-			// End simulation since the MPEG stream has ended
-			//*((volatile uint8_t *)OUTPORT_END) = 0;
-		}
+		// Give some feedback to the user that we are running
+		cnt++;
+		fifo_ctrl->signal_frame_decoded = cnt;
 	}
+
+	fifo_ctrl->signal_underflow = 1;
+
+	// Wait forever
+	for (;;)
+		;
 }
 
 uint32_t *irq(uint32_t *regs, uint32_t irqs)

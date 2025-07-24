@@ -5,6 +5,7 @@
 module mpeg_audio (
     input clk,
     input reset,
+    input dsp_enable,
 
     input [15:0] data_word,
     input data_strobe,
@@ -13,7 +14,11 @@ module mpeg_audio (
     output bit signed [15:0] audio_left,
     output bit signed [15:0] audio_right,
     input sample_tick44,
-    output playback_active
+    output playback_active,
+
+    output bit event_decoding_started,
+    output bit event_frame_decoded,
+    output bit event_underflow
 );
 
     // 4kB of MPEG stream memory to fill from outside
@@ -42,6 +47,9 @@ module mpeg_audio (
     assign fifo_full = mpeg_stream_fifo_write_adr > (mpeg_stream_fifo_read_adr + 28'd7000);
 
     always_ff @(posedge clk) begin
+        event_decoding_started <= 0;
+        event_frame_decoded <= 0;
+        event_underflow <= 0;
 
         if (reset) begin
             mpeg_stream_fifo_write_adr <= 0;
@@ -56,6 +64,10 @@ module mpeg_audio (
                     mpeg_stream_fifo_write_adr <= dmem_cmd_payload_data[27:0];
                 if (dmem_cmd_payload_address == 32'h10002004)
                     mpeg_stream_bit_index <= dmem_cmd_payload_data;
+
+                event_decoding_started <= (dmem_cmd_payload_address == 32'h10002008);
+                event_frame_decoded <= (dmem_cmd_payload_address == 32'h1000200c);
+                event_underflow <= (dmem_cmd_payload_address == 32'h10002010);
             end
         end
     end
@@ -141,7 +153,7 @@ module mpeg_audio (
         .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error),
         .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data),
         .clk(clk),
-        .reset(reset)
+        .reset(reset || !dsp_enable)
     );
     /*verilator tracing_on*/
 
@@ -150,7 +162,8 @@ module mpeg_audio (
 
     always_comb begin
         if (mac_vector_accu > signed'(33'h7fffffff)) mac_vector_accu_saturated = 32'h7fffffff;
-        else if (mac_vector_accu < signed'(-33'h7fffffff)) mac_vector_accu_saturated = -32'h7fffffff;
+        else if (mac_vector_accu < signed'(-33'h7fffffff))
+            mac_vector_accu_saturated = -32'h7fffffff;
         else mac_vector_accu_saturated = mac_vector_accu[31:0];
     end
 
@@ -426,7 +439,7 @@ module mpeg_input_stream_fifo (
     input [11:0] raddr,
     output logic [31:0] q
 );
-    
+
     logic [1:0][15:0] ram[4096];
     always_ff @(posedge clk) begin
         if (we) ram[waddr[12:1]][waddr[0]] <= wdata;

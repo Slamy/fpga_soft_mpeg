@@ -8,7 +8,7 @@ module top_vexii (
     output bit sample_tick
 );
 
-    localparam SIZE = 30208;
+    localparam SIZE = 158720;
     bit [31:0] mpeg_audio_rom[SIZE];
     initial $readmemh("fma.mem", mpeg_audio_rom);
 
@@ -30,7 +30,12 @@ module top_vexii (
         end
     end
 
-    bit playback_active_q;
+    bit  playback_active_q;
+    wire event_decoding_started;
+    wire event_frame_decoded;
+    wire event_underflow;
+
+
     always_ff @(posedge clk) begin
         // MPEG Audio has stopped.
         playback_active_q <= playback_active;
@@ -38,22 +43,31 @@ module top_vexii (
             $display("Playback has finished!");
             $finish();
         end
+
+        if (event_decoding_started) $display("DSP: Decoding started!");
+        if (event_frame_decoded) $display("DSP: Frame decoded!");
+        if (event_underflow) $display("DSP: Data underflow!");
     end
+
 
     mpeg_audio audio (
         .clk,
         .reset,
+        .dsp_enable(1'b1),
         .data_word,
         .data_strobe,
         .fifo_full,
         .audio_left,
         .audio_right,
         .sample_tick44(sample_tick),
-        .playback_active
+        .playback_active,
+        .event_decoding_started,
+        .event_frame_decoded,
+        .event_underflow
     );
 
     bit provide_lower_word = 0;
-    bit [14:0] mpeg_stream_address = 0;
+    bit [17:0] mpeg_stream_address = 0;
 
     always_ff @(posedge clk) begin
         data_strobe <= 0;
