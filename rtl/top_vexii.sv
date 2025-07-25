@@ -8,7 +8,7 @@ module top_vexii (
     output bit sample_tick
 );
 
-    localparam SIZE = 158720;
+    localparam SIZE = 29376;
     bit [31:0] mpeg_audio_rom[SIZE];
     initial $readmemh("fma.mem", mpeg_audio_rom);
 
@@ -67,7 +67,7 @@ module top_vexii (
     );
 
     bit provide_lower_word = 0;
-    bit [17:0] mpeg_stream_address = 0;
+    bit [14:0] mpeg_stream_address = 0;
 
     always_ff @(posedge clk) begin
         data_strobe <= 0;
