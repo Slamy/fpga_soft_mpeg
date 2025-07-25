@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Mon Jul 14 19:07:27 2025
+[*] Fri Jul 25 17:45:04 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Mon Jul 14 19:02:50 2025"
-[dumpfile_size] 2649297
+[dumpfile_mtime] "Fri Jul 25 17:45:04 2025"
+[dumpfile_size] 179485884
 [savefile] "/home/andre/GIT/HybridMPEG/sim/testbench.gtkw"
-[timestart] 239602
-[size] 1920 1152
-[pos] 796 -174
-*-3.193635 239625 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[timestart] 0
+[size] 2373 1152
+[pos] -360 57
+*-20.512537 1645000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top_vexii.
 [treeopen] TOP.top_vexii.audio.
@@ -20,7 +20,6 @@
 @100000028
 TOP.top_vexii.audio.mac_state
 @22
-TOP.top_vexii.audio.mac_vector_accu[31:0]
 TOP.top_vexii.audio.mac_vector_addr[31:0]
 TOP.top_vexii.audio.mac_vector_cnt[7:0]
 TOP.top_vexii.audio.mac_vector_index[8:0]
@@ -31,15 +30,21 @@ TOP.top_vexii.audio.perform_calc
 TOP.top_vexii.audio.dmem_cmd_ready
 TOP.top_vexii.audio.dmem_cmd_ready_q
 @22
-TOP.top_vexii.audio.mem.addr_b[15:0]
-TOP.top_vexii.audio.mem.addr_a[15:0]
 TOP.top_vexii.audio.dmem_cmd_payload_address[31:0]
 TOP.top_vexii.audio.dmem_cmd_payload_data[31:0]
 @28
 TOP.top_vexii.audio.dmem_cmd_payload_write
 TOP.top_vexii.audio.dmem_cmd_valid
 TOP.top_vexii.audio.dmem_rsp_valid
-@23
+@22
 TOP.top_vexii.audio.dmem_rsp_payload_data[31:0]
+@8420
+TOP.top_vexii.audio_left[15:0]
+TOP.top_vexii.audio_right[15:0]
+@28
+TOP.top_vexii.data_strobe
+@8025
+TOP.top_vexii.audio.fifo_left.count[9:0]
+TOP.top_vexii.audio.fifo_right.count[9:0]
 [pattern_trace] 1
 [pattern_trace] 0
