@@ -89,13 +89,13 @@ void main(void)
 	//  for(;;);
 
 	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 51200 * 4, 0);
-	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
+	plm_audio_t *mpeg = plm_audio_create_with_buffer(buffer, 0);
 
 	int cnt = 0;
 
 	for (;;)
 	{
-		plm_samples_t *samples = plm_decode_audio(mpeg);
+		plm_samples_t *samples = plm_audio_decode(mpeg);
 
 		if (samples)
 		{

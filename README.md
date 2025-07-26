@@ -62,8 +62,8 @@ to ensure that the hardware calculated results are correct.
 
 The md5sum of the result files are expected as
 
-    543719782627495400e583fd571ddc18  audio_left.bin
-    3afaa5556843e8fc99ccc6e8a542e8dd  audio_right.bin
+    e025598c855ae4d39c9cc642d929de0c  audio_left.bin
+    ef552bf5104375e11a6689f883bf2068  audio_right.bin
 
 Just to be sure, the input files have these md5sum
 
@@ -94,6 +94,15 @@ These are still results using 224 kb/s:
     Debug out a1a1a1a1  Waterlevel:        49404        49404 Samples decoded:      186624  Samples played:      137493  Load:          73 %   vexii
     Debug out a1a1a1a1  Waterlevel:        22340        22340 Samples decoded:      186624  Samples played:      164557  Load:          88 %   vexiiwb
     Debug out a1a1a1a1  Waterlevel:      -137554      -137554 Samples decoded:      186624  Samples played:      324453  Load:         173 %   picorv32
+
+Switching over from a muxed system stream to an elementary stream leads to reduction of memory consumption.
+The text segment is reduced from 1929 to 1357 instruction words since the demuxing logic is removed
+The total memory requirements are decreased from 28000 to 21300 byte since the elementary stream buffer is no longer required.
+The performance however is nearly untouched by this.
+
+    Debug out a1a1a1a1  Waterlevel:        50769        50769 Samples decoded:      186624  Samples played:      136129  Load:          72 %   vexii
+    Debug out a1a1a1a1  Waterlevel:        23769        23770 Samples decoded:      186624  Samples played:      163128  Load:          87 %   vexiiwb
+    Debug out a1a1a1a1  Waterlevel:      -134253      -134253 Samples decoded:      186624  Samples played:      321151  Load:         172 %   picorv32
 
 ### Benchmarks using only the soft core
 
