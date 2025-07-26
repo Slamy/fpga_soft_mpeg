@@ -12,32 +12,39 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-struct synth_window_mac
+struct io_synth_window_mac
 {
 	uint32_t *addr;
 	uint32_t index;
 	uint32_t result;
-	uint32_t busy;
 };
 
-volatile struct synth_window_mac *synth_window_mac = (volatile struct synth_window_mac *)0x30000000;
+struct io_fifo_control
+{
+	uint32_t write_byte_index;
+	uint32_t read_bit_index;
+	uint32_t signal_decoding_started;
+	uint32_t signal_frame_decoded;
+	uint32_t signal_underflow;
+};
+
+struct io_audio_out
+{
+	uint32_t sample;
+	uint32_t fifo_full;
+};
+
+volatile struct io_synth_window_mac *const synth_window_mac = (volatile struct io_synth_window_mac *)0x10001000;
+volatile struct io_fifo_control *const fifo_ctrl = (volatile struct io_fifo_control *)0x10002000;
+volatile struct io_audio_out *const io_audio_out_left = (volatile struct io_audio_out *)0x10003000;
+volatile struct io_audio_out *const io_audio_out_right = (volatile struct io_audio_out *)0x10004000;
 
 #define OUTPORT 0x10000000
 #define OUTPORT_L 0x10000004
 #define OUTPORT_R 0x10000008
 #define OUTPORT_END 0x1000000c
 
-#define OUT_L 0x10000010
-#define OUT_R 0x10000020
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
-
-extern caddr_t _end; /* _end is set in the linker command file */
-/* just in case, most boards have at least some memory */
-#ifndef RAMSIZE
-#define RAMSIZE (caddr_t)0x100000
-#endif
-
-
 
 void print_chr(char ch);
 void print_str(const char *p);
@@ -48,7 +55,6 @@ void stop_verilator();
 #define PL_MPEG_IMPLEMENTATION
 #define PLM_NO_STDIO
 #include "pl_mpeg.h"
-
 
 void print_chr(char ch)
 {
@@ -64,7 +70,6 @@ void print_str(const char *p)
 void stop_verilator()
 {
 	print_str("Nope\n");
-
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 }
 
@@ -82,63 +87,78 @@ void test_vector_unit()
 	*((volatile intsample_t *)OUTPORT) = synth_window_mac->result;
 }
 
+volatile union
+{
+	volatile uint32_t int32;
+	volatile uint8_t int8[4];
+	volatile uint16_t int16[2];
+} testenv;
+
+void test_memory()
+{
+	testenv.int32 = 0x12345678;
+	*((volatile uint32_t *)OUTPORT) = testenv.int32;
+	testenv.int8[0] = 0x42;
+	*((volatile uint32_t *)OUTPORT) = testenv.int32;
+	*((volatile uint32_t *)OUTPORT) = testenv.int8[0];
+	testenv.int8[0] = 0x81;
+	testenv.int8[1] = 0x92;
+	testenv.int16[1] = 0x5aa5;
+	*((volatile uint32_t *)OUTPORT) = testenv.int32;
+	*((volatile uint32_t *)OUTPORT) = testenv.int8[0];
+	*((volatile uint32_t *)OUTPORT) = testenv.int8[1];
+	stop_verilator();
+}
+
+void test_mpegmemory()
+{
+	// expect
+	// Debug out ba010000
+	// Debug out 00010021
+	*((volatile uint32_t *)OUTPORT) = *(uint32_t *)0x20000000;
+	*((volatile uint32_t *)OUTPORT) = *(uint32_t *)0x20000004;
+	stop_verilator();
+}
+
 void main(void)
 {
-	// test_vector_unit();
-	// stop_verilator();
-	//  for(;;);
-
-	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 51200 * 4, 0);
-	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
+	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
+	plm_audio_t *mpeg = plm_audio_create_with_buffer(buffer);
 
 	int cnt = 0;
 
-	for (;;)
+	fifo_ctrl->signal_decoding_started = 1;
+
+	int timeout = 10;
+
+	while (timeout)
 	{
-		plm_samples_t *samples = plm_decode_audio(mpeg);
+		plm_samples_t *samples = plm_audio_decode(mpeg);
 
 		if (samples)
 		{
 			// Give some feedback to the user that we are running
-			*((volatile uint8_t *)OUTPORT) = cnt;
 			cnt++;
+			fifo_ctrl->signal_frame_decoded = cnt;
+			timeout = 10;
 		}
 		else
 		{
-			// End simulation since the MPEG stream has ended
-			*((volatile uint8_t *)OUTPORT_END) = 0;
+			// For some reason, it is possible that a frame might not have
+			// been decoded with one call to plm_decode_audio()
+			// But on the second, it is successful?
+			// Happens with Philips Bumper on Lucky Luke
+			timeout--;
 		}
 	}
+
+	fifo_ctrl->signal_underflow = 1;
+
+	// Wait forever
+	for (;;)
+		;
 }
 
 uint32_t *irq(uint32_t *regs, uint32_t irqs)
 {
-}
-
-/*
- * sbrk -- changes heap size size. Get nbytes more
- *         RAM. We just increment a pointer in what's
- *         left of memory on the board.
- */
-caddr_t _sbrk(int nbytes)
-{
-	static caddr_t heap_ptr = NULL;
-	caddr_t base;
-
-	if (heap_ptr == NULL)
-	{
-		heap_ptr = (caddr_t)&_end;
-	}
-
-	if ((RAMSIZE - heap_ptr) >= 0)
-	{
-		base = heap_ptr;
-		heap_ptr += nbytes;
-		return (base);
-	}
-	else
-	{
-		errno = ENOMEM;
-		return ((caddr_t)-1);
-	}
 }
