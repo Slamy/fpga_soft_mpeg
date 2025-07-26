@@ -8,7 +8,7 @@ module top_vexii (
     output bit sample_tick
 );
 
-    localparam SIZE = 29376;
+    localparam SIZE = 29623;
     bit [31:0] mpeg_audio_rom[SIZE];
     initial $readmemh("fma.mem", mpeg_audio_rom);
 

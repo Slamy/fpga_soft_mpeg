@@ -123,13 +123,9 @@ void test_mpegmemory()
 void main(void)
 {
 	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
-	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
+	plm_audio_t *mpeg = plm_audio_create_with_buffer(buffer);
 
 	int cnt = 0;
-
-	// Wait until we have some data
-	while (!plm_init_decoders(mpeg))
-		;
 
 	fifo_ctrl->signal_decoding_started = 1;
 
@@ -137,7 +133,7 @@ void main(void)
 
 	while (timeout)
 	{
-		plm_samples_t *samples = plm_decode_audio(mpeg);
+		plm_samples_t *samples = plm_audio_decode(mpeg);
 
 		if (samples)
 		{
