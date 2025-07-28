@@ -68,13 +68,18 @@ void main(void)
 	//  for(;;);
 
 	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 202752 * 4, 0);
-	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
+	if (!buffer)
+		*((volatile uint8_t *)OUTPORT_END) = 0;
+
+	plm_video_t *mpeg = plm_video_create_with_buffer(buffer, 0);
+	if (!mpeg)
+		*((volatile uint8_t *)OUTPORT_END) = 0;
 
 	int cnt = 0;
 
 	for (;;)
 	{
-		plm_frame_t *frame = plm_decode_video(mpeg);
+		plm_frame_t *frame = plm_video_decode(mpeg);
 
 		if (frame)
 		{

@@ -836,8 +836,14 @@ plm_samples_t *plm_audio_decode(plm_audio_t *self);
 #define FALSE 0
 #endif
 
+void* checked_malloc(int sz)
+{
+	void* retval = malloc(sz);
+	if (!retval)	for (;;);
+	return retval;
+};
 #ifndef PLM_MALLOC
-	#define PLM_MALLOC(sz) malloc(sz)
+	#define PLM_MALLOC(sz) checked_malloc(sz)
 	#define PLM_FREE(p) free(p)
 	#define PLM_REALLOC(p, sz) realloc(p, sz)
 #endif
@@ -1613,6 +1619,8 @@ void plm_buffer_discard_read_bytes(plm_buffer_t *self) {
 		self->length = 0;
 	}
 	else if (byte_pos > 0) {
+	    // This operation is not allowed. The MPEG data is read only!
+		for(;;);
 		memmove(self->bytes, self->bytes + byte_pos, self->length - byte_pos);
 		self->bit_index -= byte_pos << 3;
 		self->length -= byte_pos;
@@ -2894,7 +2902,6 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 		) {
 			return NULL;
 		}
-		plm_buffer_discard_read_bytes(self->buffer);
 		
 		plm_video_decode_picture(self);
 
@@ -3050,6 +3057,8 @@ void plm_video_decode_picture(plm_video_t *self) {
 		return;
 	}
 
+	OUT_DEBUG = 4;
+
 	// Forward full_px, f_code
 	if (
 		self->picture_type == PLM_VIDEO_PICTURE_TYPE_PREDICTIVE ||
@@ -3063,6 +3072,8 @@ void plm_video_decode_picture(plm_video_t *self) {
 		}
 		self->motion_forward.r_size = f_code - 1;
 	}
+
+	OUT_DEBUG = 5;
 
 	// Backward full_px, f_code
 	if (self->picture_type == PLM_VIDEO_PICTURE_TYPE_B) {
@@ -3094,6 +3105,8 @@ void plm_video_decode_picture(plm_video_t *self) {
 
 	// Decode all slices
 	while (PLM_START_IS_SLICE(self->start_code)) {
+	OUT_DEBUG = 7;
+
 		plm_video_decode_slice(self, self->start_code & 0x000000FF);
 		if (self->macroblock_address >= self->mb_size - 2) {
 			break;
@@ -3388,7 +3401,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 
 	int n = 0;
 	uint8_t *quant_matrix;
-	OUT_DEBUG = 5;
+	OUT_DEBUG = 8;
 
 	// Decode DC coefficient of intra-coded blocks
 	if (self->macroblock_intra) {

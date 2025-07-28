@@ -8,7 +8,7 @@ CFLAGS = -O3 -mabi=ilp32 -march=rv32im$(subst C,c,$(COMPRESSED_ISA)) \
 all: firmware.mem firmware.lst
 
 analyze: firmware.elf
-	nm  --print-size --numeric-sort qfirmware.elf 
+	nm  --print-size --numeric-sort firmware.elf 
 
 firmware.mem: firmware.bin
 	objcopy -I binary -O binary --reverse-bytes=4 firmware.bin firmware_swap.bin

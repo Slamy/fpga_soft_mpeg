@@ -27,7 +27,7 @@ int OUT_DEBUG;
 #define PL_MPEG_IMPLEMENTATION
 #include "../sw/pl_mpeg.h"
 
-//#define TRACE
+// #define TRACE
 
 volatile sig_atomic_t status = 0;
 
@@ -169,8 +169,8 @@ public:
             uint8_t *mem = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__memory);
             plm_frame2_t frame = *(plm_frame2_t *)(mem + addr);
 
-            // printf("%d %d %x %x %x\n", frame.width, frame.height, frame.y.data, frame.cr.data, frame.cb.data);
-
+            // printf("%d %d %x %x %x\n", frame.width, frame.height, frame.y.adr, frame.cr.adr, frame.cb.adr);
+            // printf("%x %x %x\n",mem[frame.y.adr], mem[frame.cr.adr],mem[frame.cb.adr]);
             plm_frame_t frame_convert;
             frame_convert.y.data = &mem[frame.y.adr];
             frame_convert.y.height = frame.y.height;
@@ -188,6 +188,7 @@ public:
             int w = frame.width;
             int h = frame.height;
             uint8_t *pixels = (uint8_t *)malloc(w * h * 3);
+            assert(pixels);
             plm_frame_to_bgr(&frame_convert, pixels, w * 3); // BMP expects BGR ordering
 
             sprintf(bmp_name, "%06d.bmp", bmp_cnt);

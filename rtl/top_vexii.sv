@@ -13,7 +13,7 @@ module top_vexii (
 
     bit fifo_nearly_empty;
 
-    bit [31:0] mpeg_video_rom[202752];
+    bit [31:0] mpeg_video_rom[201554];
     initial $readmemh("fmv.mem", mpeg_video_rom);
 
     bit [31:0] memory[500000]  /*verilator public_flat_rd*/;
@@ -181,7 +181,7 @@ module top_vexii (
 
         if (dmem_cmd_payload_address == 32'h10000000 && dmem_cmd_valid && dmem_cmd_payload_write)
             $display(
-                "Debug out %x  Waterlevel: %d Samples decoded: %d  Samples played: %d  Load: %d %%",
+                "Debug out %x  Waterlevel: %d Frames decoded: %d  Frames shown: %d  Load: %d %%",
                 dmem_cmd_payload_data,
                 fifo_water_level / TICKS_PER_FRAME,
                 frames_decoded,

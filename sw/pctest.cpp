@@ -9,6 +9,8 @@
 #include <filesystem>
 
 #define PL_MPEG_IMPLEMENTATION
+#define PLM_NO_STDIO
+int OUT_DEBUG;
 #include "pl_mpeg.h"
 
 int write_bmp(const char *path, int width, int height, uint8_t *pixels)
@@ -44,7 +46,7 @@ int write_bmp(const char *path, int width, int height, uint8_t *pixels)
 
 int main(void)
 {
-	const char *path = "../sim/fmv.mpg";
+	const char *path = "../sim/fmv.m1v";
 	// const char *path = "/home/andre/GIT/MPEG1_Handbook/bunny.mp2";
 
 #if 1
@@ -62,15 +64,10 @@ int main(void)
 
 	plm_buffer_t *buffer = plm_buffer_create_with_memory(buf, filesize, 0);
 	assert(buffer);
-	plm_t *mpeg = plm_create_with_buffer(buffer, 0);
+	plm_video_t *mpeg = plm_video_create_with_buffer(buffer, 0);
 	assert(mpeg);
 	// plm_audio_t *mpeg_audio = plm_audio_create_with_buffer(buffer, 0);
 	// assert(mpeg_audio);
-	plm_set_audio_enabled(mpeg, FALSE);
-
-	int w = plm_get_width(mpeg);
-	int h = plm_get_height(mpeg);
-	uint8_t *pixels = (uint8_t *)malloc(w * h * 3);
 
 #else
 	plm_t *mpeg = plm_create_with_filename(path);
@@ -83,10 +80,22 @@ int main(void)
 	for (;;)
 	{
 
-		plm_frame_t *frame = plm_decode_video(mpeg);
+		plm_frame_t *frame = plm_video_decode(mpeg);
 
 		if (frame)
 		{
+			int w = frame->width;
+			int h = frame->height;
+			uint8_t *pixels = (uint8_t *)malloc(w * h * 3);
+			assert(pixels);
+			printf("%x %x %x\n", *frame->y.data, *frame->cr.data, *frame->cb.data);
+			/*
+			69 80 78
+Writing 000000.bmp
+69 80 78
+Writing 000001.bmp
+69 80 78
+*/
 			// Give some feedback to the user that we are running
 			plm_frame_to_bgr(frame, pixels, w * 3); // BMP expects BGR ordering
 
@@ -94,6 +103,7 @@ int main(void)
 			printf("Writing %s\n", bmp_name);
 			write_bmp(bmp_name, w, h, pixels);
 			cnt++;
+			free(pixels);
 		}
 		else
 		{

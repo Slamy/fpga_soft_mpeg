@@ -81,6 +81,7 @@ c61b6f5b0d210f0c9b890dd1b3aa67fb  000014.bmp
 5cc44b079c1f2d21af773e75bb357e88  000016.bmp
 265e26344119f0a7d134cb096888ddea  000017.bmp
 4e03ddf84d23028043de7331902d232b  000018.bmp
+59eeb6ab57b398ad37d5a446fcd14dbc  000019.bmp
 
 Laptop
 
@@ -94,5 +95,5 @@ a185d9be0a0d3bc0dd60b69f55bd4c73  000003.bmp
 
 ### Benchmarks
 
-Debug out 62626262  Waterlevel:         -382 Samples decoded:          99  Samples played:         481  Load:         485 %
+Debug out 62626262  Waterlevel:         -373 Frames decoded:          98  Frames shown:         471  Load:         480 %
 
