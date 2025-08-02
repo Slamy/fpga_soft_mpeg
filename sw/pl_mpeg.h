@@ -1686,6 +1686,9 @@ int plm_buffer_read(plm_buffer_t *self, int count) {
 	}
 
 	int value = 0;
+
+	OUT_DEBUG = 20;
+
 	while (count) {
 		int current_byte = self->bytes[self->bit_index >> 3];
 
@@ -1699,6 +1702,8 @@ int plm_buffer_read(plm_buffer_t *self, int count) {
 		self->bit_index += read;
 		count -= read;
 	}
+
+	OUT_DEBUG = 21;
 
 	return value;
 }
@@ -3318,16 +3323,20 @@ void plm_video_predict_macroblock(plm_video_t *self) {
 		}
 
 		if (self->motion_forward.is_set) {
+			OUT_DEBUG = 23;
 			plm_video_copy_macroblock(self, &self->frame_forward, fw_h, fw_v);
 			if (self->motion_backward.is_set) {
+				OUT_DEBUG = 24;
 				plm_video_interpolate_macroblock(self, &self->frame_backward, bw_h, bw_v);
 			}
 		}
 		else {
+			OUT_DEBUG = 25;
 			plm_video_copy_macroblock(self, &self->frame_backward, bw_h, bw_v);
 		}
 	}
 	else {
+		OUT_DEBUG = 26;
 		plm_video_copy_macroblock(self, &self->frame_forward, fw_h, fw_v);
 	}
 }
@@ -3446,6 +3455,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 		OUT_DEBUG = 30;
 		int run = 0;
 		uint16_t coeff = plm_buffer_read_vlc_uint(self->buffer, PLM_VIDEO_DCT_COEFF);
+		OUT_DEBUG = 32;
 
 		if ((coeff == 0x0001) && (n > 0) && (plm_buffer_read(self->buffer, 1) == 0)) {
 			// end_of_block

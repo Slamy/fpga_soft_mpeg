@@ -83,7 +83,7 @@ module top_vexii (
 
     wire [31:0] frame_adr  /*verilator public_flat_rd*/ = dmem_cmd_payload_data;
     wire expose_frame /*verilator public_flat_rd*/ = (dmem_cmd_payload_address == 32'h10000010 && dmem_cmd_payload_write && dmem_cmd_valid) ;
-    bit [31:0] soft_state = 0;
+    bit [31:0] soft_state /*verilator public_flat_rd*/  = 0;
 
 
     bit signed [31:0] mac_vector_accu = 0;
