@@ -56,55 +56,34 @@ void stop_verilator()
 
 void main(void)
 {
-	// test_vector_unit();
-	// stop_verilator();
-	//  for(;;);
-	// OUT_DEBUG = (int)image_synthesis_buffer;
-
-	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 202752 * 4, 0);
-	if (!buffer)
-		*((volatile uint8_t *)OUTPORT_END) = 0;
-
-	plm_video_t *mpeg = plm_video_create_with_buffer(buffer, 0);
-	if (!mpeg)
-		*((volatile uint8_t *)OUTPORT_END) = 0;
-
-	int cnt = 0;
-
 	for (;;)
 	{
-		plm_frame_t *frame = plm_video_decode(mpeg);
+		struct image_synthesis_descriptor *desc = get_next_ready_synthesis_desc();
 
-		OUT_DEBUG = 27;
+		if (desc->ready == 1)
+		{
+			uint8_t *d = (uint8_t *)(((uint32_t)desc->cwp.d) + 0x50000000);
+			// int d;
+			// int *block_data =  (int*)((int)&desc->cwp.block_data[0] | 0x50000000);
 
-		struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
+			write_pixels(desc->cwp.macroblock_intra, desc->cwp.n, desc->cwp.block_data, desc->cwp.di, d, desc->cwp.dw, desc->cwp.si);
+		}
+		else if (desc->ready == 2)
+		{
+			uint8_t *s = (uint8_t *)(((uint32_t)desc->cpm.s) + 0x50000000);
+			uint8_t *d = (uint8_t *)(((uint32_t)desc->cpm.d) + 0x50000000);
+
+			macroblock_worker(s, d, desc->cpm.odd_h, desc->cpm.odd_v, desc->cpm.interpolate, desc->cpm.dw, desc->cpm.di, desc->cpm.si, desc->cpm.block_size);
+		}
+		else if (desc->ready == 3)
+		{
+			// Do nothing. Just for syncing CPUs
+		}
+
 		__asm volatile("" : : : "memory");
-		desc->ready = 3;
+		desc->ready = 0; // give the buffer back
 		*((int *)OUTPORT_HANDLE_SHARED) = 1;
 		__asm volatile("" : : : "memory");
-		while (desc->ready == 3)
-			__asm volatile("" : : : "memory");
-
-		OUT_DEBUG = 28;
-
-		if (frame)
-		{
-			// Give some feedback to the user that we are running
-			*((volatile uint8_t *)OUTPORT) = cnt;
-
-			//*((volatile uint32_t *)OUTPORT) = frame->width;
-			//*((volatile uint32_t *)OUTPORT) = frame->height;
-			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->y.data;
-			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->cr.data;
-			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->cb.data;
-			*((volatile plm_frame_t **)OUTPORT_FRAME) = frame;
-			cnt++;
-		}
-		else
-		{
-			// End simulation since the MPEG stream has ended
-			*((volatile uint8_t *)OUTPORT_END) = 0;
-		}
 	}
 }
 

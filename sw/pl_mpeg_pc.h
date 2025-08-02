@@ -1683,8 +1683,6 @@ int plm_buffer_has(plm_buffer_t *self, size_t count) {
 int plm_buffer_read(plm_buffer_t *self, int count) {
 	int value = 0;
 
-	OUT_DEBUG = 20;
-
 	while (count) {
 		int current_byte = self->bytes[self->bit_index >> 3];
 
@@ -1698,8 +1696,6 @@ int plm_buffer_read(plm_buffer_t *self, int count) {
 		self->bit_index += read;
 		count -= read;
 	}
-
-	OUT_DEBUG = 21;
 
 	return value;
 }
@@ -1777,9 +1773,11 @@ int plm_buffer_peek_non_zero(plm_buffer_t *self, int bit_count) {
 
 int16_t plm_buffer_read_vlc(plm_buffer_t *self, const plm_vlc_t *table) {
 	plm_vlc_t state = {0, 0};
+
 	do {
 		state = table[state.index + plm_buffer_read(self, 1)];
 	} while (state.index > 0);
+
 	return state.value;
 }
 
@@ -2753,6 +2751,7 @@ struct plm_video_t {
 
 	uint8_t *frames_data;
 
+	int block_data[64];
 	uint8_t intra_quant_matrix[64];
 	uint8_t non_intra_quant_matrix[64];
 
@@ -2864,7 +2863,6 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 	if (!plm_video_has_header(self)) {
 		return NULL;
 	}
-	OUT_DEBUG = 2;
 
 	plm_frame_t *frame = NULL;
 	do {
@@ -3046,7 +3044,6 @@ void plm_video_init_frame(plm_video_t *self, plm_frame_t *frame, uint8_t *base) 
 }
 
 void plm_video_decode_picture(plm_video_t *self) {
-	OUT_DEBUG = 3;
 
 	plm_buffer_skip(self->buffer, 10); // skip temporalReference
 	self->picture_type = plm_buffer_read(self->buffer, 3);
@@ -3056,8 +3053,6 @@ void plm_video_decode_picture(plm_video_t *self) {
 	if (self->picture_type <= 0 || self->picture_type > PLM_VIDEO_PICTURE_TYPE_B) {
 		return;
 	}
-
-	OUT_DEBUG = 4;
 
 	// Forward full_px, f_code
 	if (
@@ -3072,8 +3067,6 @@ void plm_video_decode_picture(plm_video_t *self) {
 		}
 		self->motion_forward.r_size = f_code - 1;
 	}
-
-	OUT_DEBUG = 5;
 
 	// Backward full_px, f_code
 	if (self->picture_type == PLM_VIDEO_PICTURE_TYPE_B) {
@@ -3105,7 +3098,6 @@ void plm_video_decode_picture(plm_video_t *self) {
 
 	// Decode all slices
 	while (PLM_START_IS_SLICE(self->start_code)) {
-	OUT_DEBUG = 7;
 
 		plm_video_decode_slice(self, self->start_code & 0x000000FF);
 		if (self->macroblock_address >= self->mb_size - 2) {
@@ -3318,20 +3310,16 @@ void plm_video_predict_macroblock(plm_video_t *self) {
 		}
 
 		if (self->motion_forward.is_set) {
-			OUT_DEBUG = 23;
 			plm_video_copy_macroblock(self, &self->frame_forward, fw_h, fw_v);
 			if (self->motion_backward.is_set) {
-				OUT_DEBUG = 24;
 				plm_video_interpolate_macroblock(self, &self->frame_backward, bw_h, bw_v);
 			}
 		}
 		else {
-			OUT_DEBUG = 25;
 			plm_video_copy_macroblock(self, &self->frame_backward, bw_h, bw_v);
 		}
 	}
 	else {
-		OUT_DEBUG = 26;
 		plm_video_copy_macroblock(self, &self->frame_forward, fw_h, fw_v);
 	}
 }
@@ -3362,8 +3350,25 @@ void plm_video_interpolate_macroblock(plm_video_t *self, plm_frame_t *s, int mot
 		DEST_INDEX += dest_scan; \
 	}} while(FALSE)
 
-void macroblock_worker(uint8_t *s, uint8_t *d, int odd_h, int odd_v, int interpolate, int dw, int di, int si,int block_size)
-{
+void plm_video_process_macroblock(
+	plm_video_t *self, uint8_t *s, uint8_t *d,
+	int motion_h, int motion_v, int block_size, int interpolate
+) {
+	int dw = self->mb_width * block_size;
+
+	int hp = motion_h >> 1;
+	int vp = motion_v >> 1;
+	int odd_h = (motion_h & 1) == 1;
+	int odd_v = (motion_v & 1) == 1;
+
+	unsigned int si = ((self->mb_row * block_size) + vp) * dw + (self->mb_col * block_size) + hp;
+	unsigned int di = (self->mb_row * dw + self->mb_col) * block_size;
+	
+	unsigned int max_address = (dw * (self->mb_height * block_size - block_size + 1) - block_size);
+	if (si > max_address || di > max_address) {
+		return; // corrupt video
+	}
+
 	#define PLM_MB_CASE(INTERPOLATE, ODD_H, ODD_V, OP) \
 		case ((INTERPOLATE << 2) | (ODD_H << 1) | (ODD_V)): \
 			PLM_BLOCK_SET(d, di, dw, si, dw, block_size, OP); \
@@ -3384,88 +3389,10 @@ void macroblock_worker(uint8_t *s, uint8_t *d, int odd_h, int odd_v, int interpo
 	#undef PLM_MB_CASE
 }
 
-void plm_video_process_macroblock(
-	plm_video_t *self, uint8_t *s, uint8_t *d,
-	int motion_h, int motion_v, int block_size, int interpolate
-) {
-	int dw = self->mb_width * block_size;
-
-	int hp = motion_h >> 1;
-	int vp = motion_v >> 1;
-	int odd_h = (motion_h & 1) == 1;
-	int odd_v = (motion_v & 1) == 1;
-
-	unsigned int si = ((self->mb_row * block_size) + vp) * dw + (self->mb_col * block_size) + hp;
-	unsigned int di = (self->mb_row * dw + self->mb_col) * block_size;
-	
-	unsigned int max_address = (dw * (self->mb_height * block_size - block_size + 1) - block_size);
-	if (si > max_address || di > max_address) {
-		return; // corrupt video
-	}
-
-	//macroblock_worker(s, d,  odd_h,  odd_v,  interpolate,  dw,di,si,block_size);
-
-	struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
-	
-	desc->cpm.interpolate=interpolate;
-	desc->cpm.block_size=block_size;
-	desc->cpm.odd_h=odd_h;
-	desc->cpm.odd_v=odd_v;
-	desc->cpm.s=s;
-	desc->cpm.si=si;
-	desc->cpm.di=di;
-	desc->cpm.d=d;
-	desc->cpm.dw=dw;
-	__asm volatile("": : :"memory");
-	desc->ready=2;
-	*((int*)OUTPORT_HANDLE_SHARED) = 1;
-	__asm volatile("": : :"memory");
-
-	//while (desc->ready != 0)
-	//	__asm volatile("" : : : "memory");
-
-}
-
-#if 1
-static void write_pixels(int macroblock_intra, int n, int *s,
-	int di,uint8_t *d,int dw,int si)
-{
-	if (macroblock_intra) {
-		// Overwrite (no prediction)
-		if (n == 1) {
-			int clamped = plm_clamp((s[0] + 128) >> 8);
-			PLM_BLOCK_SET(d, di, dw, si, 8, 8, clamped);
-		}
-		else {
-			plm_video_idct(s);
-			PLM_BLOCK_SET(d, di, dw, si, 8, 8, plm_clamp(s[si]));
-		}
-	}
-	else {
-		// Add data to the predicted macroblock
-		if (n == 1) {
-			int value = (s[0] + 128) >> 8;
-			PLM_BLOCK_SET(d, di, dw, si, 8, 8, plm_clamp(d[di] + value));
-		}
-		else {
-			plm_video_idct(s);
-			PLM_BLOCK_SET(d, di, dw, si, 8, 8, plm_clamp(d[di] + s[si]));
-		}
-	}
-}
-
-#endif
-
-
 void plm_video_decode_block(plm_video_t *self, int block) {
 
 	int n = 0;
 	uint8_t *quant_matrix;
-	OUT_DEBUG = 8;
-
-	struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
-	int* block_data=desc->cwp.block_data;
-	memset(block_data, 0, 64*4);
 
 	// Decode DC coefficient of intra-coded blocks
 	if (self->macroblock_intra) {
@@ -3481,21 +3408,21 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 		if (dct_size > 0) {
 			int differential = plm_buffer_read(self->buffer, dct_size);
 			if ((differential & (1 << (dct_size - 1))) != 0) {
-				block_data[0] = predictor + differential;
+				self->block_data[0] = predictor + differential;
 			}
 			else {
-				block_data[0] = predictor + (-(1 << dct_size) | (differential + 1));
+				self->block_data[0] = predictor + (-(1 << dct_size) | (differential + 1));
 			}
 		}
 		else {
-			block_data[0] = predictor;
+			self->block_data[0] = predictor;
 		}
 
 		// Save predictor value
-		self->dc_predictor[plane_index] = block_data[0];
+		self->dc_predictor[plane_index] = self->block_data[0];
 
 		// Dequantize + premultiply
-		block_data[0] <<= (3 + 5);
+		self->block_data[0] <<= (3 + 5);
 
 		quant_matrix = self->intra_quant_matrix;
 		n = 1;
@@ -3507,11 +3434,8 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 	// Decode AC coefficients (+DC for non-intra)
 	int level = 0;
 	while (TRUE) {
-		OUT_DEBUG = 30;
 		int run = 0;
 		uint16_t coeff = plm_buffer_read_vlc_uint(self->buffer, PLM_VIDEO_DCT_COEFF);
-		OUT_DEBUG = 32;
-
 		if ((coeff == 0x0001) && (n > 0) && (plm_buffer_read(self->buffer, 1) == 0)) {
 			// end_of_block
 			break;
@@ -3543,7 +3467,6 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 			return; // invalid
 		}
 
-		OUT_DEBUG = 31;
 		int de_zig_zagged = PLM_VIDEO_ZIG_ZAG[n];
 		n++;
 
@@ -3564,9 +3487,8 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 		}
 
 		// Save premultiplied coefficient
-		block_data[de_zig_zagged] = level * PLM_VIDEO_PREMULTIPLIER_MATRIX[de_zig_zagged];
+		self->block_data[de_zig_zagged] = level * PLM_VIDEO_PREMULTIPLIER_MATRIX[de_zig_zagged];
 	}
-	OUT_DEBUG = 6;
 
 	// Move block to its place
 	uint8_t *d;
@@ -3590,25 +3512,10 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 		di = ((self->mb_row * self->luma_width) << 2) + (self->mb_col << 3);
 	}
 
-	int *s = block_data;
+	int *s = self->block_data;
 	int si = 0;
 	
-	desc->cwp.macroblock_intra=self->macroblock_intra;
-	desc->cwp.n=n;
-	desc->cwp.s=s;
-	desc->cwp.si=si;
-	desc->cwp.di=di;
-	desc->cwp.d=d;
-	desc->cwp.dw=dw;
-	__asm volatile("": : :"memory");
-	desc->ready=1;
-	*((int*)OUTPORT_HANDLE_SHARED) = 1;
-	__asm volatile("": : :"memory");
-	
-	//while (desc->ready != 0)
-	//__asm volatile("" : : : "memory");
 
-	OUT_DEBUG = 12;
 }
 
 void plm_video_idct(int *block) {
@@ -3616,7 +3523,6 @@ void plm_video_idct(int *block) {
 		b1, b3, b4, b6, b7, tmp1, tmp2, m0,
 		x0, x1, x2, x3, x4, y3, y4, y5, y6, y7;
 
-	OUT_DEBUG = 10;
 
 	// Transform columns
 	for (int i = 0; i < 8; ++i) {
@@ -3677,8 +3583,6 @@ void plm_video_idct(int *block) {
 		block[6 + i] = (y3 - x4 + 128) >> 8;
 		block[7 + i] = (y4 - b7 + 128) >> 8;
 	}
-
-	OUT_DEBUG = 11;
 
 }
 

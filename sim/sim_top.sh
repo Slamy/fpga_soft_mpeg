@@ -6,6 +6,8 @@ if [ -z "$1" ]; then
      exit 1
 fi
 
+rm *.bmp
+
 set -e
 
 make -C ../sw -j

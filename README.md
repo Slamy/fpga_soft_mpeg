@@ -83,7 +83,7 @@ c61b6f5b0d210f0c9b890dd1b3aa67fb  000014.bmp
 4e03ddf84d23028043de7331902d232b  000018.bmp
 59eeb6ab57b398ad37d5a446fcd14dbc  000019.bmp
 
-Laptop
+Laptop (somehow different results?)
 
 b67bb1b9852c4a398c4421da4d8a71e1  000000.bmp
 869d23413a83b63826ed53a478b5e7e7  000001.bmp
@@ -95,23 +95,22 @@ a185d9be0a0d3bc0dd60b69f55bd4c73  000003.bmp
 
 ### Benchmarks
 
-Debug out 62626262  Waterlevel:         -350 Frames decoded:          98  Frames shown:         448  Load:         457 %
+Debug out 3f3f3f3f  Waterlevel:         -106 Frames decoded:          64  Frames shown:         170  Load:         265 %
 
-  0           13246   0
-  2        13540794   2
-  3            2478   0
-  4            1602   0
-  5           22144   0
-  6        11686487   1
-  7           73554   0
-  8         4720838   0
- 10       142209338  21
- 11       138509316  20
- 12         7379413   1
- 20       150268674  22
- 21        43831552   6
- 26        95821529  14
- 30         1803102   0
- 31        36096287   5
- 32        14571750   2
- 
+  0           12969   0
+  2         7639506   3
+  3            1386   0
+  4             894   0
+  5           12186   0
+  6         2554768   1
+  7           41184   0
+  8        15927380   7
+ 12         4123465   1
+ 20        79773140  35   Reading from buffers
+ 21        25420467  11
+ 26         6643157   2
+ 27        50707068  22   Wasted on waiting for second core
+ 28            2176   0
+ 30          504222   0
+ 31        21873147   9
+ 32         8118503   3

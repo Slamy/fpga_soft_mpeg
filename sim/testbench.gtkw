@@ -1,25 +1,30 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Mon Jul 28 11:54:19 2025
+[*] Sat Aug  2 11:05:24 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Mon Jul 28 11:54:19 2025"
-[dumpfile_size] 29675831
+[dumpfile_mtime] "Sat Aug  2 11:05:24 2025"
+[dumpfile_size] 1044196607
 [savefile] "/home/andre/GIT/HybridMPEG/sim/testbench.gtkw"
-[timestart] 2792997
-[size] 1920 1152
-[pos] -1921 119
-*-7.542612 2793322 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[timestart] 0
+[size] 2560 1348
+[pos] -1 -1
+*-24.123621 32350000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [sst_width] 341
 [signals_width] 370
 [sst_expanded] 1
-[sst_vpaned_height] 346
-@24
-TOP.top_vexii.soft_state[31:0]
+[sst_vpaned_height] 414
 @28
 TOP.top_vexii.resetn
-@29
-TOP.top_vexii.debugflag
+@24
+TOP.top_vexii.soft_state1[31:0]
+TOP.top_vexii.soft_state2[31:0]
+TOP.top_vexii.expose_frame
+@8025
+TOP.top_vexii.shared_buffer_level[15:0]
+@28
+TOP.top_vexii.shared_buffer_level_dec
+TOP.top_vexii.shared_buffer_level_inc
 [pattern_trace] 1
 [pattern_trace] 0
