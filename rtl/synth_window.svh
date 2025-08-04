@@ -1,3 +1,5 @@
+`ifndef HEADER_SYNTHWINDOW
+`define HEADER_SYNTHWINDOW
 
 function signed [17:0] PLM_AUDIO_SYNTHESIS_WINDOW(bit [8:0] index);
     case (index)
@@ -515,3 +517,5 @@ function signed [17:0] PLM_AUDIO_SYNTHESIS_WINDOW(bit [8:0] index);
         511: PLM_AUDIO_SYNTHESIS_WINDOW = 1;
     endcase
 endfunction
+
+`endif

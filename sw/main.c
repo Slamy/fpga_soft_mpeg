@@ -12,6 +12,17 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+struct io_fifo_control
+{
+	uint32_t write_byte_index;
+	uint32_t read_bit_index;
+	uint32_t signal_decoding_started;
+	uint32_t signal_frame_decoded;
+	uint32_t signal_underflow;
+};
+
+struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
+
 #define OUTPORT 0x10000000
 #define OUTPORT_END 0x1000000c
 #define OUTPORT_FRAME 0x10000010
@@ -61,7 +72,7 @@ void main(void)
 	//  for(;;);
 	// OUT_DEBUG = (int)image_synthesis_buffer;
 
-	plm_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 202752 * 4, 0);
+	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
 	if (!buffer)
 		*((volatile uint8_t *)OUTPORT_END) = 0;
 

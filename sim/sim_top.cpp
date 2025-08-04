@@ -26,7 +26,7 @@
 #define PL_MPEG_IMPLEMENTATION
 #include "../sw/pl_mpeg_pc.h"
 
-//#define TRACE
+// #define TRACE
 
 volatile sig_atomic_t status = 0;
 
@@ -82,7 +82,7 @@ typedef struct
 
 typedef struct
 {
-    double time;
+    int32_t time;
     unsigned int width;
     unsigned int height;
     plm_plane2_t y;
@@ -131,12 +131,12 @@ public:
         // aplay -f float_le audio_left.bin  -r 44100
         // aplay -f float_le audio_right.bin  -r 44100
 
-        dut.resetn = 0;
+        dut.reset = 1;
         for (int i = 0; i < 10; i++)
         {
             modelstep();
         }
-        dut.resetn = 1;
+        dut.reset = 0;
     }
 
     void modelstep()
@@ -155,15 +155,14 @@ public:
 #endif
         sim_time += 1;
 
-        softstate1_heatmap[dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__soft_state1)]++;
-        softstate2_heatmap[dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__soft_state2)]++;
+        softstate1_heatmap[dut.rootp->top_vexii__DOT__video__DOT__soft_state1]++;
+        softstate2_heatmap[dut.rootp->top_vexii__DOT__video__DOT__soft_state2]++;
 
-        if (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__expose_frame))
+        if (dut.rootp->top_vexii__DOT__video__DOT__expose_frame)
         {
-
-            uint32_t addr = dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__frame_adr);
-            uint8_t *mem1 = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__memory_core1);
-            uint8_t *mem2 = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__memory_core2);
+            uint32_t addr = dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__video__DOT__frame_adr);
+            uint8_t *mem1 = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__video__DOT__memory_core1);
+            uint8_t *mem2 = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__video__DOT__memory_core2);
             plm_frame2_t frame = *(plm_frame2_t *)(mem1 + addr);
 
             // printf("%d %d %x %x %x\n", frame.width, frame.height, frame.y.adr, frame.cr.adr, frame.cb.adr);
@@ -220,7 +219,6 @@ int main(int argc, char **argv, char **env)
     fprintf(stderr, "Closing...\n");
     fflush(stdout);
 
-
     uint64_t sum1 = 0;
     uint64_t sum2 = 0;
     for (int i = 0; i < 40; i++)
@@ -248,5 +246,4 @@ int main(int argc, char **argv, char **env)
             printf("%3d %15d %3d\n", i, softstate2_heatmap[i], percent);
         }
     }
-
 }

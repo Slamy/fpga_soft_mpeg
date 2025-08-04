@@ -12,6 +12,17 @@
 #include <sys/stat.h>
 #include <errno.h>
 
+struct io_fifo_control
+{
+	uint32_t write_byte_index;
+	uint32_t read_bit_index;
+	uint32_t signal_decoding_started;
+	uint32_t signal_frame_decoded;
+	uint32_t signal_underflow;
+};
+
+struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
+
 #define OUTPORT 0x10000000
 #define OUTPORT_END 0x1000000c
 #define OUTPORT_FRAME 0x10000010
