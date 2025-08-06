@@ -36,7 +36,8 @@ static void catch_function(int signo)
     status = signo;
 }
 
-uint64_t softstate_heatmap[40]{0};
+uint64_t softstate1_heatmap[40]{0};
+uint64_t softstate2_heatmap[40]{0};
 
 int write_bmp(const char *path, int width, int height, uint8_t *pixels)
 {
@@ -155,7 +156,8 @@ public:
 #endif
         sim_time += 1;
 
-        softstate_heatmap[dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__soft_state1)]++;
+        softstate1_heatmap[dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__soft_state1)]++;
+        softstate2_heatmap[dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__soft_state2)]++;
 
         if (dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__expose_frame))
         {
@@ -219,16 +221,33 @@ int main(int argc, char **argv, char **env)
     fprintf(stderr, "Closing...\n");
     fflush(stdout);
 
-    uint64_t sum = 0;
-    for (int i = 0; i < 40; i++)
-        sum += softstate_heatmap[i];
 
+    uint64_t sum1 = 0;
+    uint64_t sum2 = 0;
     for (int i = 0; i < 40; i++)
     {
-        if (softstate_heatmap[i])
+        sum1 += softstate1_heatmap[i];
+        sum2 += softstate2_heatmap[i];
+    }
+
+    printf("Core 1\n");
+    for (int i = 0; i < 40; i++)
+    {
+        if (softstate1_heatmap[i])
         {
-            uint64_t percent = 100 * softstate_heatmap[i] / sum;
-            printf("%3d %15d %3d\n", i, softstate_heatmap[i], percent);
+            uint64_t percent = 100 * softstate1_heatmap[i] / sum1;
+            printf("%3d %15d %3d\n", i, softstate1_heatmap[i], percent);
         }
     }
+
+    printf("Core 2\n");
+    for (int i = 0; i < 40; i++)
+    {
+        if (softstate2_heatmap[i])
+        {
+            uint64_t percent = 100 * softstate2_heatmap[i] / sum2;
+            printf("%3d %15d %3d\n", i, softstate2_heatmap[i], percent);
+        }
+    }
+
 }
