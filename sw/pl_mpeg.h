@@ -1681,10 +1681,6 @@ int plm_buffer_has(plm_buffer_t *self, size_t count) {
 }
 
 int plm_buffer_read(plm_buffer_t *self, int count) {
-	if (!plm_buffer_has(self, count)) {
-		return 0;
-	}
-
 	int value = 0;
 
 	OUT_DEBUG = 20;
