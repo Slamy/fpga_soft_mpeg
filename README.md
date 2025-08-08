@@ -82,6 +82,7 @@ The md5sum of the result files are expected as
     265e26344119f0a7d134cb096888ddea  000017.bmp
     4e03ddf84d23028043de7331902d232b  000018.bmp
     59eeb6ab57b398ad37d5a446fcd14dbc  000019.bmp
+    c0d46aeb006e64e948d907f12d5ef140  000020.bmp
 
 Laptop (somehow different results? Different ffmpeg version maybe?)
 
@@ -95,35 +96,43 @@ Laptop (somehow different results? Different ffmpeg version maybe?)
 
 ### Benchmarks
 
-    Debug out 55555555  Waterlevel:         -137 Frames decoded:          86  Frames shown:         223  Load:         259 %
+    Debug out 55555555  Waterlevel:          -89 Frames decoded:          85  Frames shown:         174  Load:         204 %
 
 Utilization of cores in cycles and percent.
 
     Core 1
-         0           12388   0
-         2            7486   0
-         3            3432   0
-         4            8128   0
-         5           10704   0
-         6         3231005   1
-         7          161820   0
-         8        25721887   9
-         9            1232   0
-        12         7896767   2
-        14         1596382   0
-        15            1462   0
-        16         7376609   2
-        20        93122866  32
-        26        13394243   4
-        27        67388108  23
-        28            4386   0
-        31        28741948  10
-        32        33570123  11
+     0           12389   0
+     2            7104   0
+     3            3520   0
+     4            7968   0
+     5           10712   0
+     6         3398595   1
+     7          157136   0
+     8        29524882  13
+     9            1144   0
+    12         6751370   3
+    14         1799065   0
+    15            1462   0
+    16         7406064   3
+    20        96103613  42
+    26        14705747   6
+    27         1637669   0
+    28            4128   0
+    31        28557896  12
+    32        33784621  15
     Core 2
-         0             272   0
-        10       105560225  37
-        11        84955950  30
-        33         9130572   3
-        34        73444341  26
-        35         6193943   2
-        36         2965673   1
+     0             272   0
+    10        53441130  23
+    11        43027348  19
+    33         4603263   2
+    34        37241365  16
+    35        84039674  37
+    36         1522033   0
+    Core 3
+     0             272   0
+    10        53298930  23
+    11        42904202  19
+    33         4581488   2
+    34        36715713  16
+    35        84869700  37
+    36         1504780   0

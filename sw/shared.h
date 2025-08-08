@@ -36,11 +36,29 @@ struct image_synthesis_descriptor
 };
 
 struct image_synthesis_descriptor *image_synthesis_buffer = (struct image_synthesis_descriptor *)0x40000000;
+struct image_synthesis_descriptor *image_synthesis_buffer2 = (struct image_synthesis_descriptor *)0x41000000;
 int image_synthesis_buffer_index = 0;
+int image_synthesis_buffer_index2 = 0;
+static int worker_cnt;
 
 struct image_synthesis_descriptor *get_next_synthesis_desc()
 {
-    struct image_synthesis_descriptor *retval = &image_synthesis_buffer[image_synthesis_buffer_index++];
+    struct image_synthesis_descriptor *retval;
+
+    if (worker_cnt & 1)
+    {
+        retval = &image_synthesis_buffer[image_synthesis_buffer_index++];
+
+        if (image_synthesis_buffer_index == 4000)
+            image_synthesis_buffer_index = 0;
+    }
+    else
+    {
+        retval = &image_synthesis_buffer2[image_synthesis_buffer_index2++];
+
+        if (image_synthesis_buffer_index2 == 4000)
+            image_synthesis_buffer_index2 = 0;
+    }
 
 #if 0
     while (retval->ready == 1)
@@ -55,26 +73,22 @@ struct image_synthesis_descriptor *get_next_synthesis_desc()
             ;
     }
 
+    return retval;
+}
+
+struct image_synthesis_descriptor *get_next_ready_synthesis_desc()
+{
+    struct image_synthesis_descriptor *retval = &image_synthesis_buffer[image_synthesis_buffer_index++];
+
+    OUT_DEBUG = 35;
+
+    while (retval->ready == 0)
+        __asm volatile("" : : : "memory");
+
+    OUT_DEBUG = 36;
+
     if (image_synthesis_buffer_index == 4000)
         image_synthesis_buffer_index = 0;
 
     return retval;
-}
-
-
-struct image_synthesis_descriptor *get_next_ready_synthesis_desc()
-{
-	struct image_synthesis_descriptor *retval = &image_synthesis_buffer[image_synthesis_buffer_index++];
-
-	OUT_DEBUG = 35;
-
-	while (retval->ready == 0)
-		__asm volatile("" : : : "memory");
-
-	OUT_DEBUG = 36;
-
-	if (image_synthesis_buffer_index == 4000)
-		image_synthesis_buffer_index = 0;
-
-	return retval;
 }

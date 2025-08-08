@@ -37,6 +37,7 @@ static void catch_function(int signo)
 
 uint64_t softstate1_heatmap[40]{0};
 uint64_t softstate2_heatmap[40]{0};
+uint64_t softstate3_heatmap[40]{0};
 
 int write_bmp(const char *path, int width, int height, uint8_t *pixels)
 {
@@ -157,6 +158,7 @@ public:
 
         softstate1_heatmap[dut.rootp->top_vexii__DOT__video__DOT__soft_state1]++;
         softstate2_heatmap[dut.rootp->top_vexii__DOT__video__DOT__soft_state2]++;
+        softstate3_heatmap[dut.rootp->top_vexii__DOT__video__DOT__soft_state3]++;
 
         if (dut.rootp->top_vexii__DOT__video__DOT__expose_frame)
         {
@@ -221,10 +223,12 @@ int main(int argc, char **argv, char **env)
 
     uint64_t sum1 = 0;
     uint64_t sum2 = 0;
+    uint64_t sum3 = 0;
     for (int i = 0; i < 40; i++)
     {
         sum1 += softstate1_heatmap[i];
         sum2 += softstate2_heatmap[i];
+        sum3 += softstate3_heatmap[i];
     }
 
     printf("Core 1\n");
@@ -244,6 +248,16 @@ int main(int argc, char **argv, char **env)
         {
             uint64_t percent = 100 * softstate2_heatmap[i] / sum2;
             printf("%3d %15d %3d\n", i, softstate2_heatmap[i], percent);
+        }
+    }
+
+    printf("Core 3\n");
+    for (int i = 0; i < 40; i++)
+    {
+        if (softstate3_heatmap[i])
+        {
+            uint64_t percent = 100 * softstate3_heatmap[i] / sum2;
+            printf("%3d %15d %3d\n", i, softstate3_heatmap[i], percent);
         }
     }
 }

@@ -65,6 +65,16 @@ void stop_verilator()
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 }
 
+void sync_to_worker()
+{
+	struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
+	__asm volatile("" : : : "memory");
+	desc->ready = 3;
+	*((int *)OUTPORT_HANDLE_SHARED) = 1;
+	__asm volatile("" : : : "memory");
+	while (desc->ready == 3)
+		__asm volatile("" : : : "memory");
+}
 void main(void)
 {
 	// test_vector_unit();
@@ -87,14 +97,8 @@ void main(void)
 		plm_frame_t *frame = plm_video_decode(mpeg);
 
 		OUT_DEBUG = 27;
-
-		struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
-		__asm volatile("" : : : "memory");
-		desc->ready = 3;
-		*((int *)OUTPORT_HANDLE_SHARED) = 1;
-		__asm volatile("" : : : "memory");
-		while (desc->ready == 3)
-			__asm volatile("" : : : "memory");
+		sync_to_worker();
+		sync_to_worker();
 
 		OUT_DEBUG = 28;
 

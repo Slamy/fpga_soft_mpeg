@@ -69,11 +69,15 @@ module mpeg_video (
     // Memory arrays
     bit [31:0] memory_core1[500000]  /*verilator public_flat_rd*/;
     bit [31:0] memory_core2[500000]  /*verilator public_flat_rd*/;
-    bit [31:0] shared_sram[500000];  // 128KB shared SRAM
+    bit [31:0] memory_core3[500000]  /*verilator public_flat_rd*/;
+
+    bit [31:0] shared_sram2[500000];  // 128KB shared SRAM
+    bit [31:0] shared_sram3[500000];  // 128KB shared SRAM
 
     initial begin
         $readmemh("../sw/firmware.mem", memory_core1);
         $readmemh("../sw/firmware2.mem", memory_core2);
+        $readmemh("../sw/firmware2.mem", memory_core3);
     end
 
     // Core 1 signals
@@ -125,6 +129,31 @@ module mpeg_video (
     bit  [ 0:0] dmem_rsp_payload_id_2;
     bit         dmem_rsp_payload_error_2;
     bit  [31:0] dmem_rsp_payload_data_2;
+
+    // Core 3 signals
+    wire        imem_cmd_valid_3;
+    bit         imem_cmd_ready_3;
+    wire [ 0:0] imem_cmd_payload_id_3;
+    wire [31:0] imem_cmd_payload_address_3;
+    bit         imem_rsp_valid_3;
+    bit  [ 0:0] imem_rsp_payload_id_3;
+    bit         imem_rsp_payload_error_3;
+    bit  [31:0] imem_rsp_payload_word_3;
+    wire        dmem_cmd_valid_3;
+    bit         dmem_cmd_ready_3;
+    wire [ 0:0] dmem_cmd_payload_id_3;
+    wire        dmem_cmd_payload_write_3;
+    wire [31:0] dmem_cmd_payload_address_3;
+    wire [31:0] dmem_cmd_payload_data_3;
+    wire [ 1:0] dmem_cmd_payload_size_3;
+    wire [ 3:0] dmem_cmd_payload_mask_3;
+    wire        dmem_cmd_payload_io_3;
+    wire        dmem_cmd_payload_fromHart_3;
+    wire [15:0] dmem_cmd_payload_uopId_3;
+    bit         dmem_rsp_valid_3;
+    bit  [ 0:0] dmem_rsp_payload_id_3;
+    bit         dmem_rsp_payload_error_3;
+    bit  [31:0] dmem_rsp_payload_data_3;
 
     /*verilator tracing_off*/
     VexiiRiscv vexii1 (
@@ -189,6 +218,40 @@ module mpeg_video (
         .clk(clk),
         .reset(reset || !dsp_enable)
     );
+
+    VexiiRiscv vexii3 (
+        .PrivilegedPlugin_logic_rdtime(0),
+        .PrivilegedPlugin_logic_harts_0_int_m_timer(0),
+        .PrivilegedPlugin_logic_harts_0_int_m_software(0),
+        .PrivilegedPlugin_logic_harts_0_int_m_external(0),
+        .FetchCachelessPlugin_logic_bus_cmd_valid(imem_cmd_valid_3),
+        .FetchCachelessPlugin_logic_bus_cmd_ready(imem_cmd_ready_3),
+        .FetchCachelessPlugin_logic_bus_cmd_payload_id(imem_cmd_payload_id_3),
+        .FetchCachelessPlugin_logic_bus_cmd_payload_address(imem_cmd_payload_address_3),
+        .FetchCachelessPlugin_logic_bus_rsp_valid(imem_rsp_valid_3),
+        .FetchCachelessPlugin_logic_bus_rsp_payload_id(imem_rsp_payload_id_3),
+        .FetchCachelessPlugin_logic_bus_rsp_payload_error(imem_rsp_payload_error_3),
+        .FetchCachelessPlugin_logic_bus_rsp_payload_word(imem_rsp_payload_word_3),
+        .LsuCachelessPlugin_logic_bus_cmd_valid(dmem_cmd_valid_3),
+        .LsuCachelessPlugin_logic_bus_cmd_ready(dmem_cmd_ready_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_id(dmem_cmd_payload_id_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_write(dmem_cmd_payload_write_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_address(dmem_cmd_payload_address_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_data(dmem_cmd_payload_data_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_size(dmem_cmd_payload_size_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_mask(dmem_cmd_payload_mask_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_io(dmem_cmd_payload_io_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_fromHart(dmem_cmd_payload_fromHart_3),
+        .LsuCachelessPlugin_logic_bus_cmd_payload_uopId(dmem_cmd_payload_uopId_3),
+        .LsuCachelessPlugin_logic_bus_rsp_valid(dmem_rsp_valid_3),
+        .LsuCachelessPlugin_logic_bus_rsp_payload_id(dmem_rsp_payload_id_3),
+        .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error_3),
+        .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data_3),
+        .clk(clk),
+        .reset(reset || !dsp_enable)
+    );
+
+
     /*verilator tracing_on*/
 
     bit debugflag = 0;
@@ -197,6 +260,7 @@ module mpeg_video (
     wire expose_frame /*verilator public_flat_rd*/ = (dmem_cmd_payload_address_1 == 32'h10000010 && dmem_cmd_payload_write_1 && dmem_cmd_valid_1) ;
     bit [31:0] soft_state1  /*verilator public_flat_rd*/ = 0;
     bit [31:0] soft_state2  /*verilator public_flat_rd*/ = 0;
+    bit [31:0] soft_state3  /*verilator public_flat_rd*/ = 0;
 
 
     bit fail;
@@ -208,6 +272,8 @@ module mpeg_video (
         dmem_cmd_ready_1 = 1;
         imem_cmd_ready_2 = 1;
         dmem_cmd_ready_2 = 1;
+        imem_cmd_ready_3 = 1;
+        dmem_cmd_ready_3 = 1;
 
         dmem_rsp_payload_data_1 = reverse_endian_32(mpeg_in_fifo_out);
 
@@ -260,7 +326,8 @@ module mpeg_video (
         dmem_rsp_valid_1 <= 0;
         imem_rsp_valid_2 <= 0;
         dmem_rsp_valid_2 <= 0;
-
+        imem_rsp_valid_3 <= 0;
+        dmem_rsp_valid_3 <= 0;
 
         dmem_cmd_payload_address_1_q <= dmem_cmd_payload_address_1;
         dmem_cmd_valid_1_q <= dmem_cmd_valid_1;
@@ -278,6 +345,8 @@ module mpeg_video (
             soft_state1 <= dmem_cmd_payload_data_1;
         if (dmem_cmd_payload_address_2 == 32'h10000030 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2)
             soft_state2 <= dmem_cmd_payload_data_2;
+        if (dmem_cmd_payload_address_3 == 32'h10000030 && dmem_cmd_payload_write_3 && dmem_cmd_valid_3)
+            soft_state3 <= dmem_cmd_payload_data_3;
 
         if (draining_fifo) begin
             fifo_water_level <= fifo_water_level - 1;
@@ -311,15 +380,22 @@ module mpeg_video (
 
             case (dmem_cmd_payload_address_1[31:28])
                 4'd4: begin  // Shared SRAM region
-                    if (dmem_cmd_payload_write_1) begin
-                        assert (dmem_cmd_payload_mask_1 == 4'b1111);
-                        /*
-                        $display("Shared Write %x %x", dmem_cmd_payload_address_1,
-                                 dmem_cmd_payload_data_1);
-                                 */
-                        shared_sram[dmem_cmd_payload_address_1[20:2]] <= dmem_cmd_payload_data_1;
+                    if (dmem_cmd_payload_address_1[27:24] == 1) begin
+
+                        if (dmem_cmd_payload_write_1) begin
+                            assert (dmem_cmd_payload_mask_1 == 4'b1111);
+                            shared_sram2[dmem_cmd_payload_address_1[20:2]] <= dmem_cmd_payload_data_1;
+                        end else begin
+                            shared_memory_out1 <= shared_sram2[dmem_cmd_payload_address_1[20:2]];
+                        end
                     end else begin
-                        shared_memory_out1 <= shared_sram[dmem_cmd_payload_address_1[20:2]];
+                        if (dmem_cmd_payload_write_1) begin
+                            assert (dmem_cmd_payload_mask_1 == 4'b1111);
+                            shared_sram3[dmem_cmd_payload_address_1[20:2]] <= dmem_cmd_payload_data_1;
+                        end else begin
+                            shared_memory_out1 <= shared_sram3[dmem_cmd_payload_address_1[20:2]];
+                        end
+
                     end
                 end
                 4'd1: begin
@@ -345,6 +421,14 @@ module mpeg_video (
             endcase
         end
 
+
+        // Instruction fetch logic for core 1
+        if (imem_cmd_valid_1) begin
+            imem_rsp_valid_1 <= 1;
+            imem_rsp_payload_id_1 <= imem_cmd_payload_id_1;
+            imem_rsp_payload_word_1 <= memory_core1[imem_cmd_payload_address_1>>2];
+        end
+
         // Core 2 memory access
         if (dmem_cmd_valid_2 && dmem_cmd_ready_2) begin
             dmem_rsp_payload_id_2 <= dmem_cmd_payload_id_2;
@@ -367,9 +451,9 @@ module mpeg_video (
                 end
                 4'd4: begin  // Shared SRAM region
                     if (dmem_cmd_payload_write_2) begin
-                        shared_sram[dmem_cmd_payload_address_2[20:2]] <= dmem_cmd_payload_data_2;
+                        shared_sram2[dmem_cmd_payload_address_2[20:2]] <= dmem_cmd_payload_data_2;
                     end else begin
-                        dmem_rsp_payload_data_2 <= shared_sram[dmem_cmd_payload_address_2[20:2]];
+                        dmem_rsp_payload_data_2 <= shared_sram2[dmem_cmd_payload_address_2[20:2]];
                     end
                 end
                 4'd0: begin  // Core 2 private memory
@@ -391,18 +475,66 @@ module mpeg_video (
             endcase
         end
 
-        if (imem_cmd_valid_1) begin
-            imem_rsp_valid_1 <= 1;
-            imem_rsp_payload_id_1 <= imem_cmd_payload_id_1;
-            imem_rsp_payload_word_1 <= memory_core1[imem_cmd_payload_address_1>>2];
-        end
-
         // Instruction fetch logic for core 2
         if (imem_cmd_valid_2) begin
             imem_rsp_valid_2 <= 1;
             imem_rsp_payload_id_2 <= imem_cmd_payload_id_2;
             imem_rsp_payload_word_2 <= memory_core2[imem_cmd_payload_address_2>>2];
         end
+
+
+
+        // Core 3 memory access
+        if (dmem_cmd_valid_3 && dmem_cmd_ready_3) begin
+            dmem_rsp_payload_id_3 <= dmem_cmd_payload_id_3;
+            dmem_rsp_valid_3 <= 1;
+
+            case (dmem_cmd_payload_address_3[31:28])
+                4'd5: begin  // Core 1 private memory
+                    if (dmem_cmd_payload_write_3) begin
+                        if (dmem_cmd_payload_mask_3[0])
+                            memory_core1[dmem_cmd_payload_address_3[20:2]][7:0] <= dmem_cmd_payload_data_3[7:0];
+                        if (dmem_cmd_payload_mask_3[1])
+                            memory_core1[dmem_cmd_payload_address_3[20:2]][15:8] <= dmem_cmd_payload_data_3[15:8];
+                        if (dmem_cmd_payload_mask_3[2])
+                            memory_core1[dmem_cmd_payload_address_3[20:2]][23:16] <= dmem_cmd_payload_data_3[23:16];
+                        if (dmem_cmd_payload_mask_3[3])
+                            memory_core1[dmem_cmd_payload_address_3[20:2]][31:24] <= dmem_cmd_payload_data_3[31:24];
+                    end else begin
+                        dmem_rsp_payload_data_3 <= memory_core1[dmem_cmd_payload_address_3[20:2]];
+                    end
+                end
+                4'd4: begin  // Shared SRAM region
+                    if (dmem_cmd_payload_write_3) begin
+                        shared_sram3[dmem_cmd_payload_address_3[20:2]] <= dmem_cmd_payload_data_3;
+                    end else begin
+                        dmem_rsp_payload_data_3 <= shared_sram3[dmem_cmd_payload_address_3[20:2]];
+                    end
+                end
+                4'd0: begin  // Core 3 private memory
+                    if (dmem_cmd_payload_write_3) begin
+                        if (dmem_cmd_payload_mask_3[0])
+                            memory_core3[dmem_cmd_payload_address_3>>2][7:0] <= dmem_cmd_payload_data_3[7:0];
+                        if (dmem_cmd_payload_mask_3[1])
+                            memory_core3[dmem_cmd_payload_address_3>>2][15:8] <= dmem_cmd_payload_data_3[15:8];
+                        if (dmem_cmd_payload_mask_3[2])
+                            memory_core3[dmem_cmd_payload_address_3>>2][23:16] <= dmem_cmd_payload_data_3[23:16];
+                        if (dmem_cmd_payload_mask_3[3])
+                            memory_core3[dmem_cmd_payload_address_3>>2][31:24] <= dmem_cmd_payload_data_3[31:24];
+                    end else begin
+                        dmem_rsp_payload_data_3 <= memory_core3[dmem_cmd_payload_address_3>>2];
+                    end
+                end
+                default: ;
+            endcase
+        end
+
+        if (imem_cmd_valid_3) begin
+            imem_rsp_valid_3 <= 1;
+            imem_rsp_payload_id_3 <= imem_cmd_payload_id_3;
+            imem_rsp_payload_word_3 <= memory_core3[imem_cmd_payload_address_3>>2];
+        end
+
     end
 endmodule
 
