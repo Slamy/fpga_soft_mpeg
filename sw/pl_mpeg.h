@@ -1278,103 +1278,6 @@ void plm_read_packets(plm_t *self, int requested_type) {
 	}
 }
 
-plm_frame_t *plm_seek_frame(plm_t *self, double time, int seek_exact) {
-	if (!plm_init_decoders(self)) {
-		return NULL;
-	}
-
-	if (!self->video_packet_type) {
-		return NULL;
-	}
-
-	int type = self->video_packet_type;
-
-	double start_time = plm_demux_get_start_time(self->demux, type);
-	double duration = plm_demux_get_duration(self->demux, type);
-
-	if (time < 0) {
-		time = 0;
-	}
-	else if (time > duration) {
-		time = duration;
-	}
-	
-	plm_packet_t *packet = plm_demux_seek(self->demux, time, type, TRUE);
-	if (!packet) {
-		return NULL;
-	}
-
-	// Disable writing to the audio buffer while decoding video
-	int previous_audio_packet_type = self->audio_packet_type;
-	self->audio_packet_type = 0;
-
-	// Clear video buffer and decode the found packet
-	plm_video_rewind(self->video_decoder);
-	plm_video_set_time(self->video_decoder, packet->pts - start_time);
-	plm_buffer_write(self->video_buffer, packet->data, packet->length);
-	plm_frame_t *frame = plm_video_decode(self->video_decoder);	
-
-	// If we want to seek to an exact frame, we have to decode all frames
-	// on top of the intra frame we just jumped to.
-	if (seek_exact) {
-		while (frame && frame->time < time) {
-			frame = plm_video_decode(self->video_decoder);
-		}
-	}
-
-	// Enable writing to the audio buffer again?
-	self->audio_packet_type = previous_audio_packet_type;
-
-	if (frame) {
-		self->time = frame->time;
-	}
-
-	self->has_ended = FALSE;
-	return frame;
-}
-
-int plm_seek(plm_t *self, double time, int seek_exact) {
-	plm_frame_t *frame = plm_seek_frame(self, time, seek_exact);
-	
-	if (!frame) {
-		return FALSE;
-	}
-
-	if (self->video_decode_callback) {
-		self->video_decode_callback(self, frame, self->video_decode_callback_user_data);	
-	}
-
-	// If audio is not enabled we are done here.
-	if (!self->audio_packet_type) {
-		return TRUE;
-	}
-
-	// Sync up Audio. This demuxes more packets until the first audio packet
-	// with a PTS greater than the current time is found. plm_decode() is then
-	// called to decode enough audio data to satisfy the audio_lead_time.
-
-	double start_time = plm_demux_get_start_time(self->demux, self->video_packet_type);
-	plm_audio_rewind(self->audio_decoder);
-
-	plm_packet_t *packet = NULL;
-	while ((packet = plm_demux_decode(self->demux))) {
-		if (packet->type == self->video_packet_type) {
-			plm_buffer_write(self->video_buffer, packet->data, packet->length);
-		}
-		else if (
-			packet->type == self->audio_packet_type &&
-			packet->pts - start_time > self->time
-		) {
-			plm_audio_set_time(self->audio_decoder, packet->pts - start_time);
-			plm_buffer_write(self->audio_buffer, packet->data, packet->length);
-			plm_decode(self, 0);
-			break;
-		}
-	}	
-	
-	return TRUE;
-}
-
 
 
 // -----------------------------------------------------------------------------
@@ -1683,8 +1586,6 @@ int plm_buffer_has(plm_buffer_t *self, size_t count) {
 int plm_buffer_read(plm_buffer_t *self, int count) {
 	int value = 0;
 
-	OUT_DEBUG = 20;
-
 	while (count) {
 		int current_byte = self->bytes[self->bit_index >> 3];
 
@@ -1698,8 +1599,6 @@ int plm_buffer_read(plm_buffer_t *self, int count) {
 		self->bit_index += read;
 		count -= read;
 	}
-
-	OUT_DEBUG = 21;
 
 	return value;
 }
@@ -1822,470 +1721,6 @@ void plm_demux_buffer_seek(plm_demux_t *self, size_t pos);
 double plm_demux_decode_time(plm_demux_t *self);
 plm_packet_t *plm_demux_decode_packet(plm_demux_t *self, int type);
 plm_packet_t *plm_demux_get_packet(plm_demux_t *self);
-
-plm_demux_t *plm_demux_create(plm_buffer_t *buffer, int destroy_when_done) {
-	plm_demux_t *self = (plm_demux_t *)PLM_MALLOC(sizeof(plm_demux_t));
-	memset(self, 0, sizeof(plm_demux_t));
-
-	self->buffer = buffer;
-	self->destroy_buffer_when_done = destroy_when_done;
-
-	self->start_time = PLM_PACKET_INVALID_TS;
-	self->duration = PLM_PACKET_INVALID_TS;
-	self->start_code = -1;
-
-	plm_demux_has_headers(self);
-	return self;
-}
-
-void plm_demux_destroy(plm_demux_t *self) {
-	if (self->destroy_buffer_when_done) {
-		plm_buffer_destroy(self->buffer);
-	}
-	PLM_FREE(self);
-}
-
-int plm_demux_has_headers(plm_demux_t *self) {
-	if (self->has_headers) {
-		return TRUE;
-	}
-
-	// Decode pack header
-	if (!self->has_pack_header) {
-		if (
-			self->start_code != PLM_START_PACK &&
-			plm_buffer_find_start_code(self->buffer, PLM_START_PACK) == -1
-		) {
-			return FALSE;
-		}
-
-		self->start_code = PLM_START_PACK;
-		if (!plm_buffer_has(self->buffer, 64)) {
-			return FALSE;
-		}
-		self->start_code = -1;
-
-		if (plm_buffer_read(self->buffer, 4) != 0x02) {
-			return FALSE;
-		}
-
-		self->system_clock_ref = plm_demux_decode_time(self);
-		plm_buffer_skip(self->buffer, 1);
-		plm_buffer_skip(self->buffer, 22); // mux_rate * 50
-		plm_buffer_skip(self->buffer, 1);
-
-		self->has_pack_header = TRUE;
-	}
-
-	// Decode system header
-	if (!self->has_system_header) {
-		if (
-			self->start_code != PLM_START_SYSTEM &&
-			plm_buffer_find_start_code(self->buffer, PLM_START_SYSTEM) == -1
-		) {
-			return FALSE;
-		}
-
-		self->start_code = PLM_START_SYSTEM;
-		if (!plm_buffer_has(self->buffer, 56)) {
-			return FALSE;
-		}
-		self->start_code = -1;
-
-		plm_buffer_skip(self->buffer, 16); // header_length
-		plm_buffer_skip(self->buffer, 24); // rate bound
-		self->num_audio_streams = plm_buffer_read(self->buffer, 6);
-		plm_buffer_skip(self->buffer, 5); // misc flags
-		self->num_video_streams = plm_buffer_read(self->buffer, 5);
-
-		self->has_system_header = TRUE;
-	}
-
-	self->has_headers = TRUE;
-	return TRUE;
-}
-
-int plm_demux_probe(plm_demux_t *self, size_t probesize) {
-	int previous_pos = plm_buffer_tell(self->buffer);
-
-	int video_stream = FALSE;
-	int audio_streams[4] = {FALSE, FALSE, FALSE, FALSE};
-	do {
-		self->start_code = plm_buffer_next_start_code(self->buffer);
-		if (self->start_code == PLM_DEMUX_PACKET_VIDEO_1) {
-			video_stream = TRUE;
-		}
-		else if (
-			self->start_code >= PLM_DEMUX_PACKET_AUDIO_1 && 
-			self->start_code <= PLM_DEMUX_PACKET_AUDIO_4
-		) {
-			audio_streams[self->start_code - PLM_DEMUX_PACKET_AUDIO_1] = TRUE;
-		}
-	} while (
-		self->start_code != -1 && 
-		plm_buffer_tell(self->buffer) - previous_pos < probesize
-	);
-
-	self->num_video_streams = video_stream ? 1 : 0;
-	self->num_audio_streams = 0;
-	for (int i = 0; i < 4; i++) {
-		if (audio_streams[i]) {
-			self->num_audio_streams++;
-		}
-	}
-
-	plm_demux_buffer_seek(self, previous_pos);
-	return (self->num_video_streams || self->num_audio_streams);
-}
-
-int plm_demux_get_num_video_streams(plm_demux_t *self) {
-	return plm_demux_has_headers(self)
-		? self->num_video_streams
-		: 0;
-}
-
-int plm_demux_get_num_audio_streams(plm_demux_t *self) {
-	return plm_demux_has_headers(self)
-		? self->num_audio_streams
-		: 0;
-}
-
-void plm_demux_rewind(plm_demux_t *self) {
-	plm_buffer_rewind(self->buffer);
-	self->current_packet.length = 0;
-	self->next_packet.length = 0;
-	self->start_code = -1;
-}
-
-int plm_demux_has_ended(plm_demux_t *self) {
-	return plm_buffer_has_ended(self->buffer);
-}
-
-void plm_demux_buffer_seek(plm_demux_t *self, size_t pos) {
-	plm_buffer_seek(self->buffer, pos);
-	self->current_packet.length = 0;
-	self->next_packet.length = 0;
-	self->start_code = -1;
-}
-
-double plm_demux_get_start_time(plm_demux_t *self, int type) {
-	if (self->start_time != PLM_PACKET_INVALID_TS) {
-		return self->start_time;
-	}
-
-	int previous_pos = plm_buffer_tell(self->buffer);
-	int previous_start_code = self->start_code;
-	
-	// Find first video PTS
-	plm_demux_rewind(self);
-	do {
-		plm_packet_t *packet = plm_demux_decode(self);
-		if (!packet) {
-			break;
-		}
-		if (packet->type == type) {
-			self->start_time = packet->pts;
-		}
-	} while (self->start_time == PLM_PACKET_INVALID_TS);
-
-	plm_demux_buffer_seek(self, previous_pos);
-	self->start_code = previous_start_code;
-	return self->start_time;
-}
-
-double plm_demux_get_duration(plm_demux_t *self, int type) {
-	size_t file_size = plm_buffer_get_size(self->buffer);
-
-	if (
-		self->duration != PLM_PACKET_INVALID_TS &&
-		self->last_file_size == file_size
-	) {
-		return self->duration;
-	}
-
-	size_t previous_pos = plm_buffer_tell(self->buffer);
-	int previous_start_code = self->start_code;
-	
-	// Find last video PTS. Start searching 64kb from the end and go further 
-	// back if needed.
-	long start_range = 64 * 1024;
-	long max_range = 4096 * 1024;
-	for (long range = start_range; range <= max_range; range *= 2) {
-		long seek_pos = file_size - range;
-		if (seek_pos < 0) {
-			seek_pos = 0;
-			range = max_range; // Make sure to bail after this round
-		}
-		plm_demux_buffer_seek(self, seek_pos);
-		self->current_packet.length = 0;
-
-		double last_pts = PLM_PACKET_INVALID_TS;
-		plm_packet_t *packet = NULL;
-		while ((packet = plm_demux_decode(self))) {
-			if (packet->pts != PLM_PACKET_INVALID_TS && packet->type == type) {
-				last_pts = packet->pts;
-			}
-		}
-		if (last_pts != PLM_PACKET_INVALID_TS) {
-			self->duration = last_pts - plm_demux_get_start_time(self, type);
-			break;
-		}
-	}
-
-	plm_demux_buffer_seek(self, previous_pos);
-	self->start_code = previous_start_code;
-	self->last_file_size = file_size;
-	return self->duration;
-}
-
-plm_packet_t *plm_demux_seek(plm_demux_t *self, double seek_time, int type, int force_intra) {
-	if (!plm_demux_has_headers(self)) {
-		return NULL;
-	}
-
-	// Using the current time, current byte position and the average bytes per
-	// second for this file, try to jump to a byte position that hopefully has
-	// packets containing timestamps within one second before to the desired 
-	// seek_time.
-
-	// If we hit close to the seek_time scan through all packets to find the
-	// last one (just before the seek_time) containing an intra frame.
-	// Otherwise we should at least be closer than before. Calculate the bytes
-	// per second for the jumped range and jump again.
-
-	// The number of retries here is hard-limited to a generous amount. Usually
-	// the correct range is found after 1--5 jumps, even for files with very 
-	// variable bitrates. If significantly more jumps are needed, there's
-	// probably something wrong with the file and we just avoid getting into an
-	// infinite loop. 32 retries should be enough for anybody.
-
-	double duration = plm_demux_get_duration(self, type);
-	long file_size = plm_buffer_get_size(self->buffer);
-	long byterate = file_size / duration;
-
-	double cur_time = self->last_decoded_pts;
-	double scan_span = 1;
-
-	if (seek_time > duration) {
-		seek_time = duration;
-	}
-	else if (seek_time < 0) {
-		seek_time = 0;
-	}
-	seek_time += self->start_time;
-
-	for (int retry = 0; retry < 32; retry++) {
-		int found_packet_with_pts = FALSE;
-		int found_packet_in_range = FALSE;
-		long last_valid_packet_start = -1;
-		double first_packet_time = PLM_PACKET_INVALID_TS;
-
-		long cur_pos = plm_buffer_tell(self->buffer);
-
-		// Estimate byte offset and jump to it.
-		long offset = (seek_time - cur_time - scan_span) * byterate;
-		long seek_pos = cur_pos + offset;
-		if (seek_pos < 0) {
-			seek_pos = 0;
-		}
-		else if (seek_pos > file_size - 256) {
-			seek_pos = file_size - 256;
-		}
-
-		plm_demux_buffer_seek(self, seek_pos);
-
-		// Scan through all packets up to the seek_time to find the last packet
-		// containing an intra frame.
-		while (plm_buffer_find_start_code(self->buffer, type) != -1) {
-			long packet_start = plm_buffer_tell(self->buffer);
-			plm_packet_t *packet = plm_demux_decode_packet(self, type);
-
-			// Skip packet if it has no PTS
-			if (!packet || packet->pts == PLM_PACKET_INVALID_TS) {
-				continue;
-			}
-
-			// Bail scanning through packets if we hit one that is outside
-			// seek_time - scan_span.
-			// We also adjust the cur_time and byterate values here so the next 
-			// iteration can be a bit more precise.
-			if (packet->pts > seek_time || packet->pts < seek_time - scan_span) {
-				found_packet_with_pts = TRUE;
-				byterate = (seek_pos - cur_pos) / (packet->pts - cur_time);
-				cur_time = packet->pts;
-				break;
-			}
-
-			// If we are still here, it means this packet is in close range to
-			// the seek_time. If this is the first packet for this jump position
-			// record the PTS. If we later have to back off, when there was no
-			// intra frame in this range, we can lower the seek_time to not scan
-			// this range again.
-			if (!found_packet_in_range) {
-				found_packet_in_range = TRUE;
-				first_packet_time = packet->pts;
-			}
-
-			// Check if this is an intra frame packet. If so, record the buffer
-			// position of the start of this packet. We want to jump back to it 
-			// later, when we know it's the last intra frame before desired
-			// seek time.
-			if (force_intra) {
-				for (size_t i = 0; i < packet->length - 6; i++) {
-					// Find the START_PICTURE code
-					if (
-						packet->data[i] == 0x00 &&
-						packet->data[i + 1] == 0x00 &&
-						packet->data[i + 2] == 0x01 &&
-						packet->data[i + 3] == 0x00
-					) {
-						// Bits 11--13 in the picture header contain the frame 
-						// type, where 1=Intra
-						if ((packet->data[i + 5] & 0x38) == 8) {
-							last_valid_packet_start = packet_start;
-						}
-						break;
-					}
-				}
-			}
-
-			// If we don't want intra frames, just use the last PTS found.
-			else {
-				last_valid_packet_start = packet_start;
-			}
-		}
-
-		// If there was at least one intra frame in the range scanned above,
-		// our search is over. Jump back to the packet and decode it again.
-		if (last_valid_packet_start != -1) {
-			plm_demux_buffer_seek(self, last_valid_packet_start);
-			return plm_demux_decode_packet(self, type);
-		}
-
-		// If we hit the right range, but still found no intra frame, we have
-		// to increases the scan_span. This is done exponentially to also handle
-		// video files with very few intra frames.
-		else if (found_packet_in_range) {
-			scan_span *= 2;
-			seek_time = first_packet_time;
-		}
-
-		// If we didn't find any packet with a PTS, it probably means we reached
-		// the end of the file. Estimate byterate and cur_time accordingly.
-		else if (!found_packet_with_pts) {
-			byterate = (seek_pos - cur_pos) / (duration - cur_time);
-			cur_time = duration;
-		}
-	}
-
-	return NULL;
-}
-
-plm_packet_t *plm_demux_decode(plm_demux_t *self) {
-	if (!plm_demux_has_headers(self)) {
-		return NULL;
-	}
-
-	if (self->current_packet.length) {
-		size_t bits_till_next_packet = self->current_packet.length << 3;
-		if (!plm_buffer_has(self->buffer, bits_till_next_packet)) {
-			return NULL;
-		}
-		plm_buffer_skip(self->buffer, bits_till_next_packet);
-		self->current_packet.length = 0;
-	}
-
-	// Pending packet waiting for data?
-	if (self->next_packet.length) {
-		return plm_demux_get_packet(self);
-	}
-
-	// Pending packet waiting for header?
-	if (self->start_code != -1) {
-		return plm_demux_decode_packet(self, self->start_code);
-	}
-
-	do {
-		self->start_code = plm_buffer_next_start_code(self->buffer);
-		if (
-			self->start_code == PLM_DEMUX_PACKET_VIDEO_1 || 
-			self->start_code == PLM_DEMUX_PACKET_PRIVATE || (
-				self->start_code >= PLM_DEMUX_PACKET_AUDIO_1 && 
-				self->start_code <= PLM_DEMUX_PACKET_AUDIO_4
-			)
-		) {
-			return plm_demux_decode_packet(self, self->start_code);
-		}
-	} while (self->start_code != -1);
-
-	return NULL;
-}
-
-double plm_demux_decode_time(plm_demux_t *self) {
-	int64_t clock = plm_buffer_read(self->buffer, 3) << 30;
-	plm_buffer_skip(self->buffer, 1);
-	clock |= plm_buffer_read(self->buffer, 15) << 15;
-	plm_buffer_skip(self->buffer, 1);
-	clock |= plm_buffer_read(self->buffer, 15);
-	plm_buffer_skip(self->buffer, 1);
-	return (double)clock / 90000.0;
-}
-
-plm_packet_t *plm_demux_decode_packet(plm_demux_t *self, int type) {
-	if (!plm_buffer_has(self->buffer, 16 << 3)) {
-		return NULL;
-	}
-
-	self->start_code = -1;
-
-	self->next_packet.type = type;
-	self->next_packet.length = plm_buffer_read(self->buffer, 16);
-	self->next_packet.length -= plm_buffer_skip_bytes(self->buffer, 0xff); // stuffing
-
-	// skip P-STD
-	if (plm_buffer_read(self->buffer, 2) == 0x01) {
-		plm_buffer_skip(self->buffer, 16);
-		self->next_packet.length -= 2;
-	}
-
-	int pts_dts_marker = plm_buffer_read(self->buffer, 2);
-	if (pts_dts_marker == 0x03) {
-		self->next_packet.pts = plm_demux_decode_time(self);
-		self->last_decoded_pts = self->next_packet.pts;
-		plm_buffer_skip(self->buffer, 40); // skip dts
-		self->next_packet.length -= 10;
-	}
-	else if (pts_dts_marker == 0x02) {
-		self->next_packet.pts = plm_demux_decode_time(self);
-		self->last_decoded_pts = self->next_packet.pts;
-		self->next_packet.length -= 5;
-	}
-	else if (pts_dts_marker == 0x00) {
-		self->next_packet.pts = PLM_PACKET_INVALID_TS;
-		plm_buffer_skip(self->buffer, 4);
-		self->next_packet.length -= 1;
-	}
-	else {
-		return NULL; // invalid
-	}
-	
-	return plm_demux_get_packet(self);
-}
-
-plm_packet_t *plm_demux_get_packet(plm_demux_t *self) {
-	if (!plm_buffer_has(self->buffer, self->next_packet.length << 3)) {
-		return NULL;
-	}
-
-	self->current_packet.data = self->buffer->bytes + (self->buffer->bit_index >> 3);
-	self->current_packet.length = self->next_packet.length;
-	self->current_packet.type = self->next_packet.type;
-	self->current_packet.pts = self->next_packet.pts;
-
-	self->next_packet.length = 0;
-	return &self->current_packet;
-}
-
 
 
 // -----------------------------------------------------------------------------
@@ -2864,10 +2299,10 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 	if (!plm_video_has_header(self)) {
 		return NULL;
 	}
-	OUT_DEBUG = 2;
 
 	plm_frame_t *frame = NULL;
 	do {
+		OUT_DEBUG = 2;
 		if (self->start_code != PLM_START_PICTURE) {
 			self->start_code = plm_buffer_find_start_code(self->buffer, PLM_START_PICTURE);
 			
@@ -2890,18 +2325,7 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 				return NULL;
 			}
 		}
-
-		// Make sure we have a full picture in the buffer before attempting to
-		// decode it. Sadly, this can only be done by seeking for the start code
-		// of the next picture. Also, if we didn't find the start code for the
-		// next picture, but the source has ended, we assume that this last
-		// picture is in the buffer.
-		if (
-			plm_buffer_has_start_code(self->buffer, PLM_START_PICTURE) == -1 &&
-			!plm_buffer_has_ended(self->buffer)
-		) {
-			return NULL;
-		}
+		OUT_DEBUG = 9;
 		
 		plm_video_decode_picture(self);
 
@@ -2919,6 +2343,8 @@ plm_frame_t *plm_video_decode(plm_video_t *self) {
 		}
 	} while (!frame);
 	
+	OUT_DEBUG = 15;
+
 	frame->time = self->time;
 	self->frames_decoded++;
 	self->time = (double)self->frames_decoded / self->framerate;
@@ -3105,7 +2531,7 @@ void plm_video_decode_picture(plm_video_t *self) {
 
 	// Decode all slices
 	while (PLM_START_IS_SLICE(self->start_code)) {
-	OUT_DEBUG = 7;
+		OUT_DEBUG = 7;
 
 		plm_video_decode_slice(self, self->start_code & 0x000000FF);
 		if (self->macroblock_address >= self->mb_size - 2) {
@@ -3151,6 +2577,9 @@ void plm_video_decode_slice(plm_video_t *self, int slice) {
 }
 
 void plm_video_decode_macroblock(plm_video_t *self) {
+
+	OUT_DEBUG = 14;
+
 	// Decode increment
 	int increment = 0;
 	int t = plm_buffer_read_vlc(self->buffer, PLM_VIDEO_MACROBLOCK_ADDRESS_INCREMENT);
@@ -3165,6 +2594,8 @@ void plm_video_decode_macroblock(plm_video_t *self) {
 		t = plm_buffer_read_vlc(self->buffer, PLM_VIDEO_MACROBLOCK_ADDRESS_INCREMENT);
 	}
 	increment += t;
+
+	OUT_DEBUG = 16;
 
 	// Process any skipped macroblocks
 	if (self->slice_begin) {
@@ -3403,8 +2834,6 @@ void plm_video_process_macroblock(
 		return; // corrupt video
 	}
 
-	//macroblock_worker(s, d,  odd_h,  odd_v,  interpolate,  dw,di,si,block_size);
-
 	struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
 	
 	desc->cpm.interpolate=interpolate;
@@ -3507,7 +2936,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 	// Decode AC coefficients (+DC for non-intra)
 	int level = 0;
 	while (TRUE) {
-		OUT_DEBUG = 30;
+		OUT_DEBUG = 20;
 		int run = 0;
 		uint16_t coeff = plm_buffer_read_vlc_uint(self->buffer, PLM_VIDEO_DCT_COEFF);
 		OUT_DEBUG = 32;

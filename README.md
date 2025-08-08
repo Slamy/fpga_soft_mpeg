@@ -95,36 +95,35 @@ Laptop (somehow different results? Different ffmpeg version maybe?)
 
 ### Benchmarks
 
-    Debug out 89898989  Waterlevel:         -237 Frames decoded:         138  Frames shown:         375  Load:         271 %
+    Debug out 50505050  Waterlevel:         -130 Frames decoded:          81  Frames shown:         211  Load:         260 %
 
 Utilization of cores in cycles and percent.
 
-Core 1
-
-     0           12969   0
-     2        16276132   3
-     3            2898   0
-     4            1872   0
-     5           25482   0
-     6         5422339   1
-     7           86112   0
-     8        33679120   7
-    12         8612890   1
-    20       166171562  35   Reading from buffers
-    21        52558619  11   ???
-    26        14168099   3
-    27       103251334  22   Wasted on waiting for second core
-    28            4700   0
-    30         1069114   0
-    31        46389942   9   ZigZag and Dequant
-    32        17285715   3
-
-Core 2
-
+    Core 1
+     0           13784   0
+     2            6554   0
+     3            5146   0
+     4            7276   0
+     5           15493   0
+     6         3046504   1
+     7          150708   0
+     8        23820565   8
+     9            1826   0
+    12         7767737   2
+    14         1422234   0
+    15           46601   0
+    16         6814552   2
+    20        86520381  32
+    26        12691881   4
+    27        68439636  25
+    28            3240   0
+    31        27069454  10
+    32        29511363  11
+    Core 2
      0             272   0
-     1        26631647   5   Wasted on waiting for first core
-     2         4330062   0
-    10       170452770  36   IDCT
-    11       137893660  29   Writing pixel data after IDCT
-    33        13805330   2
-    34       111905158  24   macroblock_worker
+    10       100146720  37
+    11        80655353  30
+    33         8641326   3
+    34        69572154  26
+    35         5528404   2
+    36         2810706   1

@@ -23,7 +23,6 @@
 #include <verilated_vcd_c.h>
 #include <csignal>
 
-int OUT_DEBUG;
 #define PL_MPEG_IMPLEMENTATION
 #include "../sw/pl_mpeg_pc.h"
 
