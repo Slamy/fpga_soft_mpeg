@@ -3,6 +3,12 @@
 `include "util.svh"
 
 
+function [31:0] ones_mask(bit [4:0] n);
+    begin
+        ones_mask = (32'h1 << n) - 1;  // n ones at LSB
+    end
+endfunction
+
 module mpeg_video (
     input clk,
     input reset,
@@ -23,9 +29,12 @@ module mpeg_video (
         .wdata(data_word),
         .we(data_strobe),
         // Out (32 bit CPU interface)
-        .raddr(dmem_cmd_payload_address_1[13:2]),
+        .raddr(hw_read_count !=0 ? mpeg_stream_byte_index[13:2] : dmem_cmd_payload_address_1[13:2]),
         .q(mpeg_in_fifo_out)
     );
+
+    bit  [ 4:0] hw_read_count = 0;
+    bit  [31:0] hw_read_result = 32;
 
     // Word Address
     bit  [27:0] mpeg_stream_fifo_write_adr;
@@ -38,11 +47,21 @@ module mpeg_video (
     wire [27:0] fifo_level = mpeg_stream_fifo_write_adr - mpeg_stream_fifo_read_adr;
     assign fifo_full = mpeg_stream_fifo_write_adr > (mpeg_stream_fifo_read_adr + 28'd7000);
 
+    bit hw_read_mem_ready = 0;
+    wire [4:0] hw_read_bit_shift = mpeg_stream_bit_index[4:0];
+
+
+    wire [5:0] hw_read_remaining_bits_in_dword = 32 - hw_read_bit_shift;
+
+    wire  [ 4:0] hw_read_count_aligned = 6'(hw_read_count) <= hw_read_remaining_bits_in_dword ? hw_read_count : hw_read_remaining_bits_in_dword[4:0];
+    wire [31:0] hw_read_mask = ones_mask(hw_read_count_aligned);
+
     always_ff @(posedge clk) begin
 
         if (reset) begin
             mpeg_stream_fifo_write_adr <= 0;
             mpeg_stream_bit_index <= 0;
+            hw_read_count <= 0;
         end else begin
             if (data_strobe) begin
                 mpeg_stream_fifo_write_adr <= mpeg_stream_fifo_write_adr + 1;
@@ -53,12 +72,28 @@ module mpeg_video (
                     mpeg_stream_fifo_write_adr <= dmem_cmd_payload_data_1[27:0];
                 if (dmem_cmd_payload_address_1 == 32'h10002004)
                     mpeg_stream_bit_index <= dmem_cmd_payload_data_1;
+                if (dmem_cmd_payload_address_1 == 32'h10002008) begin
+                    hw_read_count  <= dmem_cmd_payload_data_1[4:0];
+                    hw_read_result <= 0;
+                end
+            end
 
+            if (hw_read_count_aligned != 0) begin
+                hw_read_mem_ready <= 1;
+
+                if (hw_read_mem_ready) begin
+                    hw_read_mem_ready <= 0;
+
+
+                    hw_read_result <= (hw_read_result<<hw_read_count_aligned) |
+                        ((mpeg_in_fifo_out >> (32 - hw_read_count_aligned - hw_read_bit_shift)) & hw_read_mask);
+
+                    mpeg_stream_bit_index <= mpeg_stream_bit_index + 32'(hw_read_count_aligned);
+                    hw_read_count <= hw_read_count - hw_read_count_aligned;
+                end
             end
         end
     end
-
-
 
     bit signed [34:0] fifo_water_level;
     bit [34:0] ticks_since_playback_started;
@@ -289,6 +324,8 @@ module mpeg_video (
                             dmem_rsp_payload_data_1 = {3'b000, mpeg_stream_fifo_write_adr, 1'b0};
                         if (dmem_cmd_payload_address_1_q == 32'h10002004)
                             dmem_rsp_payload_data_1 = mpeg_stream_bit_index;
+                        if (dmem_cmd_payload_address_1_q == 32'h10002008)
+                            dmem_rsp_payload_data_1 = hw_read_result;
                     end
                 end
                 4'd0: begin

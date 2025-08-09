@@ -16,9 +16,7 @@ struct io_fifo_control
 {
 	uint32_t write_byte_index;
 	uint32_t read_bit_index;
-	uint32_t signal_decoding_started;
-	uint32_t signal_frame_decoded;
-	uint32_t signal_underflow;
+	uint32_t hw_read_count;
 };
 
 struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
@@ -85,6 +83,20 @@ void main(void)
 	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
 	if (!buffer)
 		*((volatile uint8_t *)OUTPORT_END) = 0;
+
+#if 0
+	for (int i=0;i<32;i++)
+	{
+		plm_dma_buffer_read(buffer, i);
+		plm_dma_buffer_read(buffer, i);
+		plm_dma_buffer_read(buffer, i);
+		plm_dma_buffer_read(buffer, i);
+	}
+	
+	*((volatile uint8_t *)OUTPORT_END) = 0;
+	for (;;)
+		;
+#endif
 
 	plm_video_t *mpeg = plm_video_create_with_buffer(buffer, 0);
 	if (!mpeg)

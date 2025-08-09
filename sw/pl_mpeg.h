@@ -1313,9 +1313,9 @@ int plm_buffer_has(plm_buffer_t *self, size_t count) {
 }
 
 int plm_dma_buffer_read(plm_dma_buffer_t *self, int count) {
-
+#if 0
 	__asm volatile("" : : : "memory");
-	
+
 	int value = 0;
 	while (count) {
 		int current_byte = self->bytes[fifo_ctrl->read_bit_index >> 3];
@@ -1330,6 +1330,19 @@ int plm_dma_buffer_read(plm_dma_buffer_t *self, int count) {
 		fifo_ctrl->read_bit_index += read;
 		count -= read;
 	}
+#else
+	fifo_ctrl->hw_read_count=count;
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	int value = fifo_ctrl->hw_read_count;
+#endif
+	//*((volatile uint32_t *)OUTPORT) = value;
 
 	return value;
 }
