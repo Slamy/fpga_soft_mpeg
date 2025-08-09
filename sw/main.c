@@ -85,14 +85,16 @@ void main(void)
 		*((volatile uint8_t *)OUTPORT_END) = 0;
 
 #if 0
-	for (int i=0;i<32;i++)
-	{
-		plm_dma_buffer_read(buffer, i);
-		plm_dma_buffer_read(buffer, i);
-		plm_dma_buffer_read(buffer, i);
-		plm_dma_buffer_read(buffer, i);
-	}
-	
+	plm_dma_buffer_read(buffer, 8);
+	plm_dma_buffer_read(buffer, 16);
+	plm_dma_buffer_read(buffer, 16);
+	plm_dma_buffer_read(buffer, 16);
+	plm_dma_buffer_read(buffer, 16);
+	plm_dma_buffer_read(buffer, 16);
+	plm_dma_buffer_read(buffer, 16);
+	plm_dma_buffer_read(buffer, 16);
+	plm_dma_buffer_read(buffer, 16);
+	plm_dma_buffer_read(buffer, 16);
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 	for (;;)
 		;

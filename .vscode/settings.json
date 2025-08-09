@@ -49,6 +49,8 @@
         "csignal": "cpp",
         "array": "cpp",
         "span": "cpp",
-        "shared.h": "c"
+        "shared.h": "c",
+        "ratio": "c",
+        "system_error": "c"
     }
 }

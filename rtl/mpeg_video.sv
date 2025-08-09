@@ -304,7 +304,7 @@ module mpeg_video (
 
     always_comb begin
         imem_cmd_ready_1 = 1;
-        dmem_cmd_ready_1 = 1;
+        dmem_cmd_ready_1 = hw_read_count == 0;
         imem_cmd_ready_2 = 1;
         dmem_cmd_ready_2 = 1;
         imem_cmd_ready_3 = 1;
@@ -400,7 +400,7 @@ module mpeg_video (
         // With 2 frames available, we start the playback
         if (fifo_water_level >= (TICKS_PER_FRAME * 2)) draining_fifo <= 1;
 
-        if (dmem_cmd_payload_address_1 == 32'h10000000 && dmem_cmd_valid_1 && dmem_cmd_payload_write_1)
+        if (dmem_cmd_payload_address_1 == 32'h10000000 && dmem_cmd_valid_1 && dmem_cmd_payload_write_1 && dmem_cmd_ready_1)
             $display(
                 "Debug out %x  Waterlevel: %d Frames decoded: %d  Frames shown: %d  Load: %d %%",
                 dmem_cmd_payload_data_1,

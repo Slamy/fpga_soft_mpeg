@@ -1332,9 +1332,7 @@ int plm_dma_buffer_read(plm_dma_buffer_t *self, int count) {
 	}
 #else
 	fifo_ctrl->hw_read_count=count;
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
+	__asm volatile("" : : : "memory");
 	int value = fifo_ctrl->hw_read_count;
 #endif
 	//*((volatile uint32_t *)OUTPORT) = value;
