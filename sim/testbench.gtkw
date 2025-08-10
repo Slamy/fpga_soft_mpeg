@@ -1,21 +1,21 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Sat Aug  9 21:51:59 2025
+[*] Sat Aug  9 22:00:09 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Sat Aug  9 21:49:03 2025"
-[dumpfile_size] 16567
+[dumpfile_mtime] "Sat Aug  9 21:59:49 2025"
+[dumpfile_size] 43044387
 [savefile] "/home/andre/GIT/HybridMPEG/sim/testbench.gtkw"
-[timestart] 534
-[size] 1920 1152
-[pos] -1 -1
-*-3.245145 569 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[timestart] 24920
+[size] 2560 1348
+[pos] 44 44
+*-11.359609 32240 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top_vexii.
 [sst_width] 341
 [signals_width] 429
 [sst_expanded] 1
-[sst_vpaned_height] 346
+[sst_vpaned_height] 414
 @22
 TOP.top_vexii.video.mpeg_stream_byte_index[28:0]
 TOP.top_vexii.video.mpeg_stream_bit_index[31:0]
@@ -35,8 +35,10 @@ TOP.top_vexii.video.dmem_cmd_payload_address_1[31:0]
 TOP.top_vexii.video.dmem_cmd_payload_address_1_q[31:0]
 @28
 TOP.top_vexii.video.dmem_cmd_payload_write_1
-@23
+@22
 TOP.top_vexii.video.dmem_cmd_payload_data_1[31:0]
+@25
+TOP.top_vexii.video.soft_state1[31:0]
 @28
 TOP.top_vexii.video.dmem_cmd_ready_1
 TOP.top_vexii.video.dmem_cmd_ready_1_q

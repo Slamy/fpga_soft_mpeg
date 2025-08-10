@@ -22,6 +22,18 @@ module mpeg_video (
     // 4kB of MPEG stream memory to fill from outside
     wire [31:0] mpeg_in_fifo_out;
 
+    bit  [11:0] mpeg_input_stream_fifo_raddr;
+    always_comb begin
+        mpeg_input_stream_fifo_raddr = dmem_cmd_payload_address_1[13:2];
+
+        if (hw_read_count != 0) begin
+            mpeg_input_stream_fifo_raddr = mpeg_stream_byte_index[13:2];
+
+            if (hw_read_mem_ready && !hw_read_aligned_access)
+                mpeg_input_stream_fifo_raddr = mpeg_input_stream_fifo_raddr + 1;
+        end
+    end
+
     mpeg_input_stream_fifo in_fifo (
         .clk(clk),
         // In (from 16 Bit CD data)
@@ -29,7 +41,7 @@ module mpeg_video (
         .wdata(data_word),
         .we(data_strobe),
         // Out (32 bit CPU interface)
-        .raddr(hw_read_count !=0 ? mpeg_stream_byte_index[13:2] : dmem_cmd_payload_address_1[13:2]),
+        .raddr(mpeg_input_stream_fifo_raddr),
         .q(mpeg_in_fifo_out)
     );
 
@@ -50,13 +62,13 @@ module mpeg_video (
     bit hw_read_mem_ready = 0;
     wire [4:0] hw_read_bit_shift = mpeg_stream_bit_index[4:0];
 
-
     wire [5:0] hw_read_remaining_bits_in_dword = 32 - hw_read_bit_shift;
-
-    wire  [ 4:0] hw_read_count_aligned = 6'(hw_read_count) <= hw_read_remaining_bits_in_dword ? hw_read_count : hw_read_remaining_bits_in_dword[4:0];
+    wire hw_read_aligned_access = (6'(hw_read_count) <= hw_read_remaining_bits_in_dword);
+    wire [ 4:0] hw_read_count_aligned = hw_read_aligned_access ? hw_read_count : hw_read_remaining_bits_in_dword[4:0];
     wire [31:0] hw_read_mask = ones_mask(hw_read_count_aligned);
 
     always_ff @(posedge clk) begin
+        hw_read_mem_ready <= 0;
 
         if (reset) begin
             mpeg_stream_fifo_write_adr <= 0;
@@ -82,7 +94,6 @@ module mpeg_video (
                 hw_read_mem_ready <= 1;
 
                 if (hw_read_mem_ready) begin
-                    hw_read_mem_ready <= 0;
 
                     hw_read_result <= (hw_read_result<<hw_read_count_aligned) |
                         ((mpeg_in_fifo_out >> (32 - hw_read_count_aligned - hw_read_bit_shift)) & hw_read_mask);
@@ -305,6 +316,7 @@ module mpeg_video (
     always_comb begin
         imem_cmd_ready_1 = 1;
         dmem_cmd_ready_1 = hw_read_count == 0;
+        //dmem_cmd_ready_1 = hw_read_count == 0 || (hw_read_aligned_access&&hw_read_mem_ready);
         imem_cmd_ready_2 = 1;
         dmem_cmd_ready_2 = 1;
         imem_cmd_ready_3 = 1;
