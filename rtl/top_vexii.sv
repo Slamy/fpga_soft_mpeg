@@ -1,7 +1,8 @@
 `timescale 1 ns / 1 ps
 
 module top_vexii (
-    input clk,
+    input clk30,
+    input clk60,
     input reset
 );
 
@@ -14,7 +15,8 @@ module top_vexii (
     wire fifo_full;
 
     mpeg_video video (
-        .clk,
+        .clk30,
+        .clk60,
         .reset,
         .dsp_enable(1'b1),
         .data_word,
@@ -25,7 +27,7 @@ module top_vexii (
     bit provide_lower_word = 0;
     bit [17:0] mpeg_stream_address = 0;
 
-    always_ff @(posedge clk) begin
+    always_ff @(posedge clk30) begin
         data_strobe <= 0;
         if (!fifo_full && !reset && mpeg_stream_address <= (SIZE + 10)) begin
             data_strobe <= 1;

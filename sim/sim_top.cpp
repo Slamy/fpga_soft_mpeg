@@ -140,21 +140,23 @@ public:
         dut.reset = 0;
     }
 
+    void clock()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            dut.clk30 = (sim_time & 2);
+            dut.clk60 = (sim_time & 1);
+            dut.eval();
+#ifdef TRACE
+            m_trace.dump(sim_time);
+#endif
+            sim_time++;
+        }
+    }
+    
     void modelstep()
     {
-        dut.clk = !dut.clk;
-        dut.eval();
-#ifdef TRACE
-        m_trace.dump(sim_time);
-#endif
-        sim_time += 1;
-
-        dut.clk = !dut.clk;
-        dut.eval();
-#ifdef TRACE
-        m_trace.dump(sim_time);
-#endif
-        sim_time += 1;
+        clock();
 
         softstate1_heatmap[dut.rootp->top_vexii__DOT__video__DOT__soft_state1]++;
         softstate2_heatmap[dut.rootp->top_vexii__DOT__video__DOT__soft_state2]++;

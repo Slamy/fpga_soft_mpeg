@@ -9,7 +9,8 @@ function [31:0] ones_mask(bit [4:0] n);
 endfunction
 
 module mpeg_video (
-    input clk,
+    input clk30,
+    input clk60,
     input reset,
     input dsp_enable,
 
@@ -22,7 +23,7 @@ module mpeg_video (
     bit dct_coeff_huffman_active = 0;
     wire dct_coeff_result_valid;
     dct_coeff_huffman_decoder huff (
-        .clk,
+        .clk(clk30),
         .reset,
         .data_valid(dct_coeff_huffman_active && hw_read_mem_ready && !dct_coeff_result_valid),
         .data(mpeg_in_fifo_out[31-hw_read_bit_shift]),
@@ -46,7 +47,7 @@ module mpeg_video (
     end
 
     mpeg_input_stream_fifo in_fifo (
-        .clk(clk),
+        .clk(clk30),
         // In (from 16 Bit CD data)
         .waddr(mpeg_stream_fifo_write_adr[12:0] ^ 1),
         .wdata(data_word),
@@ -78,7 +79,7 @@ module mpeg_video (
     wire [ 4:0] hw_read_count_aligned = hw_read_aligned_access ? hw_read_count : hw_read_remaining_bits_in_dword[4:0];
     wire [31:0] hw_read_mask = ones_mask(hw_read_count_aligned);
 
-    always_ff @(posedge clk) begin
+    always_ff @(posedge clk30) begin
         hw_read_mem_ready <= 0;
 
         if (reset) begin
@@ -141,8 +142,10 @@ module mpeg_video (
     bit [31:0] memory_core3[500000]  /*verilator public_flat_rd*/;
     bit [31:0] video_ram[500000]  /*verilator public_flat_rd*/;
 
+    /* verilator lint_off MULTIDRIVEN */
     bit [31:0] shared_sram2[500000];  // 128KB shared SRAM
     bit [31:0] shared_sram3[500000];  // 128KB shared SRAM
+    /* verilator lint_on MULTIDRIVEN */
 
     initial begin
         $readmemh("../sw/firmware.mem", memory_core1);
@@ -254,7 +257,7 @@ module mpeg_video (
         .LsuCachelessPlugin_logic_bus_rsp_payload_id(dmem_rsp_payload_id_1),
         .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error_1),
         .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data_1),
-        .clk(clk),
+        .clk(clk30),
         .reset(reset || !dsp_enable)
     );
     VexiiRiscv vexii2 (
@@ -285,7 +288,7 @@ module mpeg_video (
         .LsuCachelessPlugin_logic_bus_rsp_payload_id(dmem_rsp_payload_id_2),
         .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error_2),
         .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data_2),
-        .clk(clk),
+        .clk(clk60),
         .reset(reset || !dsp_enable)
     );
 
@@ -317,10 +320,9 @@ module mpeg_video (
         .LsuCachelessPlugin_logic_bus_rsp_payload_id(dmem_rsp_payload_id_3),
         .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error_3),
         .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data_3),
-        .clk(clk),
+        .clk(clk60),
         .reset(reset || !dsp_enable)
     );
-
 
     /*verilator tracing_on*/
 
@@ -332,7 +334,6 @@ module mpeg_video (
     bit [31:0] soft_state2  /*verilator public_flat_rd*/ = 0;
     bit [31:0] soft_state3  /*verilator public_flat_rd*/ = 0;
 
-
     bit fail;
     bit draining_fifo = 0;
     bit [31:0] debug_l_storage;
@@ -340,7 +341,6 @@ module mpeg_video (
     always_comb begin
         imem_cmd_ready_1 = 1;
         dmem_cmd_ready_1 = hw_read_count == 0;
-        //dmem_cmd_ready_1 = hw_read_count == 0 || (hw_read_aligned_access&&hw_read_mem_ready);
         imem_cmd_ready_2 = 1;
         dmem_cmd_ready_2 = 1;
         imem_cmd_ready_3 = 1;
@@ -385,7 +385,25 @@ module mpeg_video (
     bit signed [15:0] shared_buffer_level = 0;
 
     wire shared_buffer_level_inc = dmem_cmd_payload_address_1 == 32'h10000014 && dmem_cmd_payload_write_1 && dmem_cmd_valid_1;
-    wire shared_buffer_level_dec = dmem_cmd_payload_address_2 == 32'h10000014 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2;
+    wire shared_buffer_level_dec1 = dmem_cmd_payload_address_2 == 32'h10000014 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2;
+    wire shared_buffer_level_dec2 = dmem_cmd_payload_address_3 == 32'h10000014 && dmem_cmd_payload_write_3 && dmem_cmd_valid_3;
+
+    wire shared_buffer_level_dec1_clk30;
+    wire shared_buffer_level_dec2_clk30;
+
+    flag_cross_domain cross1 (
+        .clk_a(clk60),
+        .clk_b(clk30),
+        .flag_in_clk_a(shared_buffer_level_dec1),
+        .flag_out_clk_b(shared_buffer_level_dec1_clk30)
+    );
+
+    flag_cross_domain cross2 (
+        .clk_a(clk60),
+        .clk_b(clk30),
+        .flag_in_clk_a(shared_buffer_level_dec2),
+        .flag_out_clk_b(shared_buffer_level_dec2_clk30)
+    );
 
     bit [31:0] dmem_cmd_payload_address_1_q;
     bit dmem_cmd_valid_1_q;
@@ -395,33 +413,22 @@ module mpeg_video (
     bit [31:0] memory_out;
     bit [31:0] shared_memory_out1;
 
-    always_ff @(posedge clk) begin
+    always_ff @(posedge clk30) begin
         debugflag <= 0;
         imem_rsp_valid_1 <= 0;
         dmem_rsp_valid_1 <= 0;
-        imem_rsp_valid_2 <= 0;
-        dmem_rsp_valid_2 <= 0;
-        imem_rsp_valid_3 <= 0;
-        dmem_rsp_valid_3 <= 0;
 
         dmem_cmd_payload_address_1_q <= dmem_cmd_payload_address_1;
         dmem_cmd_valid_1_q <= dmem_cmd_valid_1;
         dmem_cmd_ready_1_q <= dmem_cmd_ready_1;
         dmem_cmd_payload_write_1_q <= dmem_cmd_payload_write_1;
 
-        if (shared_buffer_level_inc && !shared_buffer_level_dec)
-            shared_buffer_level <= shared_buffer_level + 1;
-        if (shared_buffer_level_dec && !shared_buffer_level_inc)
-            shared_buffer_level <= shared_buffer_level - 1;
+        shared_buffer_level <= shared_buffer_level + (shared_buffer_level_inc ? 1:0) - (shared_buffer_level_dec1_clk30 ? 1 : 0) - (shared_buffer_level_dec2_clk30 ? 1:0);
 
         if (dmem_cmd_payload_address_1 == 32'h1000000c && dmem_cmd_payload_write_1 && dmem_cmd_valid_1)
             $finish();
         if (dmem_cmd_payload_address_1 == 32'h10000030 && dmem_cmd_payload_write_1 && dmem_cmd_valid_1)
             soft_state1 <= dmem_cmd_payload_data_1;
-        if (dmem_cmd_payload_address_2 == 32'h10000030 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2)
-            soft_state2 <= dmem_cmd_payload_data_2;
-        if (dmem_cmd_payload_address_3 == 32'h10000030 && dmem_cmd_payload_write_3 && dmem_cmd_valid_3)
-            soft_state3 <= dmem_cmd_payload_data_3;
 
         if (draining_fifo) begin
             fifo_water_level <= fifo_water_level - 1;
@@ -496,13 +503,25 @@ module mpeg_video (
             endcase
         end
 
-
         // Instruction fetch logic for core 1
         if (imem_cmd_valid_1) begin
             imem_rsp_valid_1 <= 1;
             imem_rsp_payload_id_1 <= imem_cmd_payload_id_1;
             imem_rsp_payload_word_1 <= memory_core1[imem_cmd_payload_address_1>>2];
         end
+    end
+
+    always_ff @(posedge clk60) begin
+        imem_rsp_valid_2 <= 0;
+        dmem_rsp_valid_2 <= 0;
+        imem_rsp_valid_3 <= 0;
+        dmem_rsp_valid_3 <= 0;
+
+        if (dmem_cmd_payload_address_2 == 32'h10000030 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2)
+            soft_state2 <= dmem_cmd_payload_data_2;
+        if (dmem_cmd_payload_address_3 == 32'h10000030 && dmem_cmd_payload_write_3 && dmem_cmd_valid_3)
+            soft_state3 <= dmem_cmd_payload_data_3;
+
 
         // Core 2 memory access
         if (dmem_cmd_valid_2 && dmem_cmd_ready_2) begin
@@ -611,6 +630,7 @@ module mpeg_video (
         end
 
     end
+
 endmodule
 
 

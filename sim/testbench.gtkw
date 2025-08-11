@@ -1,68 +1,33 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Mon Aug 11 10:29:39 2025
+[*] Mon Aug 11 14:04:58 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Mon Aug 11 10:25:20 2025"
-[dumpfile_size] 3081507
+[dumpfile_mtime] "Mon Aug 11 14:04:57 2025"
+[dumpfile_size] 648750403
 [savefile] "/home/andre/GIT/HybridMPEG/sim/testbench.gtkw"
-[timestart] 3048
-[size] 2560 1348
+[timestart] 43487000
+[size] 1920 1152
 [pos] -1 -1
-*-3.670207 3105 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-17.709183 44088800 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top_vexii.
 [treeopen] TOP.top_vexii.video.
 [sst_width] 341
 [signals_width] 429
 [sst_expanded] 1
-[sst_vpaned_height] 414
-@22
-TOP.top_vexii.video.mpeg_stream_byte_index[28:0]
-TOP.top_vexii.video.mpeg_stream_bit_index[31:0]
-TOP.top_vexii.video.mpeg_in_fifo_out[31:0]
-TOP.top_vexii.video.hw_read_count[4:0]
-TOP.top_vexii.video.hw_read_result[31:0]
+[sst_vpaned_height] 346
+@8025
+TOP.top_vexii.video.shared_buffer_level[15:0]
 @28
-TOP.top_vexii.video.clk
-TOP.top_vexii.video.hw_read_mem_ready
-TOP.top_vexii.video.reset
-TOP.top_vexii.video.dsp_enable
-TOP.top_vexii.video.data_strobe
-@22
-TOP.top_vexii.video.hw_read_mask[31:0]
-TOP.top_vexii.video.hw_read_count_aligned[4:0]
-TOP.top_vexii.video.dmem_cmd_payload_address_1[31:0]
-TOP.top_vexii.video.dmem_cmd_payload_address_1_q[31:0]
-@28
-TOP.top_vexii.video.dmem_cmd_payload_write_1
-@22
-TOP.top_vexii.video.dmem_cmd_payload_data_1[31:0]
-@24
+TOP.top_vexii.video.shared_buffer_level_dec1
+TOP.top_vexii.video.shared_buffer_level_dec1_clk30
+TOP.top_vexii.video.shared_buffer_level_dec2
+TOP.top_vexii.video.shared_buffer_level_dec2_clk30
+TOP.top_vexii.video.shared_buffer_level_inc
+@420
 TOP.top_vexii.video.soft_state1[31:0]
-@28
-TOP.top_vexii.video.dmem_cmd_ready_1
-@24
-TOP.top_vexii.video.soft_state1[31:0]
-@28
-TOP.top_vexii.video.dmem_cmd_ready_1_q
-TOP.top_vexii.video.dmem_cmd_payload_write_1_q
-TOP.top_vexii.video.dmem_cmd_valid_1
-@22
-TOP.top_vexii.video.dmem_rsp_payload_data_1[31:0]
-@28
-TOP.top_vexii.video.dmem_rsp_valid_1
-TOP.top_vexii.video.huff.clk
-TOP.top_vexii.video.huff.data
-TOP.top_vexii.video.huff.data_valid
-TOP.top_vexii.video.huff.reset
-@25
-TOP.top_vexii.video.huff.state[6:0]
-@28
-TOP.top_vexii.video.dct_coeff_huffman_active
-@22
-TOP.top_vexii.video.dct_coeff_result[15:0]
-@28
-TOP.top_vexii.video.dct_coeff_result_valid
+TOP.top_vexii.video.soft_state2[31:0]
+TOP.top_vexii.video.soft_state3[31:0]
 [pattern_trace] 1
 [pattern_trace] 0
