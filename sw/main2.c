@@ -17,6 +17,7 @@ struct io_fifo_control
 	uint32_t write_byte_index;
 	uint32_t read_bit_index;
 	uint32_t hw_read_count;
+	uint32_t hw_huffman_read_dct_coeff;
 };
 
 struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;

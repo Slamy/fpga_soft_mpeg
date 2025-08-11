@@ -2,7 +2,6 @@
 `include "synth_window.svh"
 `include "util.svh"
 
-
 function [31:0] ones_mask(bit [4:0] n);
     begin
         ones_mask = (32'h1 << n) - 1;  // n ones at LSB
@@ -19,6 +18,18 @@ module mpeg_video (
     output fifo_full
 );
 
+    bit [15:0] dct_coeff_result;
+    bit dct_coeff_huffman_active = 0;
+    wire dct_coeff_result_valid;
+    dct_coeff_huffman_decoder huff (
+        .clk,
+        .reset,
+        .data_valid(dct_coeff_huffman_active && hw_read_mem_ready && !dct_coeff_result_valid),
+        .data(mpeg_in_fifo_out[31-hw_read_bit_shift]),
+        .result_valid(dct_coeff_result_valid),
+        .result(dct_coeff_result)
+    );
+
     // 4kB of MPEG stream memory to fill from outside
     wire [31:0] mpeg_in_fifo_out;
 
@@ -29,7 +40,7 @@ module mpeg_video (
         if (hw_read_count != 0) begin
             mpeg_input_stream_fifo_raddr = mpeg_stream_byte_index[13:2];
 
-            if (hw_read_mem_ready && !hw_read_aligned_access)
+            if (hw_read_mem_ready && (!hw_read_aligned_access || mpeg_stream_bit_index[4:0]==5'b11111) )
                 mpeg_input_stream_fifo_raddr = mpeg_input_stream_fifo_raddr + 1;
         end
     end
@@ -88,6 +99,10 @@ module mpeg_video (
                     hw_read_count  <= dmem_cmd_payload_data_1[4:0];
                     hw_read_result <= 0;
                 end
+                if (dmem_cmd_payload_address_1 == 32'h1000200c) begin
+                    hw_read_count <= 1;
+                    dct_coeff_huffman_active <= 1;
+                end
             end
 
             if (hw_read_count_aligned != 0) begin
@@ -102,6 +117,15 @@ module mpeg_video (
                     hw_read_count <= hw_read_count - hw_read_count_aligned;
                 end
             end
+        end
+
+        if (reset || dct_coeff_result_valid) begin
+            dct_coeff_huffman_active <= 0;
+            mpeg_stream_bit_index <= mpeg_stream_bit_index;
+            hw_read_count <= 0;
+        end else if (dct_coeff_huffman_active) begin
+            hw_read_count <= 1;
+            hw_read_mem_ready <= 1;
         end
     end
 
@@ -338,6 +362,8 @@ module mpeg_video (
                             dmem_rsp_payload_data_1 = mpeg_stream_bit_index;
                         if (dmem_cmd_payload_address_1_q == 32'h10002008)
                             dmem_rsp_payload_data_1 = hw_read_result;
+                        if (dmem_cmd_payload_address_1_q == 32'h1000200c)
+                            dmem_rsp_payload_data_1 = {16'b0, dct_coeff_result};
                     end
                 end
                 4'd0: begin
@@ -647,7 +673,7 @@ module firmware_memory #(
     reg [DATA_WIDTH_R-1:0] data_reg2;
 
     // port A
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (we1) begin
             // edit this code if using other than four bytes per word
             if (be1[0]) ram[addr1][0] <= data_in1[7:0];
@@ -661,7 +687,7 @@ module firmware_memory #(
     assign data_out1 = data_reg1;
 
     // port B
-    always @(posedge clk) begin
+    always_ff @(posedge clk) begin
         if (we2) begin
             // edit this code if using other than four bytes per word
             if (be2[0]) ram[addr2][0] <= data_in2[7:0];

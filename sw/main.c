@@ -17,6 +17,7 @@ struct io_fifo_control
 	uint32_t write_byte_index;
 	uint32_t read_bit_index;
 	uint32_t hw_read_count;
+	uint32_t hw_huffman_read_dct_coeff;
 };
 
 struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
@@ -73,6 +74,29 @@ void sync_to_worker()
 	while (desc->ready == 3)
 		__asm volatile("" : : : "memory");
 }
+
+void dct_coeff_read(plm_dma_buffer_t *buffer)
+{
+
+#if 0
+	fifo_ctrl->hw_huffman_read_dct_coeff = 1;
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->hw_huffman_read_dct_coeff;
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	__asm volatile("nop" : : : "memory");
+	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->read_bit_index;
+#else
+	*((volatile uint32_t *)OUTPORT) = plm_dma_buffer_read_vlc_uint(buffer, PLM_VIDEO_DCT_COEFF);
+	__asm volatile("nop" : : : "memory");
+	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->read_bit_index;
+#endif
+}
+
 void main(void)
 {
 	// test_vector_unit();
@@ -85,16 +109,8 @@ void main(void)
 		*((volatile uint8_t *)OUTPORT_END) = 0;
 
 #if 0
-	plm_dma_buffer_read(buffer, 8);
-	plm_dma_buffer_read(buffer, 16);
-	plm_dma_buffer_read(buffer, 16);
-	plm_dma_buffer_read(buffer, 16);
-	plm_dma_buffer_read(buffer, 16);
-	plm_dma_buffer_read(buffer, 16);
-	plm_dma_buffer_read(buffer, 16);
-	plm_dma_buffer_read(buffer, 16);
-	plm_dma_buffer_read(buffer, 16);
-	plm_dma_buffer_read(buffer, 16);
+	for (int i = 0; i < 10000; i++)
+		dct_coeff_read(buffer);
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 	for (;;)
 		;

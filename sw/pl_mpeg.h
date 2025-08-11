@@ -1886,7 +1886,7 @@ static const plm_vlc_uint_t PLM_VIDEO_DCT_COEFF[] = {
 	{ 57 << 1,        0}, { 58 << 1,        0},  //  44: 0000 0001 01x
 	{ 59 << 1,        0}, { 60 << 1,        0},  //  45: 0000 0001 10x
 	{ 61 << 1,        0}, { 62 << 1,        0},  //  46: 0000 0001 11x
-	{      -1,        0}, { 63 << 1,        0},  //  47: 0000 0000 000x
+	{       0,        0}, { 63 << 1,        0},  //  47: 0000 0000 000x
 	{ 64 << 1,        0}, { 65 << 1,        0},  //  48: 0000 0000 001x
 	{ 66 << 1,        0}, { 67 << 1,        0},  //  49: 0000 0000 010x
 	{ 68 << 1,        0}, { 69 << 1,        0},  //  50: 0000 0000 011x
@@ -2738,9 +2738,15 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 	// Decode AC coefficients (+DC for non-intra)
 	int level = 0;
 	while (TRUE) {
-		OUT_DEBUG = 20;
 		int run = 0;
+		OUT_DEBUG = 20;
+#if 0
 		uint16_t coeff = plm_dma_buffer_read_vlc_uint(self->buffer, PLM_VIDEO_DCT_COEFF);
+#else
+		fifo_ctrl->hw_huffman_read_dct_coeff=1;
+		__asm volatile("" : : : "memory");
+		uint16_t coeff = fifo_ctrl->hw_huffman_read_dct_coeff;
+#endif
 		OUT_DEBUG = 32;
 
 		if ((coeff == 0x0001) && (n > 0) && (plm_dma_buffer_read(self->buffer, 1) == 0)) {
