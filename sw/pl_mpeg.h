@@ -777,14 +777,16 @@ void plm_frame_to_abgr(plm_frame_t *frame, uint8_t *dest, int stride);
 
 void* checked_malloc(int sz)
 {
+	stop_verilator();
 	void* retval = malloc(sz);
 	if (!retval)	for (;;);
 	return retval;
 };
 #ifndef PLM_MALLOC
+	// To catch heap management, invalidate these calls
 	#define PLM_MALLOC(sz) checked_malloc(sz)
-	#define PLM_FREE(p) free(p)
-	#define PLM_REALLOC(p, sz) realloc(p, sz)
+	#define PLM_FREE(p) stop_verilator()
+	#define PLM_REALLOC(p, sz) 0;stop_verilator()
 #endif
 
 #define PLM_UNUSED(expr) (void)(expr)
@@ -2039,7 +2041,9 @@ void plm_video_decode_block(plm_video_t *self, int block);
 void plm_video_idct(int *block);
 
 plm_video_t * plm_video_create_with_buffer(plm_dma_buffer_t *buffer, int destroy_when_done) {
-	plm_video_t *self = (plm_video_t *)PLM_MALLOC(sizeof(plm_video_t));
+
+	static plm_video_t plm_instance;
+	plm_video_t *self =&plm_instance;
 	memset(self, 0, sizeof(plm_video_t));
 	
 	self->buffer = buffer;
@@ -2243,8 +2247,8 @@ int plm_video_decode_sequence_header(plm_video_t *self) {
 	size_t luma_plane_size = self->luma_width * self->luma_height;
 	size_t chroma_plane_size = self->chroma_width * self->chroma_height;
 	size_t frame_data_size = (luma_plane_size + 2 * chroma_plane_size);
-
-	self->frames_data = (uint8_t*)PLM_MALLOC(frame_data_size * 3);
+	*((volatile uint32_t *)OUTPORT) = frame_data_size;
+	self->frames_data = (uint8_t*)0;
 	plm_video_init_frame(self, &self->frame_current, self->frames_data + frame_data_size * 0);
 	plm_video_init_frame(self, &self->frame_forward, self->frames_data + frame_data_size * 1);
 	plm_video_init_frame(self, &self->frame_backward, self->frames_data + frame_data_size * 2);
@@ -2697,6 +2701,8 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 	struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
 	int* block_data=desc->cwp.block_data;
 	memset(block_data, 0, 64*4);
+
+	OUT_DEBUG = 17;
 
 	// Decode DC coefficient of intra-coded blocks
 	if (self->macroblock_intra) {

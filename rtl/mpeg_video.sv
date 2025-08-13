@@ -137,10 +137,10 @@ module mpeg_video (
     bit fifo_nearly_empty;
 
     // Memory arrays
-    bit [31:0] memory_core1[500000]  /*verilator public_flat_rd*/;
-    bit [31:0] memory_core2[500000]  /*verilator public_flat_rd*/;
-    bit [31:0] memory_core3[500000]  /*verilator public_flat_rd*/;
-    bit [31:0] video_ram[500000]  /*verilator public_flat_rd*/;
+    bit [31:0] memory_core1[12200/4]  /*verilator public_flat_rd*/;
+    bit [31:0] memory_core2[4100/4]  /*verilator public_flat_rd*/;
+    bit [31:0] memory_core3[4100/4]  /*verilator public_flat_rd*/;
+    bit [31:0] video_ram[442368/4]  /*verilator public_flat_rd*/;
 
     /* verilator lint_off MULTIDRIVEN */
     bit [31:0] shared_sram2[500000];  // 128KB shared SRAM
@@ -532,15 +532,15 @@ module mpeg_video (
                 4'd5: begin  // Core 1 private memory
                     if (dmem_cmd_payload_write_2) begin
                         if (dmem_cmd_payload_mask_2[0])
-                            video_ram[dmem_cmd_payload_address_2[20:2]][7:0] <= dmem_cmd_payload_data_2[7:0];
+                            video_ram[dmem_cmd_payload_address_2[18:2]][7:0] <= dmem_cmd_payload_data_2[7:0];
                         if (dmem_cmd_payload_mask_2[1])
-                            video_ram[dmem_cmd_payload_address_2[20:2]][15:8] <= dmem_cmd_payload_data_2[15:8];
+                            video_ram[dmem_cmd_payload_address_2[18:2]][15:8] <= dmem_cmd_payload_data_2[15:8];
                         if (dmem_cmd_payload_mask_2[2])
-                            video_ram[dmem_cmd_payload_address_2[20:2]][23:16] <= dmem_cmd_payload_data_2[23:16];
+                            video_ram[dmem_cmd_payload_address_2[18:2]][23:16] <= dmem_cmd_payload_data_2[23:16];
                         if (dmem_cmd_payload_mask_2[3])
-                            video_ram[dmem_cmd_payload_address_2[20:2]][31:24] <= dmem_cmd_payload_data_2[31:24];
+                            video_ram[dmem_cmd_payload_address_2[18:2]][31:24] <= dmem_cmd_payload_data_2[31:24];
                     end else begin
-                        dmem_rsp_payload_data_2 <= video_ram[dmem_cmd_payload_address_2[20:2]];
+                        dmem_rsp_payload_data_2 <= video_ram[dmem_cmd_payload_address_2[18:2]];
                     end
                 end
                 4'd4: begin  // Shared SRAM region
@@ -587,15 +587,15 @@ module mpeg_video (
                 4'd5: begin  // Core 1 private memory
                     if (dmem_cmd_payload_write_3) begin
                         if (dmem_cmd_payload_mask_3[0])
-                            video_ram[dmem_cmd_payload_address_3[20:2]][7:0] <= dmem_cmd_payload_data_3[7:0];
+                            video_ram[dmem_cmd_payload_address_3[18:2]][7:0] <= dmem_cmd_payload_data_3[7:0];
                         if (dmem_cmd_payload_mask_3[1])
-                            video_ram[dmem_cmd_payload_address_3[20:2]][15:8] <= dmem_cmd_payload_data_3[15:8];
+                            video_ram[dmem_cmd_payload_address_3[18:2]][15:8] <= dmem_cmd_payload_data_3[15:8];
                         if (dmem_cmd_payload_mask_3[2])
-                            video_ram[dmem_cmd_payload_address_3[20:2]][23:16] <= dmem_cmd_payload_data_3[23:16];
+                            video_ram[dmem_cmd_payload_address_3[18:2]][23:16] <= dmem_cmd_payload_data_3[23:16];
                         if (dmem_cmd_payload_mask_3[3])
-                            video_ram[dmem_cmd_payload_address_3[20:2]][31:24] <= dmem_cmd_payload_data_3[31:24];
+                            video_ram[dmem_cmd_payload_address_3[18:2]][31:24] <= dmem_cmd_payload_data_3[31:24];
                     end else begin
-                        dmem_rsp_payload_data_3 <= video_ram[dmem_cmd_payload_address_3[20:2]];
+                        dmem_rsp_payload_data_3 <= video_ram[dmem_cmd_payload_address_3[18:2]];
                     end
                 end
                 4'd4: begin  // Shared SRAM region

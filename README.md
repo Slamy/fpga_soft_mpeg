@@ -23,6 +23,15 @@ Note: The original MPEG1 audio decoder of the CD-i also had only this clock rate
 
 Currently, only audio is supported.
 
+## Prerequisites
+
+It might be required to compile a GNU toolchain with a suitable architecture
+
+    git clone https://github.com/riscv/riscv-gnu-toolchain
+    cd riscv-gnu-toolchain
+    ./configure --with-arch=rv32imc --prefix=/opt/riscv4
+    make -j$(nproc)
+
 ## Simulation
 
 Verilator is used as simulation tool.
@@ -60,6 +69,13 @@ to ensure that the hardware calculated results are correct.
 
 ## Results
 
+To ensure the correctly decoded result, we need to be sure about the input data too.
+Please use this [ffmpeg version](https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2025-08-12-14-12),
+in case `fmv.m1v` is not as expected.
+
+    c23ab2ff12023c684f46fcc02c57b585  big_buck_bunny_1080p_h264.mov
+    6e3e2a1a9cfc1526613649135957b604  fmv.m1v
+
 The md5sum of the result files are expected as
 
     b67bb1b9852c4a398c4421da4d8a71e1  000000.bmp
@@ -96,43 +112,45 @@ Laptop (somehow different results? Different ffmpeg version maybe?)
 
 ### Benchmarks
 
-    Debug out 79797979  Waterlevel:            4 Frames decoded:         121  Frames shown:         116  Load:          95 %
+    Debug out 88888888  Waterlevel:            4 Frames decoded:         136  Frames shown:         131  Load:          96 %
 
 Utilization of cores in cycles and percent.
 
     Core 1
-     0            9969   0
-     2           10004   0
-     3            1612   0
-     4            3036   0
-     5           14938   0
-     6         4667266   3
-     7          128765   0
-     8        36871259  25
-     9            1736   0
-    12         6451317   4
-    14         1568336   1
-    15            2074   0
-    16         7457473   5
-    20         8698949   5
-    26        17824421  12
-    27          556771   0
-    28            5856   0
-    31        33835483  23
-    32        27871612  19
+     0            9993   0
+     2           12052   0
+     3            1794   0
+     4            3384   0
+     5           16626   0
+     6         5220224   3
+     7          143520   0
+     8        33267405  20
+     9            1932   0
+    12         7230289   4
+    14         1754208   1
+    15            2329   0
+    16         8220633   5
+    17         7972858   4
+    20         9714280   5
+    26        20000339  12
+    27          705358   0
+    28            6585   0
+    31        37782382  23
+    32        31132159  19
     Core 2
      0             141   0
-    10        37952213  25
-    11        30670990  21
-    33         3161028   2
-    34        25554312  17
-    35        47561585  32
-    36         1080608   0
+    10        42686771  26
+    11        34534869  21
+    33         3443164   2
+    34        28060375  17
+    35        53261608  32
+    36         1211422   0
     Core 3
      0             141   0
-    10        37842950  25
-    11        30579570  20
-    33         3139742   2
-    34        25504453  17
-    35        47833971  32
-    36         1080050   0
+    10        42540080  26
+    11        34411957  21
+    33         3418486   2
+    34        27891979  17
+    35        53729485  32
+    36         1206222   0
+    
