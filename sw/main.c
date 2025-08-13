@@ -74,25 +74,46 @@ void sync_to_worker()
 	while (desc->ready == 3)
 		__asm volatile("" : : : "memory");
 }
+/*
+Hw Acc Bitstream reader + Soft Huffman decode
+3111-2534
+577
+Debug out 00000000  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 0000000c  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00001f01  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 0000001c  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00000401  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00000021  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
 
+With hardware acc for Huffman
+318-263
+55
+Debug out 00000000  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 0000000c  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00001f01  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 0000001c  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00000401  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00000021  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+
+Without anything:
+3718-2530
+1188
+Debug out 00000000  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 0000000c  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00001f01  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 0000001c  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00000401  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+Debug out 00000021  Waterlevel:            0 Frames decoded:           0  Frames shown:           0  Load:           0 %
+*/
 void dct_coeff_read(plm_dma_buffer_t *buffer)
 {
-
-#if 0
+#if HW_ACC
 	fifo_ctrl->hw_huffman_read_dct_coeff = 1;
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
+	__asm volatile("" : : : "memory");
 	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->hw_huffman_read_dct_coeff;
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
 	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->read_bit_index;
 #else
 	*((volatile uint32_t *)OUTPORT) = plm_dma_buffer_read_vlc_uint(buffer, PLM_VIDEO_DCT_COEFF);
-	__asm volatile("nop" : : : "memory");
 	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->read_bit_index;
 #endif
 }
@@ -108,8 +129,8 @@ void main(void)
 	if (!buffer)
 		*((volatile uint8_t *)OUTPORT_END) = 0;
 
-#if 0
-	for (int i = 0; i < 10000; i++)
+#if 1
+	for (int i = 0; i < 3; i++)
 		dct_coeff_read(buffer);
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 	for (;;)

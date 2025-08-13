@@ -1315,7 +1315,7 @@ int plm_buffer_has(plm_buffer_t *self, size_t count) {
 }
 
 int plm_dma_buffer_read(plm_dma_buffer_t *self, int count) {
-#if 0
+#if 1
 	__asm volatile("" : : : "memory");
 
 	int value = 0;

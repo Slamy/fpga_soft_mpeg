@@ -79,6 +79,8 @@ module mpeg_video (
     wire [ 4:0] hw_read_count_aligned = hw_read_aligned_access ? hw_read_count : hw_read_remaining_bits_in_dword[4:0];
     wire [31:0] hw_read_mask = ones_mask(hw_read_count_aligned);
 
+    int cpu_ticks = 0;
+
     always_ff @(posedge clk30) begin
         hw_read_mem_ready <= 0;
 
@@ -87,6 +89,7 @@ module mpeg_video (
             mpeg_stream_bit_index <= 0;
             hw_read_count <= 0;
         end else begin
+            cpu_ticks <= cpu_ticks + 1;
             if (data_strobe) begin
                 mpeg_stream_fifo_write_adr <= mpeg_stream_fifo_write_adr + 1;
             end
