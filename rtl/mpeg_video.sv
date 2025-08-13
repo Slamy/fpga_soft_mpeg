@@ -137,9 +137,9 @@ module mpeg_video (
     bit fifo_nearly_empty;
 
     // Memory arrays
-    bit [31:0] memory_core1[12200/4]  /*verilator public_flat_rd*/;
-    bit [31:0] memory_core2[4100/4]  /*verilator public_flat_rd*/;
-    bit [31:0] memory_core3[4100/4]  /*verilator public_flat_rd*/;
+    bit [31:0] memory_core1[9000/4]  /*verilator public_flat_rd*/;
+    bit [31:0] memory_core2[4050/4]  /*verilator public_flat_rd*/;
+    bit [31:0] memory_core3[4050/4]  /*verilator public_flat_rd*/;
     bit [31:0] video_ram[442368/4]  /*verilator public_flat_rd*/;
 
     /* verilator lint_off MULTIDRIVEN */
