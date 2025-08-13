@@ -1,7 +1,6 @@
 FIRMWARE_OBJS = start.o main.o
 FIRMWARE2_OBJS = start.o main2.o
 
-#TOOLCHAIN_PREFIX = /opt/riscv3/bin/riscv32-unknown-elf-
 TOOLCHAIN_PREFIX = /opt/riscv/bin/riscv32-unknown-elf-
 COMPRESSED_ISA = C
 CFLAGS = -O3 -mabi=ilp32 -march=rv32im$(subst C,c,$(COMPRESSED_ISA)) \

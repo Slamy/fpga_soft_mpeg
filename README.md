@@ -29,8 +29,10 @@ It might be required to compile a GNU toolchain with a suitable architecture
 
     git clone https://github.com/riscv/riscv-gnu-toolchain
     cd riscv-gnu-toolchain
-    ./configure --with-arch=rv32imc --prefix=/opt/riscv4
+    ./configure --with-arch=rv32imc --prefix=/opt/riscv
     make -j$(nproc)
+
+The revision b8ca156d2ab0038c6af4569c52f9ec30d95342f0 was tested and confirmed working with this project.
 
 ## Simulation
 
@@ -74,83 +76,73 @@ Please use this [ffmpeg version](https://github.com/BtbN/FFmpeg-Builds/releases/
 in case `fmv.m1v` is not as expected.
 
     c23ab2ff12023c684f46fcc02c57b585  big_buck_bunny_1080p_h264.mov
-    6e3e2a1a9cfc1526613649135957b604  fmv.m1v
+    e715e20b9e12f6be1f28c1ad71043243  fmv.m1v
 
 The md5sum of the result files are expected as
 
     b67bb1b9852c4a398c4421da4d8a71e1  000000.bmp
-    c133cca150ce192cb4c7ab84fc08e5f2  000001.bmp
-    d6a6127baa36a3c76e78a8e20a673785  000002.bmp
-    60c286f412d1aacec860f859845999d3  000003.bmp
-    d42defd97f3309d6131c3d5f3ead4fd9  000004.bmp
-    dbeb8d885aa6b30ac728fac6e77fe3c3  000005.bmp
-    4bfd5f723b0839aad760f5a74424a52f  000006.bmp
-    a8883c94d5243ff1e3b4e3a2906e3cbe  000007.bmp
-    b11d6545a70b233706b45411d748157a  000008.bmp
-    7213f070a21117a1575fb556077d3716  000009.bmp
-    4fee8c20cff8d5d29f7d31d96db91337  000010.bmp
-    99bc8d1437bbda60bdf2934a4af8079f  000011.bmp
-    90a15172dc61e379e9434dd1f1642991  000012.bmp
-    d290f5e879589467ed3dbba455bb09c5  000013.bmp
-    c61b6f5b0d210f0c9b890dd1b3aa67fb  000014.bmp
-    376419974f425c8f0c6a3dde00546145  000015.bmp
-    5cc44b079c1f2d21af773e75bb357e88  000016.bmp
-    265e26344119f0a7d134cb096888ddea  000017.bmp
-    4e03ddf84d23028043de7331902d232b  000018.bmp
-    59eeb6ab57b398ad37d5a446fcd14dbc  000019.bmp
-    c0d46aeb006e64e948d907f12d5ef140  000020.bmp
-
-Laptop (somehow different results? Different ffmpeg version maybe?)
-
-    b67bb1b9852c4a398c4421da4d8a71e1  000000.bmp
-    869d23413a83b63826ed53a478b5e7e7  000001.bmp
-    24c5deef6a16e5b30c551886c3f19a21  000002.bmp
-    a185d9be0a0d3bc0dd60b69f55bd4c73  000003.bmp
-    8a5f1f2664974df8ebd45d438d045d17  000004.bmp
-    416649bf88e6640f6d10025d111c054f  000005.bmp
-    08c275f3b44ca5f8fec45284f6e7880a  000006.bmp
+    561299ffd4fb6366772390860f1e892e  000001.bmp
+    eaebbd50bdb6f6fe8914f2d7891f4f31  000002.bmp
+    3c52b42a3d0f94518db8594b7dce94da  000003.bmp
+    207ac20bf6553c3759a82a8b98d5501e  000004.bmp
+    24a263500fbf12dcab595e22fd9c3c2e  000005.bmp
+    65922aab80ce4aeb99488884cd493ee1  000006.bmp
+    96da9d17172fdf1e6ed2eced532e9549  000007.bmp
+    dd5a1ad976a87cf9a1fd8f4cd7f9ffbe  000008.bmp
+    0b0210f05a2783e25fe5f173dd808c96  000009.bmp
+    f2a58c9f321d4dabf1136997fef50bc7  000010.bmp
+    4d09800b9fdbafcb7ec0343d729e3a0b  000011.bmp
+    778968d140b981ff7df63b8c661bace0  000012.bmp
+    b70cb9fce5001e18b889eca17bac9dd7  000013.bmp
+    739fd300937f3dbafe3f832f5fbddbf1  000014.bmp
+    40900c362a57494fc285c1954114d61e  000015.bmp
+    cee3216cb56e8f54d7f9cc3255ba1e3d  000016.bmp
+    8e2ea2f2ef514cbfa857e08bd07d7bd4  000017.bmp
+    0a876d4612f4889eac1d0879c63658ff  000018.bmp
+    e3fc311735a3b37fdd1e7e78352cd5d4  000019.bmp
+    f6602ed56abca594888b95d6d0127e03  000020.bmp
 
 ### Benchmarks
 
-    Debug out 88888888  Waterlevel:            4 Frames decoded:         136  Frames shown:         131  Load:          96 %
+    Debug out 88888888  Waterlevel:            2 Frames decoded:         136  Frames shown:         133  Load:          97 %
 
 Utilization of cores in cycles and percent.
 
     Core 1
-     0            9993   0
-     2           12052   0
+     0            6184   0
+     2           12689   0
      3            1794   0
-     4            3384   0
-     5           16626   0
-     6         5220224   3
-     7          143520   0
-     8        33267405  20
-     9            1932   0
-    12         7230289   4
-    14         1754208   1
+     4            3376   0
+     5           16638   0
+     6         5460684   3
+     7            9108   0
+     8        34319032  20
+     9            2070   0
+    12         7403438   4
+    14         1753252   1
     15            2329   0
-    16         8220633   5
-    17         7972858   4
-    20         9714280   5
-    26        20000339  12
-    27          705358   0
-    28            6585   0
-    31        37782382  23
-    32        31132159  19
+    16         8007822   4
+    17         8273834   4
+    20         9863411   5
+    26        20151393  12
+    27          860310   0
+    28            6997   0
+    31        38435690  23
+    32        31082876  18
     Core 2
-     0             141   0
-    10        42686771  26
-    11        34534869  21
-    33         3443164   2
-    34        28060375  17
-    35        53261608  32
-    36         1211422   0
+     0             136   0
+    10        43728538  26
+    11        35968211  21
+    33         3331118   2
+    34        29428666  17
+    35        52067609  31
+    36         1148649   0
     Core 3
-     0             141   0
-    10        42540080  26
-    11        34411957  21
-    33         3418486   2
-    34        27891979  17
-    35        53729485  32
-    36         1206222   0
-    
+     0             136   0
+    10        43654324  26
+    11        35885924  21
+    33         3366237   2
+    34        29078883  17
+    35        52543374  31
+    36         1144049   0
+
