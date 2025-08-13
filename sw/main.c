@@ -80,19 +80,11 @@ void dct_coeff_read(plm_dma_buffer_t *buffer)
 
 #if 0
 	fifo_ctrl->hw_huffman_read_dct_coeff = 1;
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
+	__asm volatile("" : : : "memory");
 	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->hw_huffman_read_dct_coeff;
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
-	__asm volatile("nop" : : : "memory");
 	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->read_bit_index;
 #else
 	*((volatile uint32_t *)OUTPORT) = plm_dma_buffer_read_vlc_uint(buffer, PLM_VIDEO_DCT_COEFF);
-	__asm volatile("nop" : : : "memory");
 	*((volatile uint32_t *)OUTPORT) = fifo_ctrl->read_bit_index;
 #endif
 }

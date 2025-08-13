@@ -144,7 +144,7 @@ See below for detailed the API documentation.
 #define PL_MPEG_H
 
 #include <stdint.h>
-
+#include "fast_block_zero.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -2691,7 +2691,6 @@ static void write_pixels(int macroblock_intra, int n, int *s,
 
 #endif
 
-
 void plm_video_decode_block(plm_video_t *self, int block) {
 
 	int n = 0;
@@ -2700,7 +2699,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 
 	struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
 	int* block_data=desc->cwp.block_data;
-	memset(block_data, 0, 64*4);
+	fast_block_zero(block_data);
 
 	OUT_DEBUG = 17;
 
