@@ -2386,7 +2386,7 @@ void plm_video_decode_macroblock(plm_video_t *self) {
 
 	OUT_DEBUG = 14;
 
-    //worker_cnt++;
+    worker_cnt++;
 
 	// Decode increment
 	int increment = 0;
@@ -2636,7 +2636,6 @@ void plm_video_process_macroblock(
 
 	unsigned int si = ((self->mb_row * block_size) + vp) * dw + (self->mb_col * block_size) + hp;
 	unsigned int di = (self->mb_row * dw + self->mb_col) * block_size;
-	worker_cnt = self->mb_col&1;
 	
 	unsigned int max_address = (dw * (self->mb_height * block_size - block_size + 1) - block_size);
 	if (si > max_address || di > max_address) {
