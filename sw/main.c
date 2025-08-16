@@ -99,6 +99,17 @@ void main(void)
 	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
 	if (!buffer)
 		*((volatile uint8_t *)OUTPORT_END) = 0;
+#if 0
+	for(;;)
+	{
+		if (plm_dma_buffer_has(buffer, 8))
+		{
+			uint32_t val = plm_dma_buffer_read(buffer, 8);
+			*((volatile uint32_t *)OUTPORT) = val;
+			OUT_DEBUG = val;
+		}
+	}
+#endif
 
 #if 0
 	for (int i = 0; i < 10000; i++)
@@ -107,6 +118,8 @@ void main(void)
 	for (;;)
 		;
 #endif
+
+	while (!plm_dma_buffer_has(buffer, 1000));
 
 	plm_video_t *mpeg = plm_video_create_with_buffer(buffer, 0);
 	if (!mpeg)
@@ -118,14 +131,15 @@ void main(void)
 	{
 		plm_frame_t *frame = plm_video_decode(mpeg);
 
-		OUT_DEBUG = 27;
-		sync_to_worker();
-		sync_to_worker();
-
-		OUT_DEBUG = 28;
-
 		if (frame)
 		{
+			OUT_DEBUG = 27;
+			
+			sync_to_worker();
+			sync_to_worker();
+	
+			OUT_DEBUG = 28;
+	
 			// Give some feedback to the user that we are running
 			*((volatile uint8_t *)OUTPORT) = cnt;
 
@@ -140,7 +154,7 @@ void main(void)
 		else
 		{
 			// End simulation since the MPEG stream has ended
-			*((volatile uint8_t *)OUTPORT_END) = 0;
+			//*((volatile uint8_t *)OUTPORT_END) = 0;
 		}
 	}
 }

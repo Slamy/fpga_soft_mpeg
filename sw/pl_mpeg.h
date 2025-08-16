@@ -1285,6 +1285,7 @@ int plm_buffer_has_ended(plm_buffer_t *self) {
 }
 
 int plm_dma_buffer_has(plm_dma_buffer_t *self, size_t count) {
+	__asm volatile("" : : : "memory");
 	if (((fifo_ctrl->write_byte_index << 3) - fifo_ctrl->read_bit_index) >= count) {
 		return TRUE;
 	}
@@ -2692,7 +2693,7 @@ static void write_pixels(int macroblock_intra, int n, int *s,
 #endif
 
 void plm_video_decode_block(plm_video_t *self, int block) {
-
+	while (!plm_dma_buffer_has(self->buffer, 1000));
 	int n = 0;
 	uint8_t *quant_matrix;
 	OUT_DEBUG = 8;
