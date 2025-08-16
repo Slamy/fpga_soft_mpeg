@@ -2357,9 +2357,6 @@ void plm_video_decode_picture(plm_video_t *self) {
 }
 
 void plm_video_decode_slice(plm_video_t *self, int slice) {
-
-    worker_cnt++;
-
 	self->slice_begin = TRUE;
 	self->macroblock_address = (slice - 1) * self->mb_width - 1;
 
@@ -2388,6 +2385,8 @@ void plm_video_decode_slice(plm_video_t *self, int slice) {
 void plm_video_decode_macroblock(plm_video_t *self) {
 
 	OUT_DEBUG = 14;
+
+    //worker_cnt++;
 
 	// Decode increment
 	int increment = 0;
@@ -2637,6 +2636,7 @@ void plm_video_process_macroblock(
 
 	unsigned int si = ((self->mb_row * block_size) + vp) * dw + (self->mb_col * block_size) + hp;
 	unsigned int di = (self->mb_row * dw + self->mb_col) * block_size;
+	worker_cnt = self->mb_col&1;
 	
 	unsigned int max_address = (dw * (self->mb_height * block_size - block_size + 1) - block_size);
 	if (si > max_address || di > max_address) {

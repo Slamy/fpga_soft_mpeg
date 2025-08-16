@@ -60,6 +60,8 @@ struct image_synthesis_descriptor *get_next_synthesis_desc()
             image_synthesis_buffer_index2 = 0;
     }
 
+    __asm volatile("" : : : "memory");
+    
 #if 0
     while (retval->ready == 1)
         __asm volatile("" : : : "memory");
