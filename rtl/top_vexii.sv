@@ -27,13 +27,10 @@ module top_vexii (
     bit provide_lower_word = 0;
     bit [18:0] mpeg_stream_address = 0;
 
-    bit [32:0] cnt=0;
-
     always_ff @(posedge clk30) begin
         data_strobe <= 0;
-        cnt <= cnt + 1;
 
-        if (!fifo_full && !reset && mpeg_stream_address <= (SIZE + 10) && cnt[8:0]==0) begin
+        if (!fifo_full && !reset && mpeg_stream_address <= (SIZE + 10)) begin
             data_strobe <= 1;
             provide_lower_word <= !provide_lower_word;
             if (provide_lower_word) mpeg_stream_address <= mpeg_stream_address + 1;

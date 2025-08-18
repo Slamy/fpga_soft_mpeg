@@ -1,5 +1,4 @@
 `timescale 1 ns / 1 ps
-`include "synth_window.svh"
 `include "util.svh"
 
 function [31:0] ones_mask(bit [4:0] n);
@@ -57,12 +56,12 @@ module mpeg_video (
         .q(mpeg_in_fifo_out)
     );
 
-    bit  [ 4:0] hw_read_count = 0;
-    bit  [31:0] hw_read_result = 32;
+    bit [4:0] hw_read_count = 0;
+    bit [31:0] hw_read_result = 32;
 
     // Word Address
-    bit  [27:0] mpeg_stream_fifo_write_adr;
-    bit  [31:0] mpeg_stream_bit_index;
+    bit [27:0] mpeg_stream_fifo_write_adr;
+    bit [31:0] mpeg_stream_bit_index;
     wire [28:0] mpeg_stream_byte_index = mpeg_stream_bit_index[31:3];
 
     // Word address
@@ -84,7 +83,7 @@ module mpeg_video (
     always_ff @(posedge clk30) begin
         if (fifo_near_overflow) $display("FIFO FULL");
         if (fifo_underflow) $display("FIFO UNDER");
-	
+
         hw_read_mem_ready <= 0;
 
         if (reset) begin
@@ -142,10 +141,10 @@ module mpeg_video (
     bit fifo_nearly_empty;
 
     // Memory arrays
-    bit [31:0] memory_core1[11000/4]  /*verilator public_flat_rd*/;
+    bit [31:0] memory_core1[9500/4]  /*verilator public_flat_rd*/;
     bit [31:0] memory_core2[4050/4]  /*verilator public_flat_rd*/;
     bit [31:0] memory_core3[4050/4]  /*verilator public_flat_rd*/;
-    bit [31:0] video_ram[442368/4]  /*verilator public_flat_rd*/;
+    bit [31:0] video_ram[500000/4]  /*verilator public_flat_rd*/;
 
     /* verilator lint_off MULTIDRIVEN */
     bit [31:0] shared_sram2[500000];  // 128KB shared SRAM
@@ -352,7 +351,7 @@ module mpeg_video (
         dmem_cmd_ready_2 = 1;
         imem_cmd_ready_3 = 1;
         dmem_cmd_ready_3 = 1;
-        data_is_from_mpeg_buffer=0;
+        data_is_from_mpeg_buffer = 0;
 
         dmem_rsp_payload_data_1 = reverse_endian_32(mpeg_in_fifo_out);
 
@@ -379,8 +378,8 @@ module mpeg_video (
                 end
                 default: begin
                     // Assign the rest of the memory to the MPEG FIFO to fake a real big file
-                    dmem_rsp_payload_data_1 = reverse_endian_32(mpeg_in_fifo_out);
-                    data_is_from_mpeg_buffer=1;
+                    dmem_rsp_payload_data_1  = reverse_endian_32(mpeg_in_fifo_out);
+                    data_is_from_mpeg_buffer = 1;
                 end
             endcase
 
@@ -388,8 +387,11 @@ module mpeg_video (
     end
 
     always_ff @(posedge clk30) begin
-        if (data_is_from_mpeg_buffer && dmem_cmd_payload_address_1_q[27:0] > (mpeg_stream_fifo_write_adr<<1))
-            $finish("Nope!");
+        if (data_is_from_mpeg_buffer && dmem_cmd_payload_address_1_q[27:0] > (mpeg_stream_fifo_write_adr<<1)) begin
+            $display("Buffer overflow on MPEG data at instruction %x", imem_cmd_payload_address_1);
+            $display("States are %d %d %d", soft_state1, soft_state2, soft_state3);
+            $finish();
+        end
     end
 
     // Assuming 30 MHz clock rate and 25 Hz frame rate
