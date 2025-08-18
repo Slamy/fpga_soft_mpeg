@@ -6,8 +6,8 @@ module top_vexii (
     input reset
 );
 
-    localparam SIZE = 454125;
-    bit [31:0] mpeg_video_rom[SIZE];
+    localparam SIZE = 201597;
+    bit [31:0] mpeg_video_rom[201597];
     initial $readmemh("fmv.mem", mpeg_video_rom);
 
     bit [15:0] data_word;
@@ -25,7 +25,7 @@ module top_vexii (
     );
 
     bit provide_lower_word = 0;
-    bit [18:0] mpeg_stream_address = 0;
+    bit [17:0] mpeg_stream_address = 0;
 
     always_ff @(posedge clk30) begin
         data_strobe <= 0;
