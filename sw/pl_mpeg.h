@@ -1433,6 +1433,9 @@ int plm_dma_buffer_find_start_code(plm_dma_buffer_t *self, int code) {
 
 
 int plm_buffer_next_start_code(plm_dma_buffer_t *self) {
+	//OUT_DEBUG=37;
+	//while (!plm_dma_buffer_has(self, 8000));
+	//OUT_DEBUG=38;
 	plm_dma_buffer_align(self);
 
 	while (plm_dma_buffer_has(self, (5 << 3))) {
@@ -2376,6 +2379,7 @@ void plm_video_decode_slice(plm_video_t *self, int slice) {
 
 	do {
 		plm_video_decode_macroblock(self);
+		//while (!plm_dma_buffer_has(self->buffer, 8000));
 	} while (
 		self->macroblock_address < self->mb_size - 1 &&
 		plm_dma_buffer_peek_non_zero(self->buffer, 23)
@@ -2383,7 +2387,7 @@ void plm_video_decode_slice(plm_video_t *self, int slice) {
 }
 
 void plm_video_decode_macroblock(plm_video_t *self) {
-
+	while (!plm_dma_buffer_has(self->buffer, 3000));
 	OUT_DEBUG = 14;
 
     worker_cnt++;

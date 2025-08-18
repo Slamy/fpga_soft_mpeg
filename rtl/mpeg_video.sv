@@ -68,7 +68,9 @@ module mpeg_video (
     // Word address
     wire [27:0] mpeg_stream_fifo_read_adr = mpeg_stream_byte_index[28:1];
 
-    wire [27:0] fifo_level = mpeg_stream_fifo_write_adr - mpeg_stream_fifo_read_adr;
+    wire [27:0] fifo_level /*verilator public_flat_rd*/ = mpeg_stream_fifo_write_adr - mpeg_stream_fifo_read_adr;
+    wire fifo_near_overflow = mpeg_stream_fifo_write_adr > (mpeg_stream_fifo_read_adr + 28'd7100);
+    wire fifo_underflow = mpeg_stream_fifo_write_adr < mpeg_stream_fifo_read_adr;
     assign fifo_full = mpeg_stream_fifo_write_adr > (mpeg_stream_fifo_read_adr + 28'd7000);
 
     bit hw_read_mem_ready = 0;
@@ -80,6 +82,9 @@ module mpeg_video (
     wire [31:0] hw_read_mask = ones_mask(hw_read_count_aligned);
 
     always_ff @(posedge clk30) begin
+        if (fifo_near_overflow) $display("FIFO FULL");
+        if (fifo_underflow) $display("FIFO UNDER");
+	
         hw_read_mem_ready <= 0;
 
         if (reset) begin
@@ -338,6 +343,8 @@ module mpeg_video (
     bit draining_fifo = 0;
     bit [31:0] debug_l_storage;
 
+    bit data_is_from_mpeg_buffer;
+
     always_comb begin
         imem_cmd_ready_1 = 1;
         dmem_cmd_ready_1 = hw_read_count == 0;
@@ -345,6 +352,7 @@ module mpeg_video (
         dmem_cmd_ready_2 = 1;
         imem_cmd_ready_3 = 1;
         dmem_cmd_ready_3 = 1;
+        data_is_from_mpeg_buffer=0;
 
         dmem_rsp_payload_data_1 = reverse_endian_32(mpeg_in_fifo_out);
 
@@ -372,12 +380,17 @@ module mpeg_video (
                 default: begin
                     // Assign the rest of the memory to the MPEG FIFO to fake a real big file
                     dmem_rsp_payload_data_1 = reverse_endian_32(mpeg_in_fifo_out);
+                    data_is_from_mpeg_buffer=1;
                 end
             endcase
 
         end
     end
 
+    always_ff @(posedge clk30) begin
+        if (data_is_from_mpeg_buffer && dmem_cmd_payload_address_1_q[27:0] > (mpeg_stream_fifo_write_adr<<1))
+            $finish("Nope!");
+    end
 
     // Assuming 30 MHz clock rate and 25 Hz frame rate
     localparam TICKS_PER_FRAME = 1200000;
