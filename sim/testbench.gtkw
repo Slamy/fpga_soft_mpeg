@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Mon Aug 11 14:04:58 2025
+[*] Sun Aug 24 21:54:07 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Mon Aug 11 14:04:57 2025"
-[dumpfile_size] 648750403
+[dumpfile_mtime] "Sun Aug 24 21:54:07 2025"
+[dumpfile_size] 16448248
 [savefile] "/home/andre/GIT/HybridMPEG/sim/testbench.gtkw"
-[timestart] 43487000
+[timestart] 0
 [size] 1920 1152
-[pos] -1 -1
-*-17.709183 44088800 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -199 -18
+*-19.552763 1153000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top_vexii.
 [treeopen] TOP.top_vexii.video.
@@ -17,8 +17,17 @@
 [signals_width] 429
 [sst_expanded] 1
 [sst_vpaned_height] 346
-@8025
+@8024
 TOP.top_vexii.video.shared_buffer_level[15:0]
+@23
+TOP.top_vexii.video.dmem_cmd_payload_address_1[31:0]
+@22
+TOP.top_vexii.video.dmem_cmd_payload_address_2[31:0]
+TOP.top_vexii.video.dmem_cmd_payload_address_3[31:0]
+TOP.top_vexii.video.dmem_cmd_payload_data_1[31:0]
+TOP.top_vexii.video.dmem_rsp_payload_data_1[31:0]
+TOP.top_vexii.video.dmem_rsp_payload_data_2[31:0]
+TOP.top_vexii.video.dmem_rsp_payload_data_3[31:0]
 @28
 TOP.top_vexii.video.shared_buffer_level_dec1
 TOP.top_vexii.video.shared_buffer_level_dec1_clk30
@@ -29,5 +38,57 @@ TOP.top_vexii.video.shared_buffer_level_inc
 TOP.top_vexii.video.soft_state1[31:0]
 TOP.top_vexii.video.soft_state2[31:0]
 TOP.top_vexii.video.soft_state3[31:0]
+@20000
+-
+@420
+TOP.top_vexii.video.shared12.ADDRESS_WIDTH
+TOP.top_vexii.video.shared12.BYTES
+TOP.top_vexii.video.shared12.BYTE_WIDTH
+TOP.top_vexii.video.shared12.DATA_WIDTH_R
+TOP.top_vexii.video.shared12.RAM_DEPTH
+@22
+TOP.top_vexii.video.shared12.addr1[16:0]
+TOP.top_vexii.video.shared12.addr2[16:0]
+TOP.top_vexii.video.shared12.be1[3:0]
+TOP.top_vexii.video.shared12.be2[3:0]
+@28
+TOP.top_vexii.video.shared12.clk1
+TOP.top_vexii.video.shared12.clk2
+@22
+TOP.top_vexii.video.shared12.data_in1[31:0]
+TOP.top_vexii.video.shared12.data_in2[31:0]
+TOP.top_vexii.video.shared12.data_out1[31:0]
+TOP.top_vexii.video.shared12.data_out2[31:0]
+TOP.top_vexii.video.shared12.data_reg1[31:0]
+TOP.top_vexii.video.shared12.data_reg2[31:0]
+@28
+TOP.top_vexii.video.shared12.we1
+TOP.top_vexii.video.shared12.we2
+@20000
+-
+@420
+TOP.top_vexii.video.shared13.ADDRESS_WIDTH
+TOP.top_vexii.video.shared13.BYTES
+TOP.top_vexii.video.shared13.BYTE_WIDTH
+TOP.top_vexii.video.shared13.DATA_WIDTH_R
+TOP.top_vexii.video.shared13.RAM_DEPTH
+@22
+TOP.top_vexii.video.shared13.addr1[16:0]
+TOP.top_vexii.video.shared13.addr2[16:0]
+TOP.top_vexii.video.shared13.be1[3:0]
+TOP.top_vexii.video.shared13.be2[3:0]
+@28
+TOP.top_vexii.video.shared13.clk1
+TOP.top_vexii.video.shared13.clk2
+@22
+TOP.top_vexii.video.shared13.data_in1[31:0]
+TOP.top_vexii.video.shared13.data_in2[31:0]
+TOP.top_vexii.video.shared13.data_out1[31:0]
+TOP.top_vexii.video.shared13.data_out2[31:0]
+TOP.top_vexii.video.shared13.data_reg1[31:0]
+TOP.top_vexii.video.shared13.data_reg2[31:0]
+@28
+TOP.top_vexii.video.shared13.we1
+TOP.top_vexii.video.shared13.we2
 [pattern_trace] 1
 [pattern_trace] 0

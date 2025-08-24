@@ -164,22 +164,22 @@ public:
 
         if (dut.rootp->top_vexii__DOT__video__DOT__expose_frame)
         {
-            uint32_t addr = dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__video__DOT__frame_adr);
-            uint8_t *mem1 = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__video__DOT__memory_core1);
-            uint8_t *mem2 = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__video__DOT__memory_core2);
-            uint8_t *mem3 = (uint8_t *)&dut.rootp->CONCAT_FLAT_PUBLIC(__DOT__video__DOT__video_ram);
+            uint32_t addr = dut.rootp->top_vexii__DOT__video__DOT__frame_adr;
+            uint8_t *mem1 = (uint8_t *)&dut.rootp->top_vexii__DOT__video__DOT__core1mem__DOT__ram;
+            uint8_t *mem_video = (uint8_t *)&dut.rootp->top_vexii__DOT__video__DOT__videomem__DOT__ram;
             plm_frame2_t frame = *(plm_frame2_t *)(mem1 + addr);
+
 
             // printf("%d %d %x %x %x\n", frame.width, frame.height, frame.y.adr, frame.cr.adr, frame.cb.adr);
             // printf("%x %x %x\n",mem[frame.y.adr], mem[frame.cr.adr],mem[frame.cb.adr]);
             plm_frame_t frame_convert;
-            frame_convert.y.data = &mem3[frame.y.adr];
+            frame_convert.y.data = &mem_video[frame.y.adr];
             frame_convert.y.height = frame.y.height;
             frame_convert.y.width = frame.y.width;
-            frame_convert.cr.data = &mem3[frame.cr.adr];
+            frame_convert.cr.data = &mem_video[frame.cr.adr];
             frame_convert.cr.height = frame.cr.height;
             frame_convert.cr.width = frame.cr.width;
-            frame_convert.cb.data = &mem3[frame.cb.adr];
+            frame_convert.cb.data = &mem_video[frame.cb.adr];
             frame_convert.cb.height = frame.cb.height;
             frame_convert.cb.width = frame.cb.width;
             frame_convert.width = frame.width;

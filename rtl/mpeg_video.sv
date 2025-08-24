@@ -141,21 +141,150 @@ module mpeg_video (
     bit fifo_nearly_empty;
 
     // Memory arrays
-    bit [31:0] memory_core1[9500/4]  /*verilator public_flat_rd*/;
-    bit [31:0] memory_core2[4050/4]  /*verilator public_flat_rd*/;
-    bit [31:0] memory_core3[4050/4]  /*verilator public_flat_rd*/;
-    bit [31:0] video_ram[500000/4]  /*verilator public_flat_rd*/;
+    wire [31:0] memory_out_i1;
+    wire [31:0] memory_out_d1;
+    decoder_firmware_memory core1mem (
+        .clk(clk30),
+        .addr2(imem_cmd_payload_address_1[13:2]),
+        .data_out2(memory_out_i1),
+        .be2(0),
+        .we2(0),
+        .data_in2(0),
+        .addr1(dmem_cmd_payload_address_1[13:2]),
+        .data_in1(dmem_cmd_payload_data_1),
+        .we1(dmem_cmd_payload_address_1[31:28]==0 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
+        .be1({
+            dmem_cmd_payload_mask_1[0],
+            dmem_cmd_payload_mask_1[1],
+            dmem_cmd_payload_mask_1[2],
+            dmem_cmd_payload_mask_1[3]
+        }),
+        .data_out1(memory_out_d1)
+    );
 
-    /* verilator lint_off MULTIDRIVEN */
-    bit [31:0] shared_sram2[500000];  // 128KB shared SRAM
-    bit [31:0] shared_sram3[500000];  // 128KB shared SRAM
-    /* verilator lint_on MULTIDRIVEN */
+    wire [31:0] memory_out_i2;
+    wire [31:0] memory_out_d2;
+    worker_firmware_memory core2mem (
+        .clk(clk60),
+        .addr2(imem_cmd_payload_address_2[11:2]),
+        .data_out2(memory_out_i2),
+        .be2(0),
+        .we2(0),
+        .data_in2(0),
+        .addr1(dmem_cmd_payload_address_2[11:2]),
+        .data_in1(dmem_cmd_payload_data_2),
+        .we1(dmem_cmd_payload_address_2[31:28]==0 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
+        .be1({
+            dmem_cmd_payload_mask_2[0],
+            dmem_cmd_payload_mask_2[1],
+            dmem_cmd_payload_mask_2[2],
+            dmem_cmd_payload_mask_2[3]
+        }),
+        .data_out1(memory_out_d2)
+    );
 
-    initial begin
-        $readmemh("../sw/firmware.mem", memory_core1);
-        $readmemh("../sw/firmware2.mem", memory_core2);
-        $readmemh("../sw/firmware2.mem", memory_core3);
-    end
+    wire [31:0] memory_out_i3;
+    wire [31:0] memory_out_d3;
+    worker_firmware_memory core3mem (
+        .clk(clk60),
+        .addr2(imem_cmd_payload_address_3[11:2]),
+        .data_out2(memory_out_i3),
+        .be2(0),
+        .we2(0),
+        .data_in2(0),
+        .addr1(dmem_cmd_payload_address_3[11:2]),
+        .data_in1(dmem_cmd_payload_data_3),
+        .we1(dmem_cmd_payload_address_3[31:28]==0 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
+        .be1({
+            dmem_cmd_payload_mask_3[0],
+            dmem_cmd_payload_mask_3[1],
+            dmem_cmd_payload_mask_3[2],
+            dmem_cmd_payload_mask_3[3]
+        }),
+        .data_out1(memory_out_d3)
+    );
+
+
+    wire [31:0] videomemory_out_2;
+    wire [31:0] videomemory_out_3;
+    dual_port_videoram videomem (
+        .clk(clk60),
+        .addr2(dmem_cmd_payload_address_2[18:2]),
+        .data_out2(videomemory_out_2),
+        .be2({
+            dmem_cmd_payload_mask_2[0],
+            dmem_cmd_payload_mask_2[1],
+            dmem_cmd_payload_mask_2[2],
+            dmem_cmd_payload_mask_2[3]
+        }),
+        .we2(dmem_cmd_payload_address_2[31:28]==5 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
+        .data_in2(dmem_cmd_payload_data_2),
+        .addr1(dmem_cmd_payload_address_3[18:2]),
+        .data_in1(dmem_cmd_payload_data_3),
+        .we1(dmem_cmd_payload_address_3[31:28]==5 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
+        .be1({
+            dmem_cmd_payload_mask_3[0],
+            dmem_cmd_payload_mask_3[1],
+            dmem_cmd_payload_mask_3[2],
+            dmem_cmd_payload_mask_3[3]
+        }),
+        .data_out1(videomemory_out_3)
+    );
+
+
+    wire [31:0] shared12_out_2;
+    wire [31:0] shared12_out_1;
+    dualport_shared_ram shared12 (
+        .clk2(clk60),
+        .addr2(dmem_cmd_payload_address_2[18:2]),
+        .data_out2(shared12_out_2),
+        .be2({
+            dmem_cmd_payload_mask_2[0],
+            dmem_cmd_payload_mask_2[1],
+            dmem_cmd_payload_mask_2[2],
+            dmem_cmd_payload_mask_2[3]
+        }),
+        .we2(dmem_cmd_payload_address_2[31:28]==4 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
+        .data_in2(dmem_cmd_payload_data_2),
+        .addr1(dmem_cmd_payload_address_1[18:2]),
+        .clk1(clk30),
+        .data_in1(dmem_cmd_payload_data_1),
+        .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 1 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
+        .be1({
+            dmem_cmd_payload_mask_1[0],
+            dmem_cmd_payload_mask_1[1],
+            dmem_cmd_payload_mask_1[2],
+            dmem_cmd_payload_mask_1[3]
+        }),
+        .data_out1(shared12_out_1)
+    );
+
+    wire [31:0] shared13_out_3;
+    wire [31:0] shared13_out_1;
+    dualport_shared_ram shared13 (
+        .clk2(clk60),
+        .addr2(dmem_cmd_payload_address_3[18:2]),
+        .data_out2(shared13_out_3),
+        .be2({
+            dmem_cmd_payload_mask_3[0],
+            dmem_cmd_payload_mask_3[1],
+            dmem_cmd_payload_mask_3[2],
+            dmem_cmd_payload_mask_3[3]
+        }),
+        .we2(dmem_cmd_payload_address_3[31:28]==4 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
+        .data_in2(dmem_cmd_payload_data_3),
+        .addr1(dmem_cmd_payload_address_1[18:2]),
+        .clk1(clk30),
+        .data_in1(dmem_cmd_payload_data_1),
+        .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 0 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
+        .be1({
+            dmem_cmd_payload_mask_1[0],
+            dmem_cmd_payload_mask_1[1],
+            dmem_cmd_payload_mask_1[2],
+            dmem_cmd_payload_mask_1[3]
+        }),
+        .data_out1(shared13_out_1)
+    );
 
     // Core 1 signals
     wire        imem_cmd_valid_1;
@@ -182,7 +311,7 @@ module mpeg_video (
     bit         dmem_rsp_payload_error_1;
     bit  [31:0] dmem_rsp_payload_data_1;
 
-    // Core 2 signals 
+    // Core 2 signals
     wire        imem_cmd_valid_2;
     bit         imem_cmd_ready_2;
     wire [ 0:0] imem_cmd_payload_id_2;
@@ -345,6 +474,55 @@ module mpeg_video (
     bit data_is_from_mpeg_buffer;
 
     always_comb begin
+        dmem_rsp_payload_data_3 = memory_out_d3;
+
+        if (dmem_cmd_valid_3_q && dmem_cmd_ready_3_q) begin
+            case (dmem_cmd_payload_address_3_q[31:28])
+                4'd5: begin  // Video SRAM region
+                    dmem_rsp_payload_data_3 = videomemory_out_3;
+                end
+                4'd4: begin  // Shared SRAM region
+                    dmem_rsp_payload_data_3 = shared13_out_3;
+                end
+                4'd1: begin
+                    // I/O Area
+                end
+                4'd0: begin
+                    dmem_rsp_payload_data_3 = memory_out_d3;
+                end
+                default: begin
+                    dmem_rsp_payload_data_3 = memory_out_d3;
+                end
+            endcase
+        end
+    end
+
+    always_comb begin
+        dmem_rsp_payload_data_2 = memory_out_d2;
+
+        if (dmem_cmd_valid_2_q && dmem_cmd_ready_2_q) begin
+            case (dmem_cmd_payload_address_2_q[31:28])
+                4'd5: begin  // Video SRAM region
+                    dmem_rsp_payload_data_2 = videomemory_out_2;
+                end
+                4'd4: begin  // Shared SRAM region
+                    dmem_rsp_payload_data_2 = shared12_out_2;
+                end
+                4'd1: begin
+                    // I/O Area
+                end
+                4'd0: begin
+                    dmem_rsp_payload_data_2 = memory_out_d2;
+                end
+                default: begin
+                    dmem_rsp_payload_data_2 = memory_out_d2;
+                end
+            endcase
+        end
+
+    end
+
+    always_comb begin
         imem_cmd_ready_1 = 1;
         dmem_cmd_ready_1 = hw_read_count == 0;
         imem_cmd_ready_2 = 1;
@@ -352,13 +530,18 @@ module mpeg_video (
         imem_cmd_ready_3 = 1;
         dmem_cmd_ready_3 = 1;
         data_is_from_mpeg_buffer = 0;
+        imem_rsp_payload_word_1 = memory_out_i1;
+        imem_rsp_payload_word_2 = memory_out_i2;
+        imem_rsp_payload_word_3 = memory_out_i3;
 
         dmem_rsp_payload_data_1 = reverse_endian_32(mpeg_in_fifo_out);
 
         if (dmem_cmd_valid_1_q && dmem_cmd_ready_1_q) begin
             case (dmem_cmd_payload_address_1_q[31:28])
                 4'd4: begin  // Shared SRAM region
-                    dmem_rsp_payload_data_1 = shared_memory_out1;
+                    if (dmem_cmd_payload_address_1_q[27:24] == 1)
+                        dmem_rsp_payload_data_1 = shared12_out_1;
+                    else dmem_rsp_payload_data_1 = shared13_out_1;
                 end
                 4'd1: begin
                     // I/O Area
@@ -374,7 +557,7 @@ module mpeg_video (
                     end
                 end
                 4'd0: begin
-                    dmem_rsp_payload_data_1 = memory_out;
+                    dmem_rsp_payload_data_1 = memory_out_d1;
                 end
                 default: begin
                     // Assign the rest of the memory to the MPEG FIFO to fake a real big file
@@ -382,8 +565,9 @@ module mpeg_video (
                     data_is_from_mpeg_buffer = 1;
                 end
             endcase
-
         end
+
+
     end
 
     always_ff @(posedge clk30) begin
@@ -425,8 +609,15 @@ module mpeg_video (
     bit dmem_cmd_ready_1_q;
     bit dmem_cmd_payload_write_1_q;
 
-    bit [31:0] memory_out;
-    bit [31:0] shared_memory_out1;
+    bit [31:0] dmem_cmd_payload_address_2_q;
+    bit dmem_cmd_valid_2_q;
+    bit dmem_cmd_ready_2_q;
+    bit dmem_cmd_payload_write_2_q;
+
+    bit [31:0] dmem_cmd_payload_address_3_q;
+    bit dmem_cmd_valid_3_q;
+    bit dmem_cmd_ready_3_q;
+    bit dmem_cmd_payload_write_3_q;
 
     always_ff @(posedge clk30) begin
         debugflag <= 0;
@@ -481,16 +672,12 @@ module mpeg_video (
 
                         if (dmem_cmd_payload_write_1) begin
                             assert (dmem_cmd_payload_mask_1 == 4'b1111);
-                            shared_sram2[dmem_cmd_payload_address_1[20:2]] <= dmem_cmd_payload_data_1;
                         end else begin
-                            shared_memory_out1 <= shared_sram2[dmem_cmd_payload_address_1[20:2]];
                         end
                     end else begin
                         if (dmem_cmd_payload_write_1) begin
                             assert (dmem_cmd_payload_mask_1 == 4'b1111);
-                            shared_sram3[dmem_cmd_payload_address_1[20:2]] <= dmem_cmd_payload_data_1;
                         end else begin
-                            shared_memory_out1 <= shared_sram3[dmem_cmd_payload_address_1[20:2]];
                         end
 
                     end
@@ -501,18 +688,6 @@ module mpeg_video (
                     end
                 end
                 4'd0: begin
-                    if (dmem_cmd_payload_write_1) begin
-                        if (dmem_cmd_payload_mask_1[0])
-                            memory_core1[dmem_cmd_payload_address_1>>2][7:0] <= dmem_cmd_payload_data_1[7:0];
-                        if (dmem_cmd_payload_mask_1[1])
-                            memory_core1[dmem_cmd_payload_address_1>>2][15:8] <= dmem_cmd_payload_data_1[15:8];
-                        if (dmem_cmd_payload_mask_1[2])
-                            memory_core1[dmem_cmd_payload_address_1>>2][23:16] <= dmem_cmd_payload_data_1[23:16];
-                        if (dmem_cmd_payload_mask_1[3])
-                            memory_core1[dmem_cmd_payload_address_1>>2][31:24] <= dmem_cmd_payload_data_1[31:24];
-                    end else begin
-                        memory_out <= memory_core1[dmem_cmd_payload_address_1>>2];
-                    end
                 end
                 default: ;
             endcase
@@ -522,7 +697,6 @@ module mpeg_video (
         if (imem_cmd_valid_1) begin
             imem_rsp_valid_1 <= 1;
             imem_rsp_payload_id_1 <= imem_cmd_payload_id_1;
-            imem_rsp_payload_word_1 <= memory_core1[imem_cmd_payload_address_1>>2];
         end
     end
 
@@ -532,11 +706,25 @@ module mpeg_video (
         imem_rsp_valid_3 <= 0;
         dmem_rsp_valid_3 <= 0;
 
+        dmem_cmd_payload_address_2_q <= dmem_cmd_payload_address_2;
+        dmem_cmd_valid_2_q <= dmem_cmd_valid_2;
+        dmem_cmd_ready_2_q <= dmem_cmd_ready_2;
+        dmem_cmd_payload_write_2_q <= dmem_cmd_payload_write_2;
+
+        dmem_cmd_payload_address_3_q <= dmem_cmd_payload_address_3;
+        dmem_cmd_valid_3_q <= dmem_cmd_valid_3;
+        dmem_cmd_ready_3_q <= dmem_cmd_ready_3;
+        dmem_cmd_payload_write_3_q <= dmem_cmd_payload_write_3;
+
+        if (dmem_cmd_payload_address_2 == 32'h1000000c && dmem_cmd_payload_write_2 && dmem_cmd_valid_2)
+            $finish();
+        if (dmem_cmd_payload_address_3 == 32'h1000000c && dmem_cmd_payload_write_3 && dmem_cmd_valid_3)
+            $finish();
+
         if (dmem_cmd_payload_address_2 == 32'h10000030 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2)
             soft_state2 <= dmem_cmd_payload_data_2;
         if (dmem_cmd_payload_address_3 == 32'h10000030 && dmem_cmd_payload_write_3 && dmem_cmd_valid_3)
             soft_state3 <= dmem_cmd_payload_data_3;
-
 
         // Core 2 memory access
         if (dmem_cmd_valid_2 && dmem_cmd_ready_2) begin
@@ -545,39 +733,11 @@ module mpeg_video (
 
             case (dmem_cmd_payload_address_2[31:28])
                 4'd5: begin  // Core 1 private memory
-                    if (dmem_cmd_payload_write_2) begin
-                        if (dmem_cmd_payload_mask_2[0])
-                            video_ram[dmem_cmd_payload_address_2[18:2]][7:0] <= dmem_cmd_payload_data_2[7:0];
-                        if (dmem_cmd_payload_mask_2[1])
-                            video_ram[dmem_cmd_payload_address_2[18:2]][15:8] <= dmem_cmd_payload_data_2[15:8];
-                        if (dmem_cmd_payload_mask_2[2])
-                            video_ram[dmem_cmd_payload_address_2[18:2]][23:16] <= dmem_cmd_payload_data_2[23:16];
-                        if (dmem_cmd_payload_mask_2[3])
-                            video_ram[dmem_cmd_payload_address_2[18:2]][31:24] <= dmem_cmd_payload_data_2[31:24];
-                    end else begin
-                        dmem_rsp_payload_data_2 <= video_ram[dmem_cmd_payload_address_2[18:2]];
-                    end
                 end
                 4'd4: begin  // Shared SRAM region
-                    if (dmem_cmd_payload_write_2) begin
-                        shared_sram2[dmem_cmd_payload_address_2[20:2]] <= dmem_cmd_payload_data_2;
-                    end else begin
-                        dmem_rsp_payload_data_2 <= shared_sram2[dmem_cmd_payload_address_2[20:2]];
-                    end
                 end
                 4'd0: begin  // Core 2 private memory
-                    if (dmem_cmd_payload_write_2) begin
-                        if (dmem_cmd_payload_mask_2[0])
-                            memory_core2[dmem_cmd_payload_address_2>>2][7:0] <= dmem_cmd_payload_data_2[7:0];
-                        if (dmem_cmd_payload_mask_2[1])
-                            memory_core2[dmem_cmd_payload_address_2>>2][15:8] <= dmem_cmd_payload_data_2[15:8];
-                        if (dmem_cmd_payload_mask_2[2])
-                            memory_core2[dmem_cmd_payload_address_2>>2][23:16] <= dmem_cmd_payload_data_2[23:16];
-                        if (dmem_cmd_payload_mask_2[3])
-                            memory_core2[dmem_cmd_payload_address_2>>2][31:24] <= dmem_cmd_payload_data_2[31:24];
-                    end else begin
-                        dmem_rsp_payload_data_2 <= memory_core2[dmem_cmd_payload_address_2>>2];
-                    end
+
                 end
                 default: ;
 
@@ -588,10 +748,7 @@ module mpeg_video (
         if (imem_cmd_valid_2) begin
             imem_rsp_valid_2 <= 1;
             imem_rsp_payload_id_2 <= imem_cmd_payload_id_2;
-            imem_rsp_payload_word_2 <= memory_core2[imem_cmd_payload_address_2>>2];
         end
-
-
 
         // Core 3 memory access
         if (dmem_cmd_valid_3 && dmem_cmd_ready_3) begin
@@ -599,40 +756,9 @@ module mpeg_video (
             dmem_rsp_valid_3 <= 1;
 
             case (dmem_cmd_payload_address_3[31:28])
-                4'd5: begin  // Core 1 private memory
-                    if (dmem_cmd_payload_write_3) begin
-                        if (dmem_cmd_payload_mask_3[0])
-                            video_ram[dmem_cmd_payload_address_3[18:2]][7:0] <= dmem_cmd_payload_data_3[7:0];
-                        if (dmem_cmd_payload_mask_3[1])
-                            video_ram[dmem_cmd_payload_address_3[18:2]][15:8] <= dmem_cmd_payload_data_3[15:8];
-                        if (dmem_cmd_payload_mask_3[2])
-                            video_ram[dmem_cmd_payload_address_3[18:2]][23:16] <= dmem_cmd_payload_data_3[23:16];
-                        if (dmem_cmd_payload_mask_3[3])
-                            video_ram[dmem_cmd_payload_address_3[18:2]][31:24] <= dmem_cmd_payload_data_3[31:24];
-                    end else begin
-                        dmem_rsp_payload_data_3 <= video_ram[dmem_cmd_payload_address_3[18:2]];
-                    end
-                end
                 4'd4: begin  // Shared SRAM region
-                    if (dmem_cmd_payload_write_3) begin
-                        shared_sram3[dmem_cmd_payload_address_3[20:2]] <= dmem_cmd_payload_data_3;
-                    end else begin
-                        dmem_rsp_payload_data_3 <= shared_sram3[dmem_cmd_payload_address_3[20:2]];
-                    end
                 end
                 4'd0: begin  // Core 3 private memory
-                    if (dmem_cmd_payload_write_3) begin
-                        if (dmem_cmd_payload_mask_3[0])
-                            memory_core3[dmem_cmd_payload_address_3>>2][7:0] <= dmem_cmd_payload_data_3[7:0];
-                        if (dmem_cmd_payload_mask_3[1])
-                            memory_core3[dmem_cmd_payload_address_3>>2][15:8] <= dmem_cmd_payload_data_3[15:8];
-                        if (dmem_cmd_payload_mask_3[2])
-                            memory_core3[dmem_cmd_payload_address_3>>2][23:16] <= dmem_cmd_payload_data_3[23:16];
-                        if (dmem_cmd_payload_mask_3[3])
-                            memory_core3[dmem_cmd_payload_address_3>>2][31:24] <= dmem_cmd_payload_data_3[31:24];
-                    end else begin
-                        dmem_rsp_payload_data_3 <= memory_core3[dmem_cmd_payload_address_3>>2];
-                    end
                 end
                 default: ;
             endcase
@@ -641,7 +767,6 @@ module mpeg_video (
         if (imem_cmd_valid_3) begin
             imem_rsp_valid_3 <= 1;
             imem_rsp_payload_id_3 <= imem_cmd_payload_id_3;
-            imem_rsp_payload_word_3 <= memory_core3[imem_cmd_payload_address_3>>2];
         end
 
     end
@@ -658,9 +783,9 @@ integer i;
 // Read during write produces old data on ports A and B and old data on mixed ports
 // For device families that do not support this mode (e.g. Stratix V) the ram is not inferred
 
-module firmware_memory #(
+module decoder_firmware_memory #(
     parameter int BYTE_WIDTH = 8,
-    ADDRESS_WIDTH = 13,
+    ADDRESS_WIDTH = 12,
     BYTES = 4,
     DATA_WIDTH_R = BYTE_WIDTH * BYTES
 ) (
@@ -714,7 +839,210 @@ module firmware_memory #(
 
     assign data_out2 = data_reg2;
 
-endmodule : firmware_memory
+endmodule : decoder_firmware_memory
+
+
+// Quartus Prime SystemVerilog Template
+//
+// True Dual-Port RAM with different read/write addresses and single read/write clock
+// and with a control for writing single bytes into the memory word; byte enable
+
+// Read during write produces old data on ports A and B and old data on mixed ports
+// For device families that do not support this mode (e.g. Stratix V) the ram is not inferred
+
+module worker_firmware_memory #(
+    parameter int BYTE_WIDTH = 8,
+    ADDRESS_WIDTH = 10,
+    BYTES = 4,
+    DATA_WIDTH_R = BYTE_WIDTH * BYTES
+) (
+    input [ADDRESS_WIDTH-1:0] addr1,
+    input [ADDRESS_WIDTH-1:0] addr2,
+    input [BYTES-1:0] be1,
+    input [BYTES-1:0] be2,
+    input [DATA_WIDTH_R-1:0] data_in1,
+    input [DATA_WIDTH_R-1:0] data_in2,
+    input we1,
+    we2,
+    clk,
+    output [DATA_WIDTH_R-1:0] data_out1,
+    output [DATA_WIDTH_R-1:0] data_out2
+);
+    localparam RAM_DEPTH = 1 << ADDRESS_WIDTH;
+
+    // model the RAM with two dimensional packed array
+    logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1];
+
+    initial $readmemh("../sw/firmware2.mem", ram);
+
+    reg [DATA_WIDTH_R-1:0] data_reg1;
+    reg [DATA_WIDTH_R-1:0] data_reg2;
+
+    // port A
+    always @(posedge clk) begin
+        if (we1) begin
+            // edit this code if using other than four bytes per word
+            if (be1[0]) ram[addr1][0] <= data_in1[7:0];
+            if (be1[1]) ram[addr1][1] <= data_in1[15:8];
+            if (be1[2]) ram[addr1][2] <= data_in1[23:16];
+            if (be1[3]) ram[addr1][3] <= data_in1[31:24];
+        end
+        data_reg1 <= ram[addr1];
+    end
+
+    assign data_out1 = data_reg1;
+
+    // port B
+    always @(posedge clk) begin
+        if (we2) begin
+            // edit this code if using other than four bytes per word
+            if (be2[0]) ram[addr2][0] <= data_in2[7:0];
+            if (be2[1]) ram[addr2][1] <= data_in2[15:8];
+            if (be2[2]) ram[addr2][2] <= data_in2[23:16];
+            if (be2[3]) ram[addr2][3] <= data_in2[31:24];
+        end
+        data_reg2 <= ram[addr2];
+    end
+
+    assign data_out2 = data_reg2;
+
+endmodule : worker_firmware_memory
+
+
+// Quartus Prime SystemVerilog Template
+//
+// True Dual-Port RAM with different read/write addresses and single read/write clock
+// and with a control for writing single bytes into the memory word; byte enable
+
+// Read during write produces old data on ports A and B and old data on mixed ports
+// For device families that do not support this mode (e.g. Stratix V) the ram is not inferred
+
+module dual_port_videoram #(
+    parameter int BYTE_WIDTH = 8,
+    ADDRESS_WIDTH = 17,
+    BYTES = 4,
+    DATA_WIDTH_R = BYTE_WIDTH * BYTES
+) (
+    input [ADDRESS_WIDTH-1:0] addr1,
+    input [ADDRESS_WIDTH-1:0] addr2,
+    input [BYTES-1:0] be1,
+    input [BYTES-1:0] be2,
+    input [DATA_WIDTH_R-1:0] data_in1,
+    input [DATA_WIDTH_R-1:0] data_in2,
+    input we1,
+    we2,
+    clk,
+    output [DATA_WIDTH_R-1:0] data_out1,
+    output [DATA_WIDTH_R-1:0] data_out2
+);
+    localparam RAM_DEPTH = 500000 >> 2;
+
+    // model the RAM with two dimensional packed array
+    /* verilator lint_off MULTIDRIVEN */
+    logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1];
+    /* verilator lint_on MULTIDRIVEN */
+
+    reg [DATA_WIDTH_R-1:0] data_reg1;
+    reg [DATA_WIDTH_R-1:0] data_reg2;
+
+    // port A
+    always @(posedge clk) begin
+        if (we1) begin
+            // edit this code if using other than four bytes per word
+            if (be1[0]) ram[addr1][0] <= data_in1[7:0];
+            if (be1[1]) ram[addr1][1] <= data_in1[15:8];
+            if (be1[2]) ram[addr1][2] <= data_in1[23:16];
+            if (be1[3]) ram[addr1][3] <= data_in1[31:24];
+        end
+        data_reg1 <= ram[addr1];
+    end
+
+    assign data_out1 = data_reg1;
+
+    // port B
+    always @(posedge clk) begin
+        if (we2) begin
+            // edit this code if using other than four bytes per word
+            if (be2[0]) ram[addr2][0] <= data_in2[7:0];
+            if (be2[1]) ram[addr2][1] <= data_in2[15:8];
+            if (be2[2]) ram[addr2][2] <= data_in2[23:16];
+            if (be2[3]) ram[addr2][3] <= data_in2[31:24];
+        end
+        data_reg2 <= ram[addr2];
+    end
+
+    assign data_out2 = data_reg2;
+
+endmodule : dual_port_videoram
+
+
+// Quartus Prime SystemVerilog Template
+//
+// True Dual-Port RAM with different read/write addresses and single read/write clock
+// and with a control for writing single bytes into the memory word; byte enable
+
+// Read during write produces old data on ports A and B and old data on mixed ports
+// For device families that do not support this mode (e.g. Stratix V) the ram is not inferred
+
+module dualport_shared_ram #(
+    parameter int BYTE_WIDTH = 8,
+    ADDRESS_WIDTH = 17,
+    BYTES = 4,
+    DATA_WIDTH_R = BYTE_WIDTH * BYTES
+) (
+    input [ADDRESS_WIDTH-1:0] addr1,
+    input [ADDRESS_WIDTH-1:0] addr2,
+    input [BYTES-1:0] be1,
+    input [BYTES-1:0] be2,
+    input [DATA_WIDTH_R-1:0] data_in1,
+    input [DATA_WIDTH_R-1:0] data_in2,
+    input we1,
+    input we2,
+    input clk1,
+    input clk2,
+    output [DATA_WIDTH_R-1:0] data_out1,
+    output [DATA_WIDTH_R-1:0] data_out2
+);
+    localparam RAM_DEPTH = 500000 >> 2;
+
+    // model the RAM with two dimensional packed array
+    /* verilator lint_off MULTIDRIVEN */
+    logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1];
+    /* verilator lint_on MULTIDRIVEN */
+
+    reg [DATA_WIDTH_R-1:0] data_reg1;
+    reg [DATA_WIDTH_R-1:0] data_reg2;
+
+    // port A
+    always @(posedge clk1) begin
+        if (we1) begin
+            // edit this code if using other than four bytes per word
+            if (be1[0]) ram[addr1][0] <= data_in1[7:0];
+            if (be1[1]) ram[addr1][1] <= data_in1[15:8];
+            if (be1[2]) ram[addr1][2] <= data_in1[23:16];
+            if (be1[3]) ram[addr1][3] <= data_in1[31:24];
+        end
+        data_reg1 <= ram[addr1];
+    end
+
+    assign data_out1 = data_reg1;
+
+    // port B
+    always @(posedge clk2) begin
+        if (we2) begin
+            // edit this code if using other than four bytes per word
+            if (be2[0]) ram[addr2][0] <= data_in2[7:0];
+            if (be2[1]) ram[addr2][1] <= data_in2[15:8];
+            if (be2[2]) ram[addr2][2] <= data_in2[23:16];
+            if (be2[3]) ram[addr2][3] <= data_in2[31:24];
+        end
+        data_reg2 <= ram[addr2];
+    end
+
+    assign data_out2 = data_reg2;
+
+endmodule : dualport_shared_ram
+
 
 
 

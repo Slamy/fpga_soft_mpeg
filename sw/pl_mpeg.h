@@ -2660,8 +2660,8 @@ void plm_video_process_macroblock(
 	*((int*)OUTPORT_HANDLE_SHARED) = 1;
 	__asm volatile("": : :"memory");
 
-	//while (desc->ready != 0)
-	//	__asm volatile("" : : : "memory");
+	while (desc->ready != 0)
+		__asm volatile("" : : : "memory");
 }
 
 #if 1
@@ -2850,8 +2850,11 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 	*((int*)OUTPORT_HANDLE_SHARED) = 1;
 	__asm volatile("": : :"memory");
 	
-	//while (desc->ready != 0)
-	//__asm volatile("" : : : "memory");
+	if (desc->cwp.di!=di)
+		*((volatile uint8_t *)OUTPORT_END) = 0;
+
+	while (desc->ready != 0)
+		__asm volatile("" : : : "memory");
 
 	OUT_DEBUG = 12;
 }
