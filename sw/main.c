@@ -91,13 +91,14 @@ void dct_coeff_read(plm_dma_buffer_t *buffer)
 
 void main(void)
 {
-	
+#if 0
 	static uint32_t testword;
 	memory_interface_test(&testword);
 	memory_interface_test((void*)0x41000030);
 	memory_interface_test((void*)0x40000030);
 	
 	for(;;);
+#endif
 	// test_vector_unit();
 	// stop_verilator();
 	//  for(;;);

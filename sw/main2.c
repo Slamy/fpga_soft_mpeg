@@ -67,30 +67,30 @@ void stop_verilator()
 
 void main(void)
 {
+#if 0
 	static uint32_t testword;
 	switch (OUT_DEBUG)
 	{
 	case 0x4218:
 		memory_interface_test(&testword);
 		__asm volatile("" : : : "memory");
-		//memory_interface_test((void *)0x50000010);
+		memory_interface_test((void *)0x50000010);
 		__asm volatile("" : : : "memory");
-		//memory_interface_test((void *)0x40000010);
+		memory_interface_test((void *)0x40000010);
 		__asm volatile("" : : : "memory");
 		break;
 	case 0x4212:
 		memory_interface_test(&testword);
 		__asm volatile("" : : : "memory");
-		//memory_interface_test((void *)0x50000030);
+		memory_interface_test((void *)0x50000030);
 		__asm volatile("" : : : "memory");
-		//memory_interface_test((void *)0x40000030);
+		memory_interface_test((void *)0x40000030);
 		__asm volatile("" : : : "memory");
 		break;
 	default:
 		*((volatile uint8_t *)OUTPORT_END) = 4;
 	}
-
-	for(;;);
+#endif
 
 	for (;;)
 	{

@@ -153,12 +153,7 @@ module mpeg_video (
         .addr1(dmem_cmd_payload_address_1[13:2]),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==0 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
-        .be1({
-            dmem_cmd_payload_mask_1[0],
-            dmem_cmd_payload_mask_1[1],
-            dmem_cmd_payload_mask_1[2],
-            dmem_cmd_payload_mask_1[3]
-        }),
+        .be1(dmem_cmd_payload_mask_1),
         .data_out1(memory_out_d1)
     );
 
@@ -174,12 +169,7 @@ module mpeg_video (
         .addr1(dmem_cmd_payload_address_2[13:2]),
         .data_in1(dmem_cmd_payload_data_2),
         .we1(dmem_cmd_payload_address_2[31:28]==0 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
-        .be1({
-            dmem_cmd_payload_mask_2[0],
-            dmem_cmd_payload_mask_2[1],
-            dmem_cmd_payload_mask_2[2],
-            dmem_cmd_payload_mask_2[3]
-        }),
+        .be1(dmem_cmd_payload_mask_2),
         .data_out1(memory_out_d2)
     );
 
@@ -195,12 +185,7 @@ module mpeg_video (
         .addr1(dmem_cmd_payload_address_3[13:2]),
         .data_in1(dmem_cmd_payload_data_3),
         .we1(dmem_cmd_payload_address_3[31:28]==0 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
-        .be1({
-            dmem_cmd_payload_mask_3[0],
-            dmem_cmd_payload_mask_3[1],
-            dmem_cmd_payload_mask_3[2],
-            dmem_cmd_payload_mask_3[3]
-        }),
+        .be1(dmem_cmd_payload_mask_3),
         .data_out1(memory_out_d3)
     );
 
@@ -211,23 +196,13 @@ module mpeg_video (
         .clk(clk60),
         .addr2(dmem_cmd_payload_address_2[18:2]),
         .data_out2(videomemory_out_2),
-        .be2({
-            dmem_cmd_payload_mask_2[0],
-            dmem_cmd_payload_mask_2[1],
-            dmem_cmd_payload_mask_2[2],
-            dmem_cmd_payload_mask_2[3]
-        }),
+        .be2(dmem_cmd_payload_mask_2),
         .we2(dmem_cmd_payload_address_2[31:28]==5 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
         .data_in2(dmem_cmd_payload_data_2),
         .addr1(dmem_cmd_payload_address_3[18:2]),
         .data_in1(dmem_cmd_payload_data_3),
         .we1(dmem_cmd_payload_address_3[31:28]==5 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
-        .be1({
-            dmem_cmd_payload_mask_3[0],
-            dmem_cmd_payload_mask_3[1],
-            dmem_cmd_payload_mask_3[2],
-            dmem_cmd_payload_mask_3[3]
-        }),
+        .be1(dmem_cmd_payload_mask_3),
         .data_out1(videomemory_out_3)
     );
 
@@ -238,24 +213,14 @@ module mpeg_video (
         .clk2(clk60),
         .addr2(dmem_cmd_payload_address_2[18:2]),
         .data_out2(shared12_out_2),
-        .be2({
-            dmem_cmd_payload_mask_2[0],
-            dmem_cmd_payload_mask_2[1],
-            dmem_cmd_payload_mask_2[2],
-            dmem_cmd_payload_mask_2[3]
-        }),
+        .be2(dmem_cmd_payload_mask_2),
         .we2(dmem_cmd_payload_address_2[31:28]==4 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
         .data_in2(dmem_cmd_payload_data_2),
         .addr1(dmem_cmd_payload_address_1[18:2]),
         .clk1(clk30),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 1 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
-        .be1({
-            dmem_cmd_payload_mask_1[0],
-            dmem_cmd_payload_mask_1[1],
-            dmem_cmd_payload_mask_1[2],
-            dmem_cmd_payload_mask_1[3]
-        }),
+        .be1(dmem_cmd_payload_mask_1),
         .data_out1(shared12_out_1)
     );
 
@@ -265,24 +230,14 @@ module mpeg_video (
         .clk2(clk60),
         .addr2(dmem_cmd_payload_address_3[18:2]),
         .data_out2(shared13_out_3),
-        .be2({
-            dmem_cmd_payload_mask_3[0],
-            dmem_cmd_payload_mask_3[1],
-            dmem_cmd_payload_mask_3[2],
-            dmem_cmd_payload_mask_3[3]
-        }),
+        .be2(dmem_cmd_payload_mask_3),
         .we2(dmem_cmd_payload_address_3[31:28]==4 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
         .data_in2(dmem_cmd_payload_data_3),
         .addr1(dmem_cmd_payload_address_1[18:2]),
         .clk1(clk30),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 0 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
-        .be1({
-            dmem_cmd_payload_mask_1[0],
-            dmem_cmd_payload_mask_1[1],
-            dmem_cmd_payload_mask_1[2],
-            dmem_cmd_payload_mask_1[3]
-        }),
+        .be1(dmem_cmd_payload_mask_1),
         .data_out1(shared13_out_1)
     );
 
@@ -675,19 +630,6 @@ module mpeg_video (
 
             case (dmem_cmd_payload_address_1[31:28])
                 4'd4: begin  // Shared SRAM region
-                    if (dmem_cmd_payload_address_1[27:24] == 1) begin
-
-                        if (dmem_cmd_payload_write_1) begin
-                            assert (dmem_cmd_payload_mask_1 == 4'b1111);
-                        end else begin
-                        end
-                    end else begin
-                        if (dmem_cmd_payload_write_1) begin
-                            assert (dmem_cmd_payload_mask_1 == 4'b1111);
-                        end else begin
-                        end
-
-                    end
                 end
                 4'd1: begin
                     if (dmem_cmd_payload_write_1) begin
