@@ -120,9 +120,6 @@ void main(void)
 		desc->ready = 0; // give the buffer back
 		*((int *)OUTPORT_HANDLE_SHARED) = 1;
 		__asm volatile("" : : : "memory");
-
-		if (desc->ready != 0)
-			*((volatile uint32_t *)OUTPORT_END) = desc->ready;
 	}
 }
 
