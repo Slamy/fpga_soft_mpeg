@@ -29,6 +29,7 @@ struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
 
 #include "shared.h"
+#include "memtest.h"
 
 extern caddr_t _end; /* _end is set in the linker command file */
 extern caddr_t _sp;	 /* _end is set in the linker command file */
@@ -66,6 +67,31 @@ void stop_verilator()
 
 void main(void)
 {
+	static uint32_t testword;
+	switch (OUT_DEBUG)
+	{
+	case 0x4218:
+		memory_interface_test(&testword);
+		__asm volatile("" : : : "memory");
+		//memory_interface_test((void *)0x50000010);
+		__asm volatile("" : : : "memory");
+		//memory_interface_test((void *)0x40000010);
+		__asm volatile("" : : : "memory");
+		break;
+	case 0x4212:
+		memory_interface_test(&testword);
+		__asm volatile("" : : : "memory");
+		//memory_interface_test((void *)0x50000030);
+		__asm volatile("" : : : "memory");
+		//memory_interface_test((void *)0x40000030);
+		__asm volatile("" : : : "memory");
+		break;
+	default:
+		*((volatile uint8_t *)OUTPORT_END) = 4;
+	}
+
+	for(;;);
+
 	for (;;)
 	{
 		struct image_synthesis_descriptor *desc = get_next_ready_synthesis_desc();
@@ -95,7 +121,7 @@ void main(void)
 		*((int *)OUTPORT_HANDLE_SHARED) = 1;
 		__asm volatile("" : : : "memory");
 
-		if (desc->ready!=0)
+		if (desc->ready != 0)
 			*((volatile uint32_t *)OUTPORT_END) = desc->ready;
 	}
 }

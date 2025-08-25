@@ -29,6 +29,7 @@ struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
 
 #include "shared.h"
+#include "memtest.h"
 
 extern caddr_t _end; /* _end is set in the linker command file */
 extern caddr_t _sp;	 /* _end is set in the linker command file */
@@ -77,7 +78,6 @@ void sync_to_worker()
 
 void dct_coeff_read(plm_dma_buffer_t *buffer)
 {
-
 #if 0
 	fifo_ctrl->hw_huffman_read_dct_coeff = 1;
 	__asm volatile("" : : : "memory");
@@ -91,6 +91,13 @@ void dct_coeff_read(plm_dma_buffer_t *buffer)
 
 void main(void)
 {
+	
+	static uint32_t testword;
+	memory_interface_test(&testword);
+	memory_interface_test((void*)0x41000030);
+	memory_interface_test((void*)0x40000030);
+	
+	for(;;);
 	// test_vector_unit();
 	// stop_verilator();
 	//  for(;;);

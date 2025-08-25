@@ -48,10 +48,10 @@ firmware2.lst: firmware2.elf
 start.o: start.S
 	$(TOOLCHAIN_PREFIX)gcc -c $(CFLAGS) -o $@ $<
 
-main.o: main.c pl_mpeg.h shared.h
+main.o: main.c pl_mpeg.h shared.h memtest.h
 	$(TOOLCHAIN_PREFIX)gcc -c $(CFLAGS) -o main.o main.c
 
-main2.o: main2.c pl_mpeg.h shared.h
+main2.o: main2.c pl_mpeg.h shared.h memtest.h
 	$(TOOLCHAIN_PREFIX)gcc -c $(CFLAGS) -o main2.o main2.c
 
 
