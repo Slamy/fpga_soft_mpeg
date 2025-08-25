@@ -96,8 +96,6 @@ void main(void)
 	//  for(;;);
 	// OUT_DEBUG = (int)image_synthesis_buffer;
 
-	worker_cnt++;
-
 	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
 	if (!buffer)
 		*((volatile uint8_t *)OUTPORT_END) = 2;
@@ -128,7 +126,7 @@ void main(void)
 			OUT_DEBUG = 27;
 
 			sync_to_worker();
-			//worker_cnt++;
+			worker_cnt++;
 			sync_to_worker();
 
 			OUT_DEBUG = 28;
