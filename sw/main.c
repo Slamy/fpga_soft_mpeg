@@ -91,6 +91,7 @@ void dct_coeff_read(plm_dma_buffer_t *buffer)
 
 void main(void)
 {
+	*((volatile uint32_t *)OUTPORT) = sizeof(struct image_synthesis_descriptor);
 #if 0
 	static uint32_t testword;
 	memory_interface_test(&testword);

@@ -41,7 +41,7 @@ int image_synthesis_buffer_index = 0;
 int image_synthesis_buffer_index2 = 0;
 static int worker_cnt;
 
-#define SHARED_BUFFER_ENTRIES 500
+#define SHARED_BUFFER_ENTRIES 1000
 
 struct image_synthesis_descriptor *get_next_synthesis_desc()
 {
