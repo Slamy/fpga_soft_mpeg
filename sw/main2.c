@@ -61,7 +61,7 @@ void print_str(const char *p)
 void stop_verilator()
 {
 	print_str("Nope\n");
-	*((volatile uint8_t *)OUTPORT_END) = 0;
+	*((volatile uint8_t *)OUTPORT_END) = 4;
 }
 
 void main(void)
@@ -96,7 +96,7 @@ void main(void)
 		__asm volatile("" : : : "memory");
 
 		if (desc->ready!=0)
-			*((volatile uint8_t *)OUTPORT_END) = 0;
+			*((volatile uint32_t *)OUTPORT_END) = desc->ready;
 	}
 }
 

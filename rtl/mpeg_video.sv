@@ -631,8 +631,11 @@ module mpeg_video (
 
         shared_buffer_level <= shared_buffer_level + (shared_buffer_level_inc ? 1:0) - (shared_buffer_level_dec1_clk30 ? 1 : 0) - (shared_buffer_level_dec2_clk30 ? 1:0);
 
-        if (dmem_cmd_payload_address_1 == 32'h1000000c && dmem_cmd_payload_write_1 && dmem_cmd_valid_1)
+        if (dmem_cmd_payload_address_1 == 32'h1000000c && dmem_cmd_payload_write_1 && dmem_cmd_valid_1)begin
+            $display("Core 1 stopped at %x with code %x", imem_cmd_payload_address_1,
+                     dmem_cmd_payload_data_1);
             $finish();
+        end
         if (dmem_cmd_payload_address_1 == 32'h10000030 && dmem_cmd_payload_write_1 && dmem_cmd_valid_1)
             soft_state1 <= dmem_cmd_payload_data_1;
 
@@ -716,10 +719,16 @@ module mpeg_video (
         dmem_cmd_ready_3_q <= dmem_cmd_ready_3;
         dmem_cmd_payload_write_3_q <= dmem_cmd_payload_write_3;
 
-        if (dmem_cmd_payload_address_2 == 32'h1000000c && dmem_cmd_payload_write_2 && dmem_cmd_valid_2)
+        if (dmem_cmd_payload_address_2 == 32'h1000000c && dmem_cmd_payload_write_2 && dmem_cmd_valid_2) begin
+            $display("Core 2 stopped at %x with code %x", imem_cmd_payload_address_2,
+                     dmem_cmd_payload_data_2);
             $finish();
-        if (dmem_cmd_payload_address_3 == 32'h1000000c && dmem_cmd_payload_write_3 && dmem_cmd_valid_3)
+        end
+        if (dmem_cmd_payload_address_3 == 32'h1000000c && dmem_cmd_payload_write_3 && dmem_cmd_valid_3) begin
+            $display("Core 3 stopped at %x with code %x", imem_cmd_payload_address_3,
+                     dmem_cmd_payload_data_3);
             $finish();
+        end
 
         if (dmem_cmd_payload_address_2 == 32'h10000030 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2)
             soft_state2 <= dmem_cmd_payload_data_2;

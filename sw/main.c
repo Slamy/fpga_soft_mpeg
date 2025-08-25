@@ -61,7 +61,7 @@ void print_str(const char *p)
 void stop_verilator()
 {
 	print_str("Nope\n");
-	*((volatile uint8_t *)OUTPORT_END) = 0;
+	*((volatile uint8_t *)OUTPORT_END) = 1;
 }
 
 void sync_to_worker()
@@ -96,9 +96,11 @@ void main(void)
 	//  for(;;);
 	// OUT_DEBUG = (int)image_synthesis_buffer;
 
+	worker_cnt++;
+
 	plm_dma_buffer_t *buffer = plm_buffer_create_with_memory((uint8_t *)0x20000000, 700 * 1024 * 1024, 0);
 	if (!buffer)
-		*((volatile uint8_t *)OUTPORT_END) = 0;
+		*((volatile uint8_t *)OUTPORT_END) = 2;
 
 #if 0
 	for (int i = 0; i < 10000; i++)
@@ -113,7 +115,7 @@ void main(void)
 
 	plm_video_t *mpeg = plm_video_create_with_buffer(buffer, 0);
 	if (!mpeg)
-		*((volatile uint8_t *)OUTPORT_END) = 0;
+		*((volatile uint8_t *)OUTPORT_END) = 3;
 
 	int cnt = 0;
 
@@ -126,7 +128,7 @@ void main(void)
 			OUT_DEBUG = 27;
 
 			sync_to_worker();
-			worker_cnt++;
+			//worker_cnt++;
 			sync_to_worker();
 
 			OUT_DEBUG = 28;

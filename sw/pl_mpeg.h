@@ -2388,7 +2388,7 @@ void plm_video_decode_macroblock(plm_video_t *self) {
 	while (!plm_dma_buffer_has(self->buffer, 2000));
 	OUT_DEBUG = 14;
 
-    worker_cnt++;
+    //worker_cnt++;
 
 	// Decode increment
 	int increment = 0;
@@ -2851,7 +2851,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 	__asm volatile("": : :"memory");
 	
 	if (desc->cwp.di!=di)
-		*((volatile uint8_t *)OUTPORT_END) = 0;
+		*((volatile uint8_t *)OUTPORT_END) = 6;
 
 	while (desc->ready != 0)
 		__asm volatile("" : : : "memory");

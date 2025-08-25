@@ -41,6 +41,8 @@ int image_synthesis_buffer_index = 0;
 int image_synthesis_buffer_index2 = 0;
 static int worker_cnt;
 
+#define SHARED_BUFFER_ENTRIES 1000
+
 struct image_synthesis_descriptor *get_next_synthesis_desc()
 {
     struct image_synthesis_descriptor *retval;
@@ -49,14 +51,14 @@ struct image_synthesis_descriptor *get_next_synthesis_desc()
     {
         retval = &image_synthesis_buffer[image_synthesis_buffer_index++];
 
-        if (image_synthesis_buffer_index == 4000)
+        if (image_synthesis_buffer_index == SHARED_BUFFER_ENTRIES)
             image_synthesis_buffer_index = 0;
     }
     else
     {
         retval = &image_synthesis_buffer2[image_synthesis_buffer_index2++];
 
-        if (image_synthesis_buffer_index2 == 4000)
+        if (image_synthesis_buffer_index2 == SHARED_BUFFER_ENTRIES)
             image_synthesis_buffer_index2 = 0;
     }
 
@@ -70,7 +72,7 @@ struct image_synthesis_descriptor *get_next_synthesis_desc()
     if (retval->ready != 0)
     {
         // something went horribly wrong
-        *((volatile uint8_t *)OUTPORT_END) = 0;
+        *((volatile uint8_t *)OUTPORT_END) = 7;
         for (;;)
             ;
     }
@@ -89,7 +91,7 @@ struct image_synthesis_descriptor *get_next_ready_synthesis_desc()
 
     OUT_DEBUG = 36;
 
-    if (image_synthesis_buffer_index == 4000)
+    if (image_synthesis_buffer_index == SHARED_BUFFER_ENTRIES)
         image_synthesis_buffer_index = 0;
 
     return retval;
