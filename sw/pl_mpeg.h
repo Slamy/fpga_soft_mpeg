@@ -2388,8 +2388,6 @@ void plm_video_decode_macroblock(plm_video_t *self) {
 	while (!plm_dma_buffer_has(self->buffer, 2000));
 	OUT_DEBUG = 14;
 
-    worker_cnt++;
-
 	// Decode increment
 	int increment = 0;
 	int t = plm_dma_buffer_read_vlc(self->buffer, PLM_VIDEO_MACROBLOCK_ADDRESS_INCREMENT);

@@ -153,7 +153,7 @@ public:
             sim_time++;
         }
     }
-    
+
     void modelstep()
     {
         clock();
@@ -166,12 +166,11 @@ public:
         {
             uint32_t addr = dut.rootp->top_vexii__DOT__video__DOT__frame_adr;
             uint8_t *mem1 = (uint8_t *)&dut.rootp->top_vexii__DOT__video__DOT__core1mem__DOT__ram;
-            uint8_t *mem_video = (uint8_t *)&dut.rootp->top_vexii__DOT__video__DOT__videomem__DOT__ram;
+            uint8_t *mem_video = (uint8_t *)&dut.rootp->top_vexii__DOT__ddram;
             plm_frame2_t frame = *(plm_frame2_t *)(mem1 + addr);
 
-
-            // printf("%d %d %x %x %x\n", frame.width, frame.height, frame.y.adr, frame.cr.adr, frame.cb.adr);
-            // printf("%x %x %x\n",mem[frame.y.adr], mem[frame.cr.adr],mem[frame.cb.adr]);
+            printf("%d %d %x %x %x\n", frame.width, frame.height, frame.y.adr, frame.cr.adr, frame.cb.adr);
+            // printf("%x %x %x\n", mem[frame.y.adr], mem[frame.cr.adr], mem[frame.cb.adr]);
             plm_frame_t frame_convert;
             frame_convert.y.data = &mem_video[frame.y.adr];
             frame_convert.y.height = frame.y.height;

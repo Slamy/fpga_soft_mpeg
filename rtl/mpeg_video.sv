@@ -15,8 +15,24 @@ module mpeg_video (
 
     input [15:0] data_word,
     input data_strobe,
-    output fifo_full
+    output fifo_full,
+
+    output            DDRAM_CLK,
+    input             DDRAM_BUSY,
+    output     [ 7:0] DDRAM_BURSTCNT,
+    output bit [28:0] DDRAM_ADDR,
+    input      [63:0] DDRAM_DOUT,
+    input             DDRAM_DOUT_READY,
+    output            DDRAM_RD,
+    output bit [63:0] DDRAM_DIN,
+    output     [ 7:0] DDRAM_BE,
+    output bit        DDRAM_WE
 );
+
+    assign DDRAM_CLK = clk60;
+    assign DDRAM_BE = 8'hff;
+    assign DDRAM_RD = 0;
+    assign DDRAM_BURSTCNT = 1;
 
     bit [15:0] dct_coeff_result;
     bit dct_coeff_huffman_active = 0;
@@ -188,24 +204,6 @@ module mpeg_video (
         .be1(dmem_cmd_payload_mask_3),
         .data_out1(memory_out_d3)
     );
-
-
-    wire [31:0] videomemory_out_2;
-    wire [31:0] videomemory_out_3;
-    dual_port_videoram videomem (
-        .clk(clk60),
-        .addr2(dmem_cmd_payload_address_2[18:2]),
-        .data_out2(videomemory_out_2),
-        .be2(dmem_cmd_payload_mask_2),
-        .we2(dmem_cmd_payload_address_2[31:28]==5 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
-        .data_in2(dmem_cmd_payload_data_2),
-        .addr1(dmem_cmd_payload_address_3[18:2]),
-        .data_in1(dmem_cmd_payload_data_3),
-        .we1(dmem_cmd_payload_address_3[31:28]==5 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
-        .be1(dmem_cmd_payload_mask_3),
-        .data_out1(videomemory_out_3)
-    );
-
 
     wire [31:0] shared12_out_2;
     wire [31:0] shared12_out_1;
@@ -434,7 +432,7 @@ module mpeg_video (
         if (dmem_cmd_valid_3_q && dmem_cmd_ready_3_q) begin
             case (dmem_cmd_payload_address_3_q[31:28])
                 4'd5: begin  // Video SRAM region
-                    dmem_rsp_payload_data_3 = videomemory_out_3;
+                    dmem_rsp_payload_data_3 = 0;
                 end
                 4'd4: begin  // Shared SRAM region
                     dmem_rsp_payload_data_3 = shared13_out_3;
@@ -460,7 +458,7 @@ module mpeg_video (
         if (dmem_cmd_valid_2_q && dmem_cmd_ready_2_q) begin
             case (dmem_cmd_payload_address_2_q[31:28])
                 4'd5: begin  // Video SRAM region
-                    dmem_rsp_payload_data_2 = videomemory_out_2;
+                    dmem_rsp_payload_data_2 = 0;
                 end
                 4'd4: begin  // Shared SRAM region
                     dmem_rsp_payload_data_2 = shared12_out_2;
@@ -650,6 +648,8 @@ module mpeg_video (
     end
 
     always_ff @(posedge clk60) begin
+        DDRAM_WE <= 0;
+
         imem_rsp_valid_2 <= 0;
         dmem_rsp_valid_2 <= 0;
         imem_rsp_valid_3 <= 0;
@@ -688,6 +688,27 @@ module mpeg_video (
 
             case (dmem_cmd_payload_address_2[31:28])
                 4'd5: begin  // Core 1 private memory
+                    //assert(dmem_cmd_payload_address_2[1:0] == 2'b00);
+
+                    if (dmem_cmd_payload_write_2) begin
+                        DDRAM_ADDR <= {dmem_cmd_payload_address_2[28:3], 3'b000};
+
+                        if (dmem_cmd_payload_address_2[2] == 1'b1) begin
+                            DDRAM_WE <= dmem_cmd_payload_mask_2[3];
+                            // verilog_format: off
+                            if (dmem_cmd_payload_mask_2[0]) DDRAM_DIN[39:32] <= dmem_cmd_payload_data_2[7:0];
+                            if (dmem_cmd_payload_mask_2[1]) DDRAM_DIN[47:40] <= dmem_cmd_payload_data_2[15:8];
+                            if (dmem_cmd_payload_mask_2[2]) DDRAM_DIN[55:48] <= dmem_cmd_payload_data_2[23:16];
+                            if (dmem_cmd_payload_mask_2[3]) DDRAM_DIN[63:56] <= dmem_cmd_payload_data_2[31:24];
+                        end else begin
+                            if (dmem_cmd_payload_mask_2[0]) DDRAM_DIN[7:0] <= dmem_cmd_payload_data_2[7:0];
+                            if (dmem_cmd_payload_mask_2[1]) DDRAM_DIN[15:8] <= dmem_cmd_payload_data_2[15:8];
+                            if (dmem_cmd_payload_mask_2[2]) DDRAM_DIN[23:16] <= dmem_cmd_payload_data_2[23:16];
+                            if (dmem_cmd_payload_mask_2[3]) DDRAM_DIN[31:24] <= dmem_cmd_payload_data_2[31:24];
+                        end
+                        // verilog_format: on
+                    end
+
                 end
                 4'd4: begin  // Shared SRAM region
                 end
@@ -864,71 +885,6 @@ module worker_firmware_memory #(
 endmodule : worker_firmware_memory
 
 
-// Quartus Prime SystemVerilog Template
-//
-// True Dual-Port RAM with different read/write addresses and single read/write clock
-// and with a control for writing single bytes into the memory word; byte enable
-
-// Read during write produces old data on ports A and B and old data on mixed ports
-// For device families that do not support this mode (e.g. Stratix V) the ram is not inferred
-
-module dual_port_videoram #(
-    parameter int BYTE_WIDTH = 8,
-    ADDRESS_WIDTH = 17,
-    BYTES = 4,
-    DATA_WIDTH_R = BYTE_WIDTH * BYTES
-) (
-    input [ADDRESS_WIDTH-1:0] addr1,
-    input [ADDRESS_WIDTH-1:0] addr2,
-    input [BYTES-1:0] be1,
-    input [BYTES-1:0] be2,
-    input [DATA_WIDTH_R-1:0] data_in1,
-    input [DATA_WIDTH_R-1:0] data_in2,
-    input we1,
-    we2,
-    clk,
-    output [DATA_WIDTH_R-1:0] data_out1,
-    output [DATA_WIDTH_R-1:0] data_out2
-);
-    localparam RAM_DEPTH = 500000 >> 2;
-
-    // model the RAM with two dimensional packed array
-    /* verilator lint_off MULTIDRIVEN */
-    logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1];
-    /* verilator lint_on MULTIDRIVEN */
-
-    reg [DATA_WIDTH_R-1:0] data_reg1;
-    reg [DATA_WIDTH_R-1:0] data_reg2;
-
-    // port A
-    always @(posedge clk) begin
-        if (we1) begin
-            // edit this code if using other than four bytes per word
-            if (be1[0]) ram[addr1][0] <= data_in1[7:0];
-            if (be1[1]) ram[addr1][1] <= data_in1[15:8];
-            if (be1[2]) ram[addr1][2] <= data_in1[23:16];
-            if (be1[3]) ram[addr1][3] <= data_in1[31:24];
-        end
-        data_reg1 <= ram[addr1];
-    end
-
-    assign data_out1 = data_reg1;
-
-    // port B
-    always @(posedge clk) begin
-        if (we2) begin
-            // edit this code if using other than four bytes per word
-            if (be2[0]) ram[addr2][0] <= data_in2[7:0];
-            if (be2[1]) ram[addr2][1] <= data_in2[15:8];
-            if (be2[2]) ram[addr2][2] <= data_in2[23:16];
-            if (be2[3]) ram[addr2][3] <= data_in2[31:24];
-        end
-        data_reg2 <= ram[addr2];
-    end
-
-    assign data_out2 = data_reg2;
-
-endmodule : dual_port_videoram
 
 
 // Quartus Prime SystemVerilog Template

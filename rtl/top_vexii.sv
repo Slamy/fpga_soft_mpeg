@@ -4,7 +4,29 @@ module top_vexii (
     input clk30,
     input clk60,
     input reset
+
 );
+
+    wire        DDRAM_CLK;
+    wire        DDRAM_BUSY;
+    wire [ 7:0] DDRAM_BURSTCNT;
+    wire [28:0] DDRAM_ADDR;
+    wire [63:0] DDRAM_DOUT;
+    wire        DDRAM_DOUT_READY;
+    wire        DDRAM_RD;
+    wire [63:0] DDRAM_DIN;
+    wire [ 7:0] DDRAM_BE;
+    wire        DDRAM_WE;
+
+    bit  [63:0] ddram            [500000/8]  /*verilator public_flat_rd*/;
+
+    always_ff @(posedge DDRAM_CLK) begin
+        if (DDRAM_WE) begin
+            assert (DDRAM_ADDR[2:0] == 0);
+            ddram[DDRAM_ADDR[18:3]] <= DDRAM_DIN;
+            //$display("Write at %x %x",DDRAM_ADDR, DDRAM_DIN);
+        end
+    end
 
     localparam SIZE = 494980;
     bit [31:0] mpeg_video_rom[SIZE];
@@ -21,7 +43,18 @@ module top_vexii (
         .dsp_enable(1'b1),
         .data_word,
         .data_strobe,
-        .fifo_full
+        .fifo_full,
+
+        .DDRAM_CLK,
+        .DDRAM_BUSY,
+        .DDRAM_BURSTCNT,
+        .DDRAM_ADDR,
+        .DDRAM_DOUT,
+        .DDRAM_DOUT_READY,
+        .DDRAM_RD,
+        .DDRAM_DIN,
+        .DDRAM_BE,
+        .DDRAM_WE
     );
 
     bit provide_lower_word = 0;
