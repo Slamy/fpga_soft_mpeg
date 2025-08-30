@@ -2601,9 +2601,6 @@ void plm_video_interpolate_macroblock(plm_video_t *self, plm_frame_t *s, int mot
 		DEST_INDEX += dest_scan; \
 	}} while(FALSE)
 
-#pragma GCC push_options
-#pragma GCC optimize ("unroll-loops")
-
 void macroblock_worker(uint8_t *s, uint8_t *d, int odd_h, int odd_v, int interpolate, int dw, int di, int si,int block_size)
 {
 	#define PLM_MB_CASE(INTERPOLATE, ODD_H, ODD_V, OP) \
@@ -2625,7 +2622,6 @@ void macroblock_worker(uint8_t *s, uint8_t *d, int odd_h, int odd_v, int interpo
 
 	#undef PLM_MB_CASE
 }
-#pragma GCC pop_options
 
 void plm_video_process_macroblock(
 	plm_video_t *self, uint8_t *s, uint8_t *d,
@@ -2664,10 +2660,6 @@ void plm_video_process_macroblock(
 }
 
 #if 1
-
-#pragma GCC push_options
-#pragma GCC optimize ("unroll-loops")
-
 static void write_pixels(int macroblock_intra, int n, int *s,
 	int di,uint8_t *d,int dw,int si)
 {
@@ -2694,8 +2686,6 @@ static void write_pixels(int macroblock_intra, int n, int *s,
 		}
 	}
 }
-
-#pragma GCC pop_options
 
 #endif
 
