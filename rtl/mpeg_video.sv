@@ -209,12 +209,12 @@ module mpeg_video (
     wire [31:0] shared12_out_1;
     dualport_shared_ram shared12 (
         .clk2(clk60),
-        .addr2(dmem_cmd_payload_address_2[18:2]),
+        .addr2(dmem_cmd_payload_address_2[12:2]),
         .data_out2(shared12_out_2),
         .be2(dmem_cmd_payload_mask_2),
         .we2(dmem_cmd_payload_address_2[31:28]==4 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
         .data_in2(dmem_cmd_payload_data_2),
-        .addr1(dmem_cmd_payload_address_1[18:2]),
+        .addr1(dmem_cmd_payload_address_1[12:2]),
         .clk1(clk30),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 1 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
@@ -226,12 +226,12 @@ module mpeg_video (
     wire [31:0] shared13_out_1;
     dualport_shared_ram shared13 (
         .clk2(clk60),
-        .addr2(dmem_cmd_payload_address_3[18:2]),
+        .addr2(dmem_cmd_payload_address_3[12:2]),
         .data_out2(shared13_out_3),
         .be2(dmem_cmd_payload_mask_3),
         .we2(dmem_cmd_payload_address_3[31:28]==4 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
         .data_in2(dmem_cmd_payload_data_3),
-        .addr1(dmem_cmd_payload_address_1[18:2]),
+        .addr1(dmem_cmd_payload_address_1[12:2]),
         .clk1(clk30),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 0 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
@@ -608,8 +608,8 @@ module mpeg_video (
 
         fifo_nearly_empty <= (fifo_water_level < (TICKS_PER_FRAME / 2));
 
-        // With 2 frames available, we start the playback
-        if (fifo_water_level >= (TICKS_PER_FRAME * 2)) draining_fifo <= 1;
+        // With 1 frames available, we start the playback
+        if (fifo_water_level >= TICKS_PER_FRAME) draining_fifo <= 1;
 
         if (dmem_cmd_payload_address_1 == 32'h10000000 && dmem_cmd_valid_1 && dmem_cmd_payload_write_1 && dmem_cmd_ready_1)
             $display(
@@ -691,7 +691,8 @@ module mpeg_video (
                     //assert(dmem_cmd_payload_address_2[1:0] == 2'b00);
 
                     if (dmem_cmd_payload_write_2) begin
-                        DDRAM_ADDR <= {dmem_cmd_payload_address_2[28:3], 3'b000};
+                        // 0011 like the N64 core to force a base of 0x30000000
+                        DDRAM_ADDR <= {4'b0011, dmem_cmd_payload_address_2[27:3]};
 
                         if (dmem_cmd_payload_address_2[2] == 1'b1) begin
                             DDRAM_WE <= dmem_cmd_payload_mask_2[3];
@@ -897,7 +898,7 @@ endmodule : worker_firmware_memory
 
 module dualport_shared_ram #(
     parameter int BYTE_WIDTH = 8,
-    ADDRESS_WIDTH = 17,
+    ADDRESS_WIDTH = 11,
     BYTES = 4,
     DATA_WIDTH_R = BYTE_WIDTH * BYTES
 ) (
@@ -914,11 +915,11 @@ module dualport_shared_ram #(
     output [DATA_WIDTH_R-1:0] data_out1,
     output [DATA_WIDTH_R-1:0] data_out2
 );
-    localparam RAM_DEPTH = 500000 >> 2;
+    localparam RAM_DEPTH = 8192 >> 2;
 
     // model the RAM with two dimensional packed array
     /* verilator lint_off MULTIDRIVEN */
-    logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1];
+    logic [BYTES-1:0][BYTE_WIDTH-1:0] ram[0:RAM_DEPTH-1]  /* synthesis ramstyle = "no_rw_check" */;
     /* verilator lint_on MULTIDRIVEN */
 
     reg [DATA_WIDTH_R-1:0] data_reg1;

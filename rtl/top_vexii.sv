@@ -22,8 +22,7 @@ module top_vexii (
 
     always_ff @(posedge DDRAM_CLK) begin
         if (DDRAM_WE) begin
-            assert (DDRAM_ADDR[2:0] == 0);
-            ddram[DDRAM_ADDR[18:3]] <= DDRAM_DIN;
+            ddram[DDRAM_ADDR[15:0]] <= DDRAM_DIN;
             //$display("Write at %x %x",DDRAM_ADDR, DDRAM_DIN);
         end
     end

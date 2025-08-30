@@ -41,7 +41,7 @@ int image_synthesis_buffer_index = 0;
 int image_synthesis_buffer_index2 = 0;
 static int worker_cnt;
 
-#define SHARED_BUFFER_ENTRIES 1000
+#define SHARED_BUFFER_ENTRIES 28
 
 struct image_synthesis_descriptor *get_next_synthesis_desc()
 {
@@ -63,9 +63,9 @@ struct image_synthesis_descriptor *get_next_synthesis_desc()
     }
 
     __asm volatile("" : : : "memory");
-    
-#if 0
-    while (retval->ready !=0)
+
+#if 1
+    while (retval->ready != 0)
         __asm volatile("" : : : "memory");
 #endif
 
