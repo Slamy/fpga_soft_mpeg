@@ -109,7 +109,7 @@ void main(void)
 			uint8_t *d = (uint8_t *)(((uint32_t)desc->cpm.d) + 0x50000000);
 			OUT_DEBUG = 34;
 
-			macroblock_worker(s, d, desc->cpm.odd_h, desc->cpm.odd_v, desc->cpm.interpolate, desc->cpm.dw, desc->cpm.di, desc->cpm.si, desc->cpm.block_size);
+			//macroblock_worker(s, d, desc->cpm.odd_h, desc->cpm.odd_v, desc->cpm.interpolate, desc->cpm.dw, desc->cpm.di, desc->cpm.si, desc->cpm.block_size);
 		}
 		else if (desc->ready == 3)
 		{
