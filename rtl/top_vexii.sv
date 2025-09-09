@@ -1,4 +1,6 @@
 `timescale 1 ns / 1 ps
+`include "util.svh"
+`include "bus.svh"
 
 module top_vexii (
     input clk30,
@@ -7,23 +9,49 @@ module top_vexii (
 
 );
 
-    wire        DDRAM_CLK;
-    wire        DDRAM_BUSY;
-    wire [ 7:0] DDRAM_BURSTCNT;
-    wire [28:0] DDRAM_ADDR;
-    wire [63:0] DDRAM_DOUT;
-    wire        DDRAM_DOUT_READY;
-    wire        DDRAM_RD;
-    wire [63:0] DDRAM_DIN;
-    wire [ 7:0] DDRAM_BE;
-    wire        DDRAM_WE;
+    // DDR3 simulation
+    bit [63:0] ddram[500000/8]  /*verilator public_flat_rd*/;
 
-    bit  [63:0] ddram            [500000/8]  /*verilator public_flat_rd*/;
+    int ddr_latencycnt;
+    bit [7:0] ddr_words_to_prove;
+    bit [28:0] ddr_addr;
+
+    wire DDRAM_CLK;
+    bit DDRAM_BUSY;  // every read and write request is only accepted in a cycle where busy is low
+    wire [7:0] DDRAM_BURSTCNT;  // amount of words to be written/read. Maximum is 128
+    wire [28:0] DDRAM_ADDR;         // starting address for read/write. In case of burst; the addresses will internally count up
+    bit [63:0] DDRAM_DOUT;  // data coming from (burst) read
+    bit         DDRAM_DOUT_READY;   // high for 1 clock cycle for every 64 bit dataword requested via (burst) read request
+    wire DDRAM_RD;  // request read at DDRAM_ADDR and DDRAM_BURSTCNT length
+    wire [63:0] DDRAM_DIN;  // data word to be written
+    wire  [7:0] DDRAM_BE;           // byte enable for each of the 8 bytes in DDRAM_DIN; only used for writing. (1=write; 0=ignore)
+    wire DDRAM_WE;  // request write at DDRAM_ADDR with DDRAM_DIN data and DDRAM_BE mask
 
     always_ff @(posedge DDRAM_CLK) begin
-        if (DDRAM_WE) begin
+        DDRAM_DOUT_READY <= 0;
+
+        if (DDRAM_WE && !DDRAM_BUSY) begin
             ddram[DDRAM_ADDR[15:0]] <= DDRAM_DIN;
             //$display("Write at %x %x",DDRAM_ADDR, DDRAM_DIN);
+        end
+
+        if (DDRAM_RD && !DDRAM_BUSY) begin
+            ddr_latencycnt <= 3;
+            ddr_words_to_prove <= DDRAM_BURSTCNT;
+            ddr_addr <= DDRAM_ADDR;
+            DDRAM_BUSY <= 1;
+        end
+
+        if (DDRAM_BUSY) begin
+            if (ddr_latencycnt > 0) ddr_latencycnt <= ddr_latencycnt - 1;
+            else begin
+                DDRAM_DOUT <= ddram[ddr_addr[15:0]];
+                ddr_addr <= ddr_addr + 1;
+                DDRAM_DOUT_READY <= 1;
+                ddr_words_to_prove <= ddr_words_to_prove - 1;
+                if (ddr_words_to_prove == 1) DDRAM_BUSY <= 0;
+            end
+
         end
     end
 
@@ -35,6 +63,20 @@ module top_vexii (
     bit data_strobe;
     wire fifo_full;
 
+    ddr_if ddr_host ();
+
+    assign DDRAM_CLK = clk60;
+    assign DDRAM_ADDR = ddr_host.addr;
+    assign DDRAM_BE = ddr_host.byteenable;
+    assign DDRAM_WE = ddr_host.write;
+    assign DDRAM_RD = ddr_host.read;
+    assign DDRAM_DIN = ddr_host.wdata;
+    assign DDRAM_BURSTCNT = ddr_host.burstcnt;
+    assign ddr_host.rdata = DDRAM_DOUT;
+    assign ddr_host.rdata_ready = DDRAM_DOUT_READY;
+    assign ddr_host.busy = DDRAM_BUSY;
+
+
     mpeg_video video (
         .clk30,
         .clk60,
@@ -43,17 +85,12 @@ module top_vexii (
         .data_word,
         .data_strobe,
         .fifo_full,
-
-        .DDRAM_CLK,
-        .DDRAM_BUSY,
-        .DDRAM_BURSTCNT,
-        .DDRAM_ADDR,
-        .DDRAM_DOUT,
-        .DDRAM_DOUT_READY,
-        .DDRAM_RD,
-        .DDRAM_DIN,
-        .DDRAM_BE,
-        .DDRAM_WE
+        .ddrif(ddr_host),
+        .hsync(),
+        .vsync(),
+        .hblank(),
+        .vblank(),
+        .vidout()
     );
 
     bit provide_lower_word = 0;

@@ -26,7 +26,7 @@
 #define PL_MPEG_IMPLEMENTATION
 #include "../sw/pl_mpeg_pc.h"
 
-//#define TRACE
+// #define TRACE
 
 volatile sig_atomic_t status = 0;
 

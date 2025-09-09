@@ -1,5 +1,6 @@
 `timescale 1 ns / 1 ps
 `include "util.svh"
+`include "bus.svh"
 
 function [31:0] ones_mask(bit [4:0] n);
     begin
@@ -17,22 +18,28 @@ module mpeg_video (
     input data_strobe,
     output fifo_full,
 
-    output            DDRAM_CLK,
-    input             DDRAM_BUSY,
-    output     [ 7:0] DDRAM_BURSTCNT,
-    output bit [28:0] DDRAM_ADDR,
-    input      [63:0] DDRAM_DOUT,
-    input             DDRAM_DOUT_READY,
-    output            DDRAM_RD,
-    output bit [63:0] DDRAM_DIN,
-    output     [ 7:0] DDRAM_BE,
-    output bit        DDRAM_WE
+    ddr_if.to_host ddrif,
+
+    output rgb888_s vidout,
+    input           hsync,
+    input           vsync,
+    input           hblank,
+    input           vblank
 );
 
-    assign DDRAM_CLK = clk60;
-    assign DDRAM_BE = 8'hff;
-    assign DDRAM_RD = 0;
-    assign DDRAM_BURSTCNT = 1;
+    ddr_if worker_ddr ();
+    ddr_if player_ddr ();
+
+    ddr_mux ddrmux (
+        .clk(clk60),
+        .x  (ddrif),
+        .a  (worker_ddr),
+        .b  (player_ddr)
+    );
+
+    assign worker_ddr.byteenable = 8'hff;
+    assign worker_ddr.read = 0;
+    assign worker_ddr.burstcnt = 1;
 
     bit [15:0] dct_coeff_result;
     bit dct_coeff_huffman_active = 0;
@@ -346,6 +353,17 @@ module mpeg_video (
         .clk(clk30),
         .reset(reset || !dsp_enable)
     );
+
+
+    flag_cross_domain cross_reset (
+        .clk_a(clk30),
+        .clk_b(clk60),
+        .flag_in_clk_a(reset_dsp_enabled),
+        .flag_out_clk_b(reset_dsp_enabled_clk60)
+    );
+    wire reset_dsp_enabled = reset || !dsp_enable;
+    wire reset_dsp_enabled_clk60;
+
     VexiiRiscv vexii2 (
         .PrivilegedPlugin_logic_rdtime(0),
         .PrivilegedPlugin_logic_harts_0_int_m_timer(0),
@@ -375,7 +393,7 @@ module mpeg_video (
         .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error_2),
         .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data_2),
         .clk(clk60),
-        .reset(reset || !dsp_enable)
+        .reset(reset_dsp_enabled_clk60)
     );
 
     VexiiRiscv vexii3 (
@@ -407,7 +425,7 @@ module mpeg_video (
         .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error_3),
         .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data_3),
         .clk(clk60),
-        .reset(reset || !dsp_enable)
+        .reset(reset_dsp_enabled_clk60)
     );
 
     /*verilator tracing_on*/
@@ -427,6 +445,10 @@ module mpeg_video (
     bit data_is_from_mpeg_buffer;
 
     always_comb begin
+        imem_cmd_ready_3 = 1;
+        imem_rsp_payload_word_3 = memory_out_i3;
+
+        dmem_cmd_ready_3 = 1;
         dmem_rsp_payload_data_3 = memory_out_d3;
 
         if (dmem_cmd_valid_3_q && dmem_cmd_ready_3_q) begin
@@ -453,7 +475,15 @@ module mpeg_video (
     end
 
     always_comb begin
+        imem_cmd_ready_2 = 1;
+        imem_rsp_payload_word_2 = memory_out_i2;
+
+        dmem_cmd_ready_2 = 1;
         dmem_rsp_payload_data_2 = memory_out_d2;
+
+        if (worker_ddr.acquire && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
+            dmem_cmd_ready_2 = 0;
+
 
         if (dmem_cmd_valid_2_q && dmem_cmd_ready_2_q) begin
             case (dmem_cmd_payload_address_2_q[31:28])
@@ -480,17 +510,12 @@ module mpeg_video (
     end
 
     always_comb begin
-        imem_cmd_ready_1 = 1;
-        dmem_cmd_ready_1 = hw_read_count == 0;
-        imem_cmd_ready_2 = 1;
-        dmem_cmd_ready_2 = 1;
-        imem_cmd_ready_3 = 1;
-        dmem_cmd_ready_3 = 1;
         data_is_from_mpeg_buffer = 0;
-        imem_rsp_payload_word_1 = memory_out_i1;
-        imem_rsp_payload_word_2 = memory_out_i2;
-        imem_rsp_payload_word_3 = memory_out_i3;
 
+        imem_cmd_ready_1 = 1;
+        imem_rsp_payload_word_1 = memory_out_i1;
+
+        dmem_cmd_ready_1 = hw_read_count == 0;
         dmem_rsp_payload_data_1 = reverse_endian_32(mpeg_in_fifo_out);
 
         if (dmem_cmd_valid_1_q && dmem_cmd_ready_1_q) begin
@@ -647,8 +672,15 @@ module mpeg_video (
         end
     end
 
+    // 0011 like the N64 core to force a base of 0x30000000
+    localparam bit [3:0] DDR_CORE_BASE = 4'b0011;
+
     always_ff @(posedge clk60) begin
-        DDRAM_WE <= 0;
+
+        if (!worker_ddr.busy) begin
+            worker_ddr.write   <= 0;
+            worker_ddr.acquire <= 0;
+        end
 
         imem_rsp_valid_2 <= 0;
         dmem_rsp_valid_2 <= 0;
@@ -691,21 +723,23 @@ module mpeg_video (
                     //assert(dmem_cmd_payload_address_2[1:0] == 2'b00);
 
                     if (dmem_cmd_payload_write_2) begin
-                        // 0011 like the N64 core to force a base of 0x30000000
-                        DDRAM_ADDR <= {4'b0011, dmem_cmd_payload_address_2[27:3]};
+                        assert (worker_ddr.write == 0);
+
+                        worker_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
 
                         if (dmem_cmd_payload_address_2[2] == 1'b1) begin
-                            DDRAM_WE <= dmem_cmd_payload_mask_2[3];
+                            worker_ddr.write   <= dmem_cmd_payload_mask_2[3];
+                            worker_ddr.acquire <= 1;
                             // verilog_format: off
-                            if (dmem_cmd_payload_mask_2[0]) DDRAM_DIN[39:32] <= dmem_cmd_payload_data_2[7:0];
-                            if (dmem_cmd_payload_mask_2[1]) DDRAM_DIN[47:40] <= dmem_cmd_payload_data_2[15:8];
-                            if (dmem_cmd_payload_mask_2[2]) DDRAM_DIN[55:48] <= dmem_cmd_payload_data_2[23:16];
-                            if (dmem_cmd_payload_mask_2[3]) DDRAM_DIN[63:56] <= dmem_cmd_payload_data_2[31:24];
+                            if (dmem_cmd_payload_mask_2[0]) worker_ddr.wdata[39:32] <= dmem_cmd_payload_data_2[7:0];
+                            if (dmem_cmd_payload_mask_2[1]) worker_ddr.wdata[47:40] <= dmem_cmd_payload_data_2[15:8];
+                            if (dmem_cmd_payload_mask_2[2]) worker_ddr.wdata[55:48] <= dmem_cmd_payload_data_2[23:16];
+                            if (dmem_cmd_payload_mask_2[3]) worker_ddr.wdata[63:56] <= dmem_cmd_payload_data_2[31:24];
                         end else begin
-                            if (dmem_cmd_payload_mask_2[0]) DDRAM_DIN[7:0] <= dmem_cmd_payload_data_2[7:0];
-                            if (dmem_cmd_payload_mask_2[1]) DDRAM_DIN[15:8] <= dmem_cmd_payload_data_2[15:8];
-                            if (dmem_cmd_payload_mask_2[2]) DDRAM_DIN[23:16] <= dmem_cmd_payload_data_2[23:16];
-                            if (dmem_cmd_payload_mask_2[3]) DDRAM_DIN[31:24] <= dmem_cmd_payload_data_2[31:24];
+                            if (dmem_cmd_payload_mask_2[0]) worker_ddr.wdata[7:0] <= dmem_cmd_payload_data_2[7:0];
+                            if (dmem_cmd_payload_mask_2[1]) worker_ddr.wdata[15:8] <= dmem_cmd_payload_data_2[15:8];
+                            if (dmem_cmd_payload_mask_2[2]) worker_ddr.wdata[23:16] <= dmem_cmd_payload_data_2[23:16];
+                            if (dmem_cmd_payload_mask_2[3]) worker_ddr.wdata[31:24] <= dmem_cmd_payload_data_2[31:24];
                         end
                         // verilog_format: on
                     end
