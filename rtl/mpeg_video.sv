@@ -483,7 +483,7 @@ module mpeg_video (
         imem_rsp_payload_word_2 = memory_out_i2;
 
         dmem_cmd_ready_2 = 1;
-        dmem_rsp_payload_data_2 = 3;
+        dmem_rsp_payload_data_2 = memory_out_d2;
 
         // Stall on DDR write until resolved
         if (worker_ddr.acquire && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
@@ -498,8 +498,6 @@ module mpeg_video (
             dmem_cmd_ready_2 = 0;
 
         cache_miss = (dmem_cmd_payload_address_2[27:3] < cache_adr) || (dmem_cmd_payload_address_2[27:3] > cache_adr + 1);
-
-        //if (!worker_ddr.read && dmem_cmd_payload_address_2[31:28] == 4'd5 && !dmem_cmd_payload_write_2 && dmem_cmd_valid_2) dmem_cmd_ready_2 = 0;
 
         if (dmem_cmd_valid_2_q) begin
             case (dmem_cmd_payload_address_2_q[31:28])
@@ -736,15 +734,15 @@ module mpeg_video (
         if (dmem_cmd_payload_address_2 == 32'h1000000c && dmem_cmd_payload_write_2 && dmem_cmd_valid_2 && dmem_cmd_ready_2) begin
             $display("Core 2 stopped at %x with code %x", imem_cmd_payload_address_2,
                      dmem_cmd_payload_data_2);
-            //$finish();
+            $finish();
         end
-        /*
-        if (dmem_cmd_payload_address_3 == 32'h1000000c && dmem_cmd_payload_write_3 && dmem_cmd_valid_3) begin
+        
+        if (dmem_cmd_payload_address_3 == 32'h1000000c && dmem_cmd_payload_write_3 && dmem_cmd_valid_3 && dmem_cmd_ready_3) begin
             $display("Core 3 stopped at %x with code %x", imem_cmd_payload_address_3,
                      dmem_cmd_payload_data_3);
             $finish();
         end
-        */
+        
 
         if (dmem_cmd_payload_address_2 == 32'h10000030 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2)
             soft_state2 <= dmem_cmd_payload_data_2;
@@ -766,7 +764,7 @@ module mpeg_video (
 
                         if (dmem_cmd_payload_address_2[2] == 1'b1) begin
                             worker_ddr.write <= dmem_cmd_payload_mask_2[3];
-                            worker_ddr.acquire <= 1;
+                            worker_ddr.acquire <= dmem_cmd_payload_mask_2[3];
                             worker_ddr.burstcnt <= 1;
                             // verilog_format: off
                             if (dmem_cmd_payload_mask_2[0]) worker_ddr.wdata[39:32] <= dmem_cmd_payload_data_2[7:0];

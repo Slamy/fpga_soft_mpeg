@@ -64,18 +64,6 @@ void stop_verilator()
 
 void main(void)
 {
-  *((volatile uint32_t *)0x50000000) = 0x12345678;
-  *((volatile uint32_t *)0x50000004) = 0x9abcdef0;
-  *((volatile uint32_t *)0x50000008) = 0xab332211;
-  *((volatile uint32_t *)0x5000000c) = 0x82939283;
-  
-  *((volatile uint32_t *)OUTPORT_END) = *((volatile uint32_t *)0x50000000);
-  *((volatile uint32_t *)OUTPORT_END) = *((volatile uint32_t *)0x50000004);
-  *((volatile uint32_t *)OUTPORT_END) = *((volatile uint32_t *)0x50000008);
-  *((volatile uint32_t *)OUTPORT_END) = *((volatile uint32_t *)0x5000000c);
-
-  for (;;)
-    ;
 #if 0
 	static uint32_t testword;
 	switch (OUT_DEBUG)

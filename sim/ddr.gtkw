@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.125 (w)1999-2025 BSI
-[*] Tue Sep  9 23:00:21 2025
+[*] Tue Sep  9 23:10:31 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Tue Sep  9 22:58:53 2025"
-[dumpfile_size] 2575150
+[dumpfile_mtime] "Tue Sep  9 23:10:27 2025"
+[dumpfile_size] 44879360
 [savefile] "/home/andre/GIT/HybridMPEG/sim/ddr.gtkw"
-[timestart] 255
+[timestart] 33848
 [size] 1920 1152
 [pos] -1 -1
-*-2.985806 266 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-3.170539 33870 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top_vexii.
 [treeopen] TOP.top_vexii.video.
@@ -80,6 +80,7 @@ TOP.top_vexii.video.data_burst_cnt[1:0]
 TOP.top_vexii.video.cache_2[1][63:0]
 TOP.top_vexii.video.cache_2[0][63:0]
 @29
+>1
 TOP.top_vexii.video.cache_miss
 [pattern_trace] 1
 [pattern_trace] 0
