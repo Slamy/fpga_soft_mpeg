@@ -38,8 +38,6 @@ module mpeg_video (
     );
 
     assign worker_ddr.byteenable = 8'hff;
-    assign worker_ddr.read = 0;
-    assign worker_ddr.burstcnt = 1;
 
     bit [15:0] dct_coeff_result;
     bit dct_coeff_huffman_active = 0;
@@ -474,6 +472,12 @@ module mpeg_video (
         end
     end
 
+    bit cache_miss=1;
+    bit [63:0] cache_2[2];
+
+    bit [1:0] data_burst_cnt;
+    bit [27-3:0] cache_adr;
+
     always_comb begin
         imem_cmd_ready_2 = 1;
         imem_rsp_payload_word_2 = memory_out_i2;
@@ -481,14 +485,18 @@ module mpeg_video (
         dmem_cmd_ready_2 = 1;
         dmem_rsp_payload_data_2 = memory_out_d2;
 
-        if (worker_ddr.acquire && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
+        // Stall on write until resolved
+        if (worker_ddr.acquire && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
             dmem_cmd_ready_2 = 0;
 
+        if (worker_ddr.acquire && dmem_cmd_valid_2 && !dmem_cmd_payload_write_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
+            dmem_cmd_ready_2 = 0;
 
         if (dmem_cmd_valid_2_q && dmem_cmd_ready_2_q) begin
             case (dmem_cmd_payload_address_2_q[31:28])
                 4'd5: begin  // Video SRAM region
-                    dmem_rsp_payload_data_2 = 0;
+                
+                    dmem_rsp_payload_data_2 = dmem_cmd_payload_address_2_q[2] ? cache_2[1'(dmem_cmd_payload_address_2_q[27:3]-cache_adr)][63:32]: cache_2[1'(dmem_cmd_payload_address_2_q[27:3]-cache_adr)][31:0];
                 end
                 4'd4: begin  // Shared SRAM region
                     dmem_rsp_payload_data_2 = shared12_out_2;
@@ -677,9 +685,20 @@ module mpeg_video (
 
     always_ff @(posedge clk60) begin
 
-        if (!worker_ddr.busy) begin
+        if (!worker_ddr.busy && worker_ddr.write) begin
             worker_ddr.write   <= 0;
             worker_ddr.acquire <= 0;
+        end
+
+        if (worker_ddr.read && worker_ddr.rdata_ready) begin
+            if (worker_ddr.rdata_ready) begin
+                data_burst_cnt <= data_burst_cnt + 1;
+                cache_2[data_burst_cnt[0]] <= worker_ddr.rdata;
+            end
+            if (data_burst_cnt == 1) begin
+                worker_ddr.read <= 0;
+                worker_ddr.acquire <= 0;
+            end
         end
 
         imem_rsp_valid_2 <= 0;
@@ -724,12 +743,12 @@ module mpeg_video (
 
                     if (dmem_cmd_payload_write_2) begin
                         assert (worker_ddr.write == 0);
-
                         worker_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
 
                         if (dmem_cmd_payload_address_2[2] == 1'b1) begin
-                            worker_ddr.write   <= dmem_cmd_payload_mask_2[3];
+                            worker_ddr.write <= dmem_cmd_payload_mask_2[3];
                             worker_ddr.acquire <= 1;
+                            worker_ddr.burstcnt <= 1;
                             // verilog_format: off
                             if (dmem_cmd_payload_mask_2[0]) worker_ddr.wdata[39:32] <= dmem_cmd_payload_data_2[7:0];
                             if (dmem_cmd_payload_mask_2[1]) worker_ddr.wdata[47:40] <= dmem_cmd_payload_data_2[15:8];
@@ -742,6 +761,13 @@ module mpeg_video (
                             if (dmem_cmd_payload_mask_2[3]) worker_ddr.wdata[31:24] <= dmem_cmd_payload_data_2[31:24];
                         end
                         // verilog_format: on
+                    end else if (cache_miss) begin
+                        worker_ddr.read <= 1;
+                        worker_ddr.acquire <= 1;
+                        worker_ddr.burstcnt <= 2;
+                        data_burst_cnt <= 0;
+                        worker_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
+                        cache_adr <= dmem_cmd_payload_address_2[27:3];
                     end
 
                 end
