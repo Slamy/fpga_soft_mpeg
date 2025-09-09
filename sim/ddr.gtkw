@@ -1,22 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.125 (w)1999-2025 BSI
-[*] Tue Sep  9 19:58:17 2025
+[*] Tue Sep  9 23:00:21 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Tue Sep  9 19:15:25 2025"
-[dumpfile_size] 12084
+[dumpfile_mtime] "Tue Sep  9 22:58:53 2025"
+[dumpfile_size] 2575150
 [savefile] "/home/andre/GIT/HybridMPEG/sim/ddr.gtkw"
-[timestart] 495
-[size] 1920 988
+[timestart] 255
+[size] 1920 1152
 [pos] -1 -1
-*-2.815950 517 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-2.985806 266 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top_vexii.
 [treeopen] TOP.top_vexii.video.
 [sst_width] 416
 [signals_width] 429
 [sst_expanded] 1
-[sst_vpaned_height] 291
+[sst_vpaned_height] 348
 @22
 TOP.top_vexii.DDRAM_ADDR[28:0]
 TOP.top_vexii.DDRAM_BE[7:0]
@@ -31,18 +31,30 @@ TOP.top_vexii.DDRAM_DOUT[63:0]
 TOP.top_vexii.DDRAM_DOUT_READY
 TOP.top_vexii.DDRAM_RD
 TOP.top_vexii.DDRAM_WE
+@20000
+-
 @22
 TOP.top_vexii.video.dmem_cmd_payload_address_2[31:0]
 TOP.top_vexii.video.dmem_cmd_payload_address_2_q[31:0]
 @28
+TOP.top_vexii.video.dmem_cmd_payload_id_2[0]
+@22
+TOP.top_vexii.video.dmem_cmd_payload_data_2[31:0]
+@28
 TOP.top_vexii.video.dmem_cmd_payload_write_2
 TOP.top_vexii.video.dmem_cmd_payload_write_2_q
-@29
 TOP.top_vexii.video.dmem_cmd_ready_2
-@28
 TOP.top_vexii.video.dmem_cmd_ready_2_q
+@22
+TOP.top_vexii.video.dmem_rsp_payload_data_2[31:0]
+@28
+TOP.top_vexii.video.dmem_rsp_payload_id_2[0]
+TOP.top_vexii.video.dmem_rsp_valid_2
 TOP.top_vexii.video.dmem_cmd_valid_2
 TOP.top_vexii.video.dmem_cmd_valid_2_q
+@20000
+-
+@28
 TOP.top_vexii.video.clk60
 @20000
 -
@@ -63,5 +75,11 @@ TOP.top_vexii.video.ddrif.read
 TOP.top_vexii.video.ddrif.wdata[63:0]
 @28
 TOP.top_vexii.video.ddrif.write
+TOP.top_vexii.video.data_burst_cnt[1:0]
+@22
+TOP.top_vexii.video.cache_2[1][63:0]
+TOP.top_vexii.video.cache_2[0][63:0]
+@29
+TOP.top_vexii.video.cache_miss
 [pattern_trace] 1
 [pattern_trace] 0
