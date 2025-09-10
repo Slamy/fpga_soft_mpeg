@@ -135,6 +135,8 @@ void main(void)
 			OUT_DEBUG = 27;
 
 			sync_to_worker();
+			worker_cnt++;
+			sync_to_worker();
 
 			OUT_DEBUG = 28;
 
