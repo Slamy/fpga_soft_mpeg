@@ -74,14 +74,22 @@ module ddr_mux3 (
     assign x.acquire = a.acquire | b.acquire | c.acquire;
 
     always_ff @(posedge clk) begin
-        a_active <= 0;
-        b_active <= 0;
-        c_active <= 0;
 
-        if (a.acquire && !b_active && !c_active) a_active <= 1;
-        else if (b.acquire && !a_active && !c_active) b_active <= 1;
-        else if (c.acquire && !a_active && !b_active) c_active <= 1;
-
+        if (a.acquire && !b.acquire && !c.acquire) begin
+            a_active <= 1;
+            b_active <= 0;
+            c_active <= 0;
+        end
+        if (b.acquire && !a.acquire && !c.acquire) begin
+            a_active <= 0;
+            b_active <= 1;
+            c_active <= 0;
+        end
+        if (c.acquire && !a.acquire && !b.acquire) begin
+            a_active <= 0;
+            b_active <= 0;
+            c_active <= 1;
+        end
     end
 
 endmodule

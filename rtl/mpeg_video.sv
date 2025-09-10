@@ -185,12 +185,12 @@ module mpeg_video (
     wire [31:0] memory_out_d2;
     worker_firmware_memory core2mem (
         .clk(clk60),
-        .addr2(imem_cmd_payload_address_2[13:2]),
+        .addr2(imem_cmd_payload_address_2[12:2]),
         .data_out2(memory_out_i2),
         .be2(0),
         .we2(0),
         .data_in2(0),
-        .addr1(dmem_cmd_payload_address_2[13:2]),
+        .addr1(dmem_cmd_payload_address_2[12:2]),
         .data_in1(dmem_cmd_payload_data_2),
         .we1(dmem_cmd_payload_address_2[31:28]==0 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
         .be1(dmem_cmd_payload_mask_2),
@@ -201,12 +201,12 @@ module mpeg_video (
     wire [31:0] memory_out_d3;
     worker_firmware_memory core3mem (
         .clk(clk60),
-        .addr2(imem_cmd_payload_address_3[13:2]),
+        .addr2(imem_cmd_payload_address_3[12:2]),
         .data_out2(memory_out_i3),
         .be2(0),
         .we2(0),
         .data_in2(0),
-        .addr1(dmem_cmd_payload_address_3[13:2]),
+        .addr1(dmem_cmd_payload_address_3[12:2]),
         .data_in1(dmem_cmd_payload_data_3),
         .we1(dmem_cmd_payload_address_3[31:28]==0 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
         .be1(dmem_cmd_payload_mask_3),
@@ -916,11 +916,19 @@ module mpeg_video (
 
             endcase
         end
-
-
-
     end
 
+    frameplayer frameplayer (
+        .clk(clk30),
+        .clkddr(clk60),
+        .reset,
+        .ddrif(player_ddr),
+        .vidout,
+        .hsync,
+        .vsync,
+        .hblank,
+        .vblank
+    );
 endmodule
 
 integer i;
@@ -1002,7 +1010,7 @@ endmodule : decoder_firmware_memory
 
 module worker_firmware_memory #(
     parameter int BYTE_WIDTH = 8,
-    ADDRESS_WIDTH = 12,
+    ADDRESS_WIDTH = 11,
     BYTES = 4,
     DATA_WIDTH_R = BYTE_WIDTH * BYTES
 ) (
