@@ -11,8 +11,9 @@ module ddr_mux3 (
     ddr_if.from_host c
 );
 
-    reg a_active = 0;
-    reg b_active = 0;
+    bit a_active = 0;
+    bit b_active = 0;
+    bit c_active = 0;
 
     always_comb begin
         a.rdata = x.rdata;
@@ -75,8 +76,12 @@ module ddr_mux3 (
     always_ff @(posedge clk) begin
         a_active <= 0;
         b_active <= 0;
-        if (a.acquire) a_active <= 1;
-        if (b.acquire) b_active <= 1;
+        c_active <= 0;
+
+        if (a.acquire && !b_active && !c_active) a_active <= 1;
+        else if (b.acquire && !a_active && !c_active) b_active <= 1;
+        else if (c.acquire && !a_active && !b_active) c_active <= 1;
+
     end
 
 endmodule
