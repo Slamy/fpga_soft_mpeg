@@ -1,22 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.125 (w)1999-2025 BSI
-[*] Wed Sep 10 12:20:13 2025
+[*] Wed Sep 10 13:18:29 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Wed Sep 10 12:20:13 2025"
-[dumpfile_size] 285219320
+[dumpfile_mtime] "Wed Sep 10 13:04:42 2025"
+[dumpfile_size] 1452765776
 [savefile] "/home/andre/GIT/HybridMPEG/sim/ddr.gtkw"
-[timestart] 57028
-[size] 1920 1152
-[pos] -1 -1
-*-6.986638 57535 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[timestart] 40466075
+[size] 2560 1348
+[pos] 1919 -121
+*-10.320538 40469628 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top_vexii.
 [treeopen] TOP.top_vexii.video.
 [sst_width] 416
 [signals_width] 429
 [sst_expanded] 1
-[sst_vpaned_height] 348
+[sst_vpaned_height] 416
 @28
 TOP.top_vexii.video.ddrmux.a.acquire
 @22
@@ -54,8 +54,10 @@ TOP.top_vexii.video.ddrmux.b.wdata[63:0]
 @28
 TOP.top_vexii.video.ddrmux.b.write
 @20000
+>196
 -
 @28
+>0
 TOP.top_vexii.video.ddrmux.c.acquire
 @22
 TOP.top_vexii.video.ddrmux.c.addr[28:0]
@@ -85,11 +87,18 @@ TOP.top_vexii.video.worker_3_ddr.acquire
 TOP.top_vexii.video.worker_3_ddr.read
 TOP.top_vexii.video.worker_3_ddr.write
 TOP.top_vexii.video.worker_3_ddr.busy
-@29
 TOP.top_vexii.video.worker_3_ddr.rdata_ready
-@28
 TOP.top_vexii.video.ddrmux.a_active
 TOP.top_vexii.video.ddrmux.b_active
+@29
 TOP.top_vexii.video.ddrmux.c_active
+@22
+TOP.top_vexii.video.soft_state1[31:0]
+TOP.top_vexii.video.soft_state2[31:0]
+TOP.top_vexii.video.soft_state3[31:0]
+@28
+TOP.top_vexii.video.expose_frame
+TOP.top_vexii.video.cache_miss_2
+TOP.top_vexii.video.cache_miss_3
 [pattern_trace] 1
 [pattern_trace] 0

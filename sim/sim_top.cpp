@@ -140,7 +140,7 @@ public:
         dut.reset = 0;
     }
 
-    #if 0
+    #if 1
     void clock()
     {
         for (int i = 0; i < 6; i++)

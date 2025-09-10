@@ -52,7 +52,7 @@ module ddr_mux3 (
             c.rdata_ready = 0;
             a.busy = 1;
             a.rdata_ready = 0;
-        end else begin  // c is active
+        end else if (c_active) begin
             x.addr = c.addr;
             x.wdata = c.wdata;
             x.read = c.read;
@@ -68,26 +68,41 @@ module ddr_mux3 (
             a.rdata_ready = 0;
             b.busy = 1;
             b.rdata_ready = 0;
+        end else begin
+            a.busy = 1;
+            a.rdata_ready = 0;
+            b.busy = 1;
+            b.rdata_ready = 0;
+            c.busy = 1;
+            c.rdata_ready = 0;
+
+            x.addr = b.addr;
+            x.wdata = b.wdata;
+            x.read = 0;
+            x.write = 0;
+            x.burstcnt = 0;
+            x.byteenable = 0;
         end
     end
 
     assign x.acquire = a.acquire | b.acquire | c.acquire;
 
     always_ff @(posedge clk) begin
+        a_active <= 0;
+        b_active <= 0;
+        c_active <= 0;
 
-        if (a.acquire && !b.acquire && !c.acquire) begin
+        if (a_active && a.acquire) begin
             a_active <= 1;
-            b_active <= 0;
-            c_active <= 0;
-        end
-        if (b.acquire && !a.acquire && !c.acquire) begin
-            a_active <= 0;
+        end else if (b_active && b.acquire) begin
             b_active <= 1;
-            c_active <= 0;
-        end
-        if (c.acquire && !a.acquire && !b.acquire) begin
-            a_active <= 0;
-            b_active <= 0;
+        end else if (c_active && c.acquire) begin
+            c_active <= 1;
+        end else if (a.acquire) begin
+            a_active <= 1;
+        end else if (b.acquire) begin
+            b_active <= 1;
+        end else if (c.acquire) begin
             c_active <= 1;
         end
     end
