@@ -27,17 +27,20 @@ module mpeg_video (
     input           vblank
 );
 
-    ddr_if worker_ddr ();
+    ddr_if worker2_ddr ();
+    ddr_if worker3_ddr ();
     ddr_if player_ddr ();
 
-    ddr_mux ddrmux (
+    ddr_mux3 ddrmux (
         .clk(clk60),
         .x  (ddrif),
-        .a  (worker_ddr),
-        .b  (player_ddr)
+        .a  (worker2_ddr),
+        .b  (worker3_ddr),
+        .c  (player_ddr)
     );
 
-    assign worker_ddr.byteenable = 8'hff;
+    assign worker2_ddr.byteenable = 8'hff;
+    assign worker3_ddr.byteenable = 8'hff;
 
     bit [15:0] dct_coeff_result;
     bit dct_coeff_huffman_active = 0;
@@ -485,15 +488,15 @@ module mpeg_video (
         dmem_rsp_payload_data_2 = memory_out_d2;
 
         // Stall on DDR write until resolved
-        if (worker_ddr.acquire && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
+        if (worker2_ddr.acquire && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
             dmem_cmd_ready_2 = 0;
 
         // Stall on DDR read until resolved
-        if (dmem_cmd_payload_address_2_q[31:28] == 4'd5 && !dmem_cmd_payload_write_2_q && dmem_cmd_valid_2_q && worker_ddr.acquire)
+        if (dmem_cmd_payload_address_2_q[31:28] == 4'd5 && !dmem_cmd_payload_write_2_q && dmem_cmd_valid_2_q && worker2_ddr.acquire)
             dmem_cmd_ready_2 = 0;
 
         // Handle read directly after write to avoid read and write at the same time
-        if (dmem_cmd_payload_address_2[31:28] == 4'd5 && !dmem_cmd_payload_write_2 && dmem_cmd_valid_2 && worker_ddr.acquire)
+        if (dmem_cmd_payload_address_2[31:28] == 4'd5 && !dmem_cmd_payload_write_2 && dmem_cmd_valid_2 && worker2_ddr.acquire)
             dmem_cmd_ready_2 = 0;
 
         cache_miss_2 = (dmem_cmd_payload_address_2[27:3] < cache_adr_2) || (dmem_cmd_payload_address_2[27:3] > cache_adr_2 + 1);
@@ -713,23 +716,23 @@ module mpeg_video (
         dmem_rsp_valid_2 <= 0;
         dmem_rsp_valid_3 <= 0;
 
-        if (!worker_ddr.busy && worker_ddr.write) begin
-            worker_ddr.write   <= 0;
-            worker_ddr.acquire <= 0;
+        if (!worker2_ddr.busy && worker2_ddr.write) begin
+            worker2_ddr.write   <= 0;
+            worker2_ddr.acquire <= 0;
         end
 
-        if (!worker_ddr.busy && worker_ddr.read) begin
-            worker_ddr.read <= 0;
+        if (!worker2_ddr.busy && worker2_ddr.read) begin
+            worker2_ddr.read <= 0;
         end
 
-        if (data_burst_cnt_2 != 2 && worker_ddr.rdata_ready) begin
-            if (worker_ddr.rdata_ready) begin
+        if (data_burst_cnt_2 != 2 && worker2_ddr.rdata_ready) begin
+            if (worker2_ddr.rdata_ready) begin
                 data_burst_cnt_2 <= data_burst_cnt_2 + 1;
-                cache_2[data_burst_cnt_2[0]] <= worker_ddr.rdata;
+                cache_2[data_burst_cnt_2[0]] <= worker2_ddr.rdata;
             end
             if (data_burst_cnt_2 == 1) begin
-                worker_ddr.read <= 0;
-                worker_ddr.acquire <= 0;
+                worker2_ddr.read <= 0;
+                worker2_ddr.acquire <= 0;
                 dmem_rsp_valid_2 <= 1;
             end
         end
@@ -776,32 +779,32 @@ module mpeg_video (
                     //assert(dmem_cmd_payload_address_2[1:0] == 2'b00);
 
                     if (dmem_cmd_payload_write_2) begin
-                        assert (worker_ddr.write == 0);
-                        worker_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
+                        assert (worker2_ddr.write == 0);
+                        worker2_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
 
                         if (dmem_cmd_payload_address_2[2] == 1'b1) begin
-                            worker_ddr.write <= dmem_cmd_payload_mask_2[3];
-                            worker_ddr.acquire <= dmem_cmd_payload_mask_2[3];
-                            worker_ddr.burstcnt <= 1;
+                            worker2_ddr.write <= dmem_cmd_payload_mask_2[3];
+                            worker2_ddr.acquire <= dmem_cmd_payload_mask_2[3];
+                            worker2_ddr.burstcnt <= 1;
                             // verilog_format: off
-                            if (dmem_cmd_payload_mask_2[0]) worker_ddr.wdata[39:32] <= dmem_cmd_payload_data_2[7:0];
-                            if (dmem_cmd_payload_mask_2[1]) worker_ddr.wdata[47:40] <= dmem_cmd_payload_data_2[15:8];
-                            if (dmem_cmd_payload_mask_2[2]) worker_ddr.wdata[55:48] <= dmem_cmd_payload_data_2[23:16];
-                            if (dmem_cmd_payload_mask_2[3]) worker_ddr.wdata[63:56] <= dmem_cmd_payload_data_2[31:24];
+                            if (dmem_cmd_payload_mask_2[0]) worker2_ddr.wdata[39:32] <= dmem_cmd_payload_data_2[7:0];
+                            if (dmem_cmd_payload_mask_2[1]) worker2_ddr.wdata[47:40] <= dmem_cmd_payload_data_2[15:8];
+                            if (dmem_cmd_payload_mask_2[2]) worker2_ddr.wdata[55:48] <= dmem_cmd_payload_data_2[23:16];
+                            if (dmem_cmd_payload_mask_2[3]) worker2_ddr.wdata[63:56] <= dmem_cmd_payload_data_2[31:24];
                         end else begin
-                            if (dmem_cmd_payload_mask_2[0]) worker_ddr.wdata[7:0] <= dmem_cmd_payload_data_2[7:0];
-                            if (dmem_cmd_payload_mask_2[1]) worker_ddr.wdata[15:8] <= dmem_cmd_payload_data_2[15:8];
-                            if (dmem_cmd_payload_mask_2[2]) worker_ddr.wdata[23:16] <= dmem_cmd_payload_data_2[23:16];
-                            if (dmem_cmd_payload_mask_2[3]) worker_ddr.wdata[31:24] <= dmem_cmd_payload_data_2[31:24];
+                            if (dmem_cmd_payload_mask_2[0]) worker2_ddr.wdata[7:0] <= dmem_cmd_payload_data_2[7:0];
+                            if (dmem_cmd_payload_mask_2[1]) worker2_ddr.wdata[15:8] <= dmem_cmd_payload_data_2[15:8];
+                            if (dmem_cmd_payload_mask_2[2]) worker2_ddr.wdata[23:16] <= dmem_cmd_payload_data_2[23:16];
+                            if (dmem_cmd_payload_mask_2[3]) worker2_ddr.wdata[31:24] <= dmem_cmd_payload_data_2[31:24];
                         end
                         // verilog_format: on
                     end else if (cache_miss_2) begin
-                        worker_ddr.read <= 1;
-                        worker_ddr.acquire <= 1;
-                        worker_ddr.burstcnt <= 2;
+                        worker2_ddr.read <= 1;
+                        worker2_ddr.acquire <= 1;
+                        worker2_ddr.burstcnt <= 2;
                         data_burst_cnt_2 <= 0;
                         dmem_rsp_valid_2 <= 0;
-                        worker_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
+                        worker2_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
                         cache_adr_2 <= dmem_cmd_payload_address_2[27:3];
                     end
 
