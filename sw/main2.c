@@ -115,6 +115,11 @@ void main(void)
     else if (desc->ready == 3)
     {
       // Do nothing. Just for syncing CPUs
+
+      // force cache invalidation by reading some areas
+      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000000);
+      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000010);
+      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000020);
     }
 
     __asm volatile("" : : : "memory");

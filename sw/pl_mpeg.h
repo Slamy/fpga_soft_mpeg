@@ -2563,7 +2563,7 @@ void plm_video_predict_macroblock(plm_video_t *self) {
 			plm_video_copy_macroblock(self, &self->frame_forward, fw_h, fw_v);
 			if (self->motion_backward.is_set) {
 				OUT_DEBUG = 24;
-				plm_video_interpolate_macroblock(self, &self->frame_backward, bw_h, bw_v);
+				//plm_video_interpolate_macroblock(self, &self->frame_backward, bw_h, bw_v);
 			}
 		}
 		else {

@@ -140,7 +140,7 @@ public:
         dut.reset = 0;
     }
 
-    #if 1
+#if 1
     void clock()
     {
         for (int i = 0; i < 6; i++)
@@ -154,8 +154,8 @@ public:
             sim_time++;
         }
     }
-    #else
-        void clock()
+#else
+    void clock()
     {
         for (int i = 0; i < 4; i++)
         {
@@ -168,7 +168,7 @@ public:
             sim_time++;
         }
     }
-    #endif
+#endif
 
     void modelstep()
     {
@@ -208,7 +208,7 @@ public:
             plm_frame_to_bgr(&frame_convert, pixels, w * 3); // BMP expects BGR ordering
 
             sprintf(bmp_name, "%06d.bmp", bmp_cnt);
-            printf("Writing %s\n", bmp_name);
+            fprintf(stderr, "Writing %s\n", bmp_name);
             write_bmp(bmp_name, w, h, pixels);
 
             free(pixels);
