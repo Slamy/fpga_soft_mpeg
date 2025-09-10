@@ -2388,6 +2388,8 @@ void plm_video_decode_macroblock(plm_video_t *self) {
 	while (!plm_dma_buffer_has(self->buffer, 2000));
 	OUT_DEBUG = 14;
 
+    worker_cnt++;
+
 	// Decode increment
 	int increment = 0;
 	int t = plm_dma_buffer_read_vlc(self->buffer, PLM_VIDEO_MACROBLOCK_ADDRESS_INCREMENT);
@@ -2641,7 +2643,6 @@ void plm_video_process_macroblock(
 	if (si > max_address || di > max_address) {
 		return; // corrupt video
 	}
-    worker_cnt++;
 
 	struct image_synthesis_descriptor *desc = get_next_synthesis_desc();
 	
@@ -2833,8 +2834,7 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 
 	int *s = block_data;
 	int si = 0;
-
-	worker_cnt++;
+	
 	desc->cwp.macroblock_intra=self->macroblock_intra;
 	desc->cwp.n=n;
 	desc->cwp.s=s;
