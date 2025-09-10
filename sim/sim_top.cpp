@@ -26,7 +26,7 @@
 #define PL_MPEG_IMPLEMENTATION
 #include "../sw/pl_mpeg_pc.h"
 
-#define TRACE
+// #define TRACE
 
 volatile sig_atomic_t status = 0;
 
@@ -140,7 +140,22 @@ public:
         dut.reset = 0;
     }
 
+    #if 0
     void clock()
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            dut.clk30 = (i < 3);
+            dut.clk60 = (i & 1);
+            dut.eval();
+#ifdef TRACE
+            m_trace.dump(sim_time);
+#endif
+            sim_time++;
+        }
+    }
+    #else
+        void clock()
     {
         for (int i = 0; i < 4; i++)
         {
@@ -153,6 +168,7 @@ public:
             sim_time++;
         }
     }
+    #endif
 
     void modelstep()
     {
