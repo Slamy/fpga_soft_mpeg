@@ -217,12 +217,12 @@ module mpeg_video (
     wire [31:0] shared12_out_1;
     dualport_shared_ram shared12 (
         .clk2(clk60),
-        .addr2(dmem_cmd_payload_address_2[12:2]),
+        .addr2(dmem_cmd_payload_address_2[13:2]),
         .data_out2(shared12_out_2),
         .be2(dmem_cmd_payload_mask_2),
         .we2(dmem_cmd_payload_address_2[31:28]==4 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
         .data_in2(dmem_cmd_payload_data_2),
-        .addr1(dmem_cmd_payload_address_1[12:2]),
+        .addr1(dmem_cmd_payload_address_1[13:2]),
         .clk1(clk30),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 1 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
@@ -234,12 +234,12 @@ module mpeg_video (
     wire [31:0] shared13_out_1;
     dualport_shared_ram shared13 (
         .clk2(clk60),
-        .addr2(dmem_cmd_payload_address_3[12:2]),
+        .addr2(dmem_cmd_payload_address_3[13:2]),
         .data_out2(shared13_out_3),
         .be2(dmem_cmd_payload_mask_3),
         .we2(dmem_cmd_payload_address_3[31:28]==4 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
         .data_in2(dmem_cmd_payload_data_3),
-        .addr1(dmem_cmd_payload_address_1[12:2]),
+        .addr1(dmem_cmd_payload_address_1[13:2]),
         .clk1(clk30),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 0 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
@@ -1079,7 +1079,7 @@ endmodule : worker_firmware_memory
 
 module dualport_shared_ram #(
     parameter int BYTE_WIDTH = 8,
-    ADDRESS_WIDTH = 11,
+    ADDRESS_WIDTH = 12,
     BYTES = 4,
     DATA_WIDTH_R = BYTE_WIDTH * BYTES
 ) (
@@ -1096,7 +1096,7 @@ module dualport_shared_ram #(
     output [DATA_WIDTH_R-1:0] data_out1,
     output [DATA_WIDTH_R-1:0] data_out2
 );
-    localparam RAM_DEPTH = 8192 >> 2;
+    localparam RAM_DEPTH = 16384 >> 2;
 
     // model the RAM with two dimensional packed array
     /* verilator lint_off MULTIDRIVEN */

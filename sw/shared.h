@@ -41,7 +41,8 @@ int image_synthesis_buffer_index = 0;
 int image_synthesis_buffer_index2 = 0;
 static int worker_cnt = 0;
 
-#define SHARED_BUFFER_ENTRIES 28
+#define CMD_SIZE 288
+#define SHARED_BUFFER_ENTRIES (16384/CMD_SIZE)
 
 struct image_synthesis_descriptor *get_next_synthesis_desc()
 {
