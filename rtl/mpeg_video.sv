@@ -42,12 +42,21 @@ module mpeg_video (
     assign worker_2_ddr.byteenable = 8'hff;
     assign worker_3_ddr.byteenable = 8'hff;
 
+    flag_cross_domain cross_reset (
+        .clk_a(clk30),
+        .clk_b(clk60),
+        .flag_in_clk_a(reset_dsp_enabled),
+        .flag_out_clk_b(reset_dsp_enabled_clk60)
+    );
+    wire reset_dsp_enabled = reset || !dsp_enable;
+    wire reset_dsp_enabled_clk60;
+
     bit [15:0] dct_coeff_result;
     bit dct_coeff_huffman_active = 0;
     wire dct_coeff_result_valid;
     dct_coeff_huffman_decoder huff (
-        .clk(clk30),
-        .reset,
+        .clk(clk60),
+        .reset(reset_dsp_enabled_clk60),
         .data_valid(dct_coeff_huffman_active && hw_read_mem_ready && !dct_coeff_result_valid),
         .data(mpeg_in_fifo_out[31-hw_read_bit_shift]),
         .result_valid(dct_coeff_result_valid),
@@ -70,12 +79,13 @@ module mpeg_video (
     end
 
     mpeg_input_stream_fifo in_fifo (
-        .clk(clk30),
+        .clkw(clk30),
         // In (from 16 Bit CD data)
         .waddr(mpeg_stream_fifo_write_adr[12:0] ^ 1),
         .wdata(data_word),
         .we(data_strobe),
         // Out (32 bit CPU interface)
+        .clkr(clk60),
         .raddr(mpeg_input_stream_fifo_raddr),
         .q(mpeg_in_fifo_out)
     );
@@ -105,23 +115,28 @@ module mpeg_video (
     wire [31:0] hw_read_mask = ones_mask(hw_read_count_aligned);
 
     always_ff @(posedge clk30) begin
+        if (reset) begin
+            mpeg_stream_fifo_write_adr <= 0;
+        end else if (data_strobe) begin
+            mpeg_stream_fifo_write_adr <= mpeg_stream_fifo_write_adr + 1;
+        end
+    end
+
+    always_ff @(posedge clk60) begin
         if (fifo_near_overflow) $display("FIFO FULL");
         if (fifo_underflow) $display("FIFO UNDER");
 
         hw_read_mem_ready <= 0;
 
-        if (reset) begin
-            mpeg_stream_fifo_write_adr <= 0;
+        if (reset_dsp_enabled_clk60) begin
             mpeg_stream_bit_index <= 0;
             hw_read_count <= 0;
         end else begin
-            if (data_strobe) begin
-                mpeg_stream_fifo_write_adr <= mpeg_stream_fifo_write_adr + 1;
-            end
 
             if (dmem_cmd_payload_write_1 && dmem_cmd_valid_1) begin
-                if (dmem_cmd_payload_address_1 == 32'h10002000)
-                    mpeg_stream_fifo_write_adr <= dmem_cmd_payload_data_1[27:0];
+                if (dmem_cmd_payload_address_1 == 32'h10002000) $finish();
+                //mpeg_stream_fifo_write_adr <= dmem_cmd_payload_data_1[27:0];
+
                 if (dmem_cmd_payload_address_1 == 32'h10002004)
                     mpeg_stream_bit_index <= dmem_cmd_payload_data_1;
                 if (dmem_cmd_payload_address_1 == 32'h10002008) begin
@@ -148,7 +163,7 @@ module mpeg_video (
             end
         end
 
-        if (reset || dct_coeff_result_valid) begin
+        if (reset_dsp_enabled_clk60 || dct_coeff_result_valid) begin
             dct_coeff_huffman_active <= 0;
             mpeg_stream_bit_index <= mpeg_stream_bit_index;
             hw_read_count <= 0;
@@ -168,7 +183,7 @@ module mpeg_video (
     wire [31:0] memory_out_i1;
     wire [31:0] memory_out_d1;
     decoder_firmware_memory core1mem (
-        .clk(clk30),
+        .clk(clk60),
         .addr2(imem_cmd_payload_address_1[13:2]),
         .data_out2(memory_out_i1),
         .be2(0),
@@ -223,7 +238,7 @@ module mpeg_video (
         .we2(dmem_cmd_payload_address_2[31:28]==4 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_write_2),
         .data_in2(dmem_cmd_payload_data_2),
         .addr1(dmem_cmd_payload_address_1[13:2]),
-        .clk1(clk30),
+        .clk1(clk60),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 1 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
         .be1(dmem_cmd_payload_mask_1),
@@ -240,7 +255,7 @@ module mpeg_video (
         .we2(dmem_cmd_payload_address_3[31:28]==4 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_write_3),
         .data_in2(dmem_cmd_payload_data_3),
         .addr1(dmem_cmd_payload_address_1[13:2]),
-        .clk1(clk30),
+        .clk1(clk60),
         .data_in1(dmem_cmd_payload_data_1),
         .we1(dmem_cmd_payload_address_1[31:28]==4 && dmem_cmd_payload_address_1[27:24] == 0 && dmem_cmd_valid_1 && dmem_cmd_ready_1 && dmem_cmd_payload_write_1),
         .be1(dmem_cmd_payload_mask_1),
@@ -351,19 +366,10 @@ module mpeg_video (
         .LsuCachelessPlugin_logic_bus_rsp_payload_id(dmem_rsp_payload_id_1),
         .LsuCachelessPlugin_logic_bus_rsp_payload_error(dmem_rsp_payload_error_1),
         .LsuCachelessPlugin_logic_bus_rsp_payload_data(dmem_rsp_payload_data_1),
-        .clk(clk30),
-        .reset(reset || !dsp_enable)
+        .clk(clk60),
+        .reset(reset_dsp_enabled_clk60)
     );
 
-
-    flag_cross_domain cross_reset (
-        .clk_a(clk30),
-        .clk_b(clk60),
-        .flag_in_clk_a(reset_dsp_enabled),
-        .flag_out_clk_b(reset_dsp_enabled_clk60)
-    );
-    wire reset_dsp_enabled = reset || !dsp_enable;
-    wire reset_dsp_enabled_clk60;
 
     VexiiRiscv vexii2 (
         .PrivilegedPlugin_logic_rdtime(0),
@@ -433,11 +439,24 @@ module mpeg_video (
 
     bit debugflag = 0;
 
-    wire [31:0] frame_adr  /*verilator public_flat_rd*/ = dmem_cmd_payload_data_1;
-    wire expose_frame /*verilator public_flat_rd*/ = (dmem_cmd_payload_address_1 == 32'h10000010 && dmem_cmd_payload_write_1 && dmem_cmd_valid_1) ;
+    bit [31:0] frame_adr  /*verilator public_flat_rd*/;
+    wire expose_frame_clk60  = (dmem_cmd_payload_address_1 == 32'h10000010 && dmem_cmd_payload_write_1 && dmem_cmd_valid_1) ;
     bit [31:0] soft_state1  /*verilator public_flat_rd*/ = 0;
     bit [31:0] soft_state2  /*verilator public_flat_rd*/ = 0;
     bit [31:0] soft_state3  /*verilator public_flat_rd*/ = 0;
+
+    wire expose_frame  /*verilator public_flat_rd*/;
+
+    flag_cross_domain cross_expose_frame (
+        .clk_a(clk60),
+        .clk_b(clk30),
+        .flag_in_clk_a(expose_frame_clk60),
+        .flag_out_clk_b(expose_frame)
+    );
+
+    always_ff @(posedge clk60) begin
+        if (expose_frame_clk60) frame_adr <= dmem_cmd_payload_data_1;
+    end
 
     bit fail;
     bit draining_fifo = 0;
@@ -591,7 +610,7 @@ module mpeg_video (
         end
     end
 
-    always_ff @(posedge clk30) begin
+    always_ff @(posedge clk60) begin
         if (data_is_from_mpeg_buffer && dmem_cmd_payload_address_1_q[27:0] > (mpeg_stream_fifo_write_adr<<1)) begin
             $display("Buffer overflow on MPEG data at instruction %x", imem_cmd_payload_address_1);
             $display("States are %d %d %d", soft_state1, soft_state2, soft_state3);
@@ -599,31 +618,14 @@ module mpeg_video (
         end
     end
 
-    // Assuming 30 MHz clock rate and 25 Hz frame rate
-    localparam TICKS_PER_FRAME = 1200000;
+    // Assuming 90 MHz clock rate and 25 Hz frame rate
+    localparam TICKS_PER_FRAME = 1200000 * 3;
 
     bit signed [15:0] shared_buffer_level = 0;
 
     wire shared_buffer_level_inc = dmem_cmd_payload_address_1 == 32'h10000014 && dmem_cmd_payload_write_1 && dmem_cmd_valid_1;
     wire shared_buffer_level_dec1 = dmem_cmd_payload_address_2 == 32'h10000014 && dmem_cmd_payload_write_2 && dmem_cmd_valid_2;
     wire shared_buffer_level_dec2 = dmem_cmd_payload_address_3 == 32'h10000014 && dmem_cmd_payload_write_3 && dmem_cmd_valid_3;
-
-    wire shared_buffer_level_dec1_clk30;
-    wire shared_buffer_level_dec2_clk30;
-
-    flag_cross_domain cross1 (
-        .clk_a(clk60),
-        .clk_b(clk30),
-        .flag_in_clk_a(shared_buffer_level_dec1),
-        .flag_out_clk_b(shared_buffer_level_dec1_clk30)
-    );
-
-    flag_cross_domain cross2 (
-        .clk_a(clk60),
-        .clk_b(clk30),
-        .flag_in_clk_a(shared_buffer_level_dec2),
-        .flag_out_clk_b(shared_buffer_level_dec2_clk30)
-    );
 
     bit [31:0] dmem_cmd_payload_address_1_q;
     bit dmem_cmd_valid_1_q;
@@ -640,7 +642,7 @@ module mpeg_video (
     bit dmem_cmd_ready_3_q;
     bit dmem_cmd_payload_write_3_q;
 
-    always_ff @(posedge clk30) begin
+    always_ff @(posedge clk60) begin
         debugflag <= 0;
         imem_rsp_valid_1 <= 0;
         dmem_rsp_valid_1 <= 0;
@@ -650,7 +652,7 @@ module mpeg_video (
         dmem_cmd_ready_1_q <= dmem_cmd_ready_1;
         dmem_cmd_payload_write_1_q <= dmem_cmd_payload_write_1;
 
-        shared_buffer_level <= shared_buffer_level + (shared_buffer_level_inc ? 1:0) - (shared_buffer_level_dec1_clk30 ? 1 : 0) - (shared_buffer_level_dec2_clk30 ? 1:0);
+        shared_buffer_level <= shared_buffer_level + (shared_buffer_level_inc ? 1:0) - (shared_buffer_level_dec1 ? 1 : 0) - (shared_buffer_level_dec2 ? 1:0);
 
         if (dmem_cmd_payload_address_1 == 32'h1000000c && dmem_cmd_payload_write_1 && dmem_cmd_valid_1)begin
             $display("Core 1 stopped at %x with code %x", imem_cmd_payload_address_1,
@@ -871,7 +873,7 @@ module mpeg_video (
         end
 
         // Core 3 memory access
-		if (dmem_cmd_valid_3 && dmem_cmd_ready_3) begin
+        if (dmem_cmd_valid_3 && dmem_cmd_ready_3) begin
             dmem_rsp_payload_id_3 <= dmem_cmd_payload_id_3;
             dmem_rsp_valid_3 <= 1;
 
@@ -933,12 +935,4 @@ module mpeg_video (
         .vblank
     );
 endmodule
-
-
-
-
-
-
-
-
 
