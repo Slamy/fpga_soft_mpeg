@@ -2371,6 +2371,8 @@ void plm_video_decode_picture(plm_video_t *self) {
 }
 
 void plm_video_decode_slice(plm_video_t *self, int slice) {
+	while (!plm_dma_buffer_has(self->buffer, 2000));
+
 	self->slice_begin = TRUE;
 	self->macroblock_address = (slice - 1) * self->mb_width - 1;
 
@@ -2575,7 +2577,7 @@ void plm_video_predict_macroblock(plm_video_t *self) {
 			plm_video_copy_macroblock(self, &self->frame_forward, fw_h, fw_v);
 			if (self->motion_backward.is_set) {
 				OUT_DEBUG = 24;
-				//plm_video_interpolate_macroblock(self, &self->frame_backward, bw_h, bw_v);
+				plm_video_interpolate_macroblock(self, &self->frame_backward, bw_h, bw_v);
 			}
 		}
 		else {
@@ -2704,7 +2706,7 @@ static void write_pixels(int macroblock_intra, int n, int *s,
 #endif
 
 void plm_video_decode_block(plm_video_t *self, int block) {
-	while (!plm_dma_buffer_has(self->buffer, 1000));
+	while (!plm_dma_buffer_has(self->buffer, 2000));
 	int n = 0;
 	uint8_t *quant_matrix;
 	OUT_DEBUG = 8;
@@ -2755,6 +2757,8 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 	// Decode AC coefficients (+DC for non-intra)
 	int level = 0;
 	while (TRUE) {
+		while (!plm_dma_buffer_has(self->buffer, 2000));
+		
 		int run = 0;
 		OUT_DEBUG = 20;
 #if 0

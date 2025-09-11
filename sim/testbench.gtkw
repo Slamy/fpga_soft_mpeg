@@ -1,94 +1,70 @@
 [*]
-[*] GTKWave Analyzer v3.3.121 (w)1999-2024 BSI
-[*] Sun Aug 24 21:54:07 2025
+[*] GTKWave Analyzer v3.3.125 (w)1999-2025 BSI
+[*] Thu Sep 11 16:40:30 2025
 [*]
 [dumpfile] "/tmp/waveform.vcd"
-[dumpfile_mtime] "Sun Aug 24 21:54:07 2025"
-[dumpfile_size] 16448248
+[dumpfile_mtime] "Thu Sep 11 16:40:30 2025"
+[dumpfile_size] 8214918855
 [savefile] "/home/andre/GIT/HybridMPEG/sim/testbench.gtkw"
 [timestart] 0
 [size] 1920 1152
-[pos] -199 -18
-*-19.552763 1153000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -461 -277
+*-24.516817 83500000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.top_vexii.
 [treeopen] TOP.top_vexii.video.
-[sst_width] 341
-[signals_width] 429
+[sst_width] 431
+[signals_width] 315
 [sst_expanded] 1
-[sst_vpaned_height] 346
-@8024
-TOP.top_vexii.video.shared_buffer_level[15:0]
-@23
-TOP.top_vexii.video.dmem_cmd_payload_address_1[31:0]
-@22
-TOP.top_vexii.video.dmem_cmd_payload_address_2[31:0]
-TOP.top_vexii.video.dmem_cmd_payload_address_3[31:0]
-TOP.top_vexii.video.dmem_cmd_payload_data_1[31:0]
-TOP.top_vexii.video.dmem_rsp_payload_data_1[31:0]
-TOP.top_vexii.video.dmem_rsp_payload_data_2[31:0]
-TOP.top_vexii.video.dmem_rsp_payload_data_3[31:0]
-@28
-TOP.top_vexii.video.shared_buffer_level_dec1
-TOP.top_vexii.video.shared_buffer_level_dec1_clk30
-TOP.top_vexii.video.shared_buffer_level_dec2
-TOP.top_vexii.video.shared_buffer_level_dec2_clk30
-TOP.top_vexii.video.shared_buffer_level_inc
-@420
+[sst_vpaned_height] 349
+@24
 TOP.top_vexii.video.soft_state1[31:0]
 TOP.top_vexii.video.soft_state2[31:0]
 TOP.top_vexii.video.soft_state3[31:0]
-@20000
--
-@420
-TOP.top_vexii.video.shared12.ADDRESS_WIDTH
-TOP.top_vexii.video.shared12.BYTES
-TOP.top_vexii.video.shared12.BYTE_WIDTH
-TOP.top_vexii.video.shared12.DATA_WIDTH_R
-TOP.top_vexii.video.shared12.RAM_DEPTH
-@22
-TOP.top_vexii.video.shared12.addr1[16:0]
-TOP.top_vexii.video.shared12.addr2[16:0]
-TOP.top_vexii.video.shared12.be1[3:0]
-TOP.top_vexii.video.shared12.be2[3:0]
 @28
-TOP.top_vexii.video.shared12.clk1
-TOP.top_vexii.video.shared12.clk2
-@22
-TOP.top_vexii.video.shared12.data_in1[31:0]
-TOP.top_vexii.video.shared12.data_in2[31:0]
-TOP.top_vexii.video.shared12.data_out1[31:0]
-TOP.top_vexii.video.shared12.data_out2[31:0]
-TOP.top_vexii.video.shared12.data_reg1[31:0]
-TOP.top_vexii.video.shared12.data_reg2[31:0]
+TOP.top_vexii.video.expose_frame
+@8022
+TOP.top_vexii.video.shared_buffer_level[15:0]
 @28
-TOP.top_vexii.video.shared12.we1
-TOP.top_vexii.video.shared12.we2
-@20000
--
-@420
-TOP.top_vexii.video.shared13.ADDRESS_WIDTH
-TOP.top_vexii.video.shared13.BYTES
-TOP.top_vexii.video.shared13.BYTE_WIDTH
-TOP.top_vexii.video.shared13.DATA_WIDTH_R
-TOP.top_vexii.video.shared13.RAM_DEPTH
-@22
-TOP.top_vexii.video.shared13.addr1[16:0]
-TOP.top_vexii.video.shared13.addr2[16:0]
-TOP.top_vexii.video.shared13.be1[3:0]
-TOP.top_vexii.video.shared13.be2[3:0]
+TOP.top_vexii.video.shared_buffer_level_dec1
+TOP.top_vexii.video.shared_buffer_level_dec2
+TOP.top_vexii.video.shared_buffer_level_inc
+@c00022
+TOP.top_vexii.video.worker_2_ddr.addr[28:0]
 @28
-TOP.top_vexii.video.shared13.clk1
-TOP.top_vexii.video.shared13.clk2
-@22
-TOP.top_vexii.video.shared13.data_in1[31:0]
-TOP.top_vexii.video.shared13.data_in2[31:0]
-TOP.top_vexii.video.shared13.data_out1[31:0]
-TOP.top_vexii.video.shared13.data_out2[31:0]
-TOP.top_vexii.video.shared13.data_reg1[31:0]
-TOP.top_vexii.video.shared13.data_reg2[31:0]
+(0)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(1)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(2)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(3)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(4)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(5)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(6)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(7)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(8)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(9)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(10)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(11)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(12)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(13)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(14)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(15)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(16)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(17)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(18)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(19)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(20)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(21)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(22)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(23)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(24)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(25)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(26)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(27)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+(28)TOP.top_vexii.video.worker_2_ddr.addr[28:0]
+@1401200
+-group_end
 @28
-TOP.top_vexii.video.shared13.we1
-TOP.top_vexii.video.shared13.we2
+TOP.top_vexii.video.worker_2_ddr.write
+TOP.top_vexii.video.worker_2_ddr.read
 [pattern_trace] 1
 [pattern_trace] 0

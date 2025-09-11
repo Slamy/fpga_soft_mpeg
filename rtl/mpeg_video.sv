@@ -135,7 +135,6 @@ module mpeg_video (
 
             if (dmem_cmd_payload_write_1 && dmem_cmd_valid_1) begin
                 if (dmem_cmd_payload_address_1 == 32'h10002000) $finish();
-                //mpeg_stream_fifo_write_adr <= dmem_cmd_payload_data_1[27:0];
 
                 if (dmem_cmd_payload_address_1 == 32'h10002004)
                     mpeg_stream_bit_index <= dmem_cmd_payload_data_1;
@@ -464,17 +463,38 @@ module mpeg_video (
 
     bit data_is_from_mpeg_buffer;
 
+
     bit cache_miss_2;
-    bit [63:0] cache_2[3];
+    bit [2:0] cache_hit_adr_2;
+    bit cache_miss_2_q;
+    bit [2:0] cache_hit_adr_2_q;
+    bit [63:0] cache_2[8][3];
     bit [1:0] data_burst_cnt_2;
-    bit [27-3:0] cache_adr_2 = 10;
+    bit [27-3:0] cache_adr_2[8] = '{default: 8000};
+    bit [2:0] cache_write_adr_2 = 0;
+
+`ifdef VERILATOR
+    bit [27-3:0] missed_cache_adr_2[16] = '{default: 8000};
+    bit [3:0] missed_cache_adr_index_2;
+`endif
 
     bit cache_miss_3;
-    bit [63:0] cache_3[3];
+    bit [2:0] cache_hit_adr_3;
+    bit [2:0] cache_hit_adr_3_q;
+    bit [63:0] cache_3[8][3];
     bit [1:0] data_burst_cnt_3;
-    bit [27-3:0] cache_adr_3 = 10;
+    bit [27-3:0] cache_adr_3[8] = '{default: 8000};
+    bit [2:0] cache_write_adr_3 = 0;
+
+`ifdef VERILATOR
+    bit [27-3:0] missed_cache_adr_3[16] = '{default: 8000};
+    bit [3:0] missed_cache_adr_index_3;
+`endif
 
     always_comb begin
+        integer i;
+        bit cache_hit;
+
         imem_cmd_ready_3 = 1;
         imem_rsp_payload_word_3 = memory_out_i3;
 
@@ -493,15 +513,28 @@ module mpeg_video (
         if (dmem_cmd_payload_address_3[31:28] == 4'd5 && !dmem_cmd_payload_write_3 && dmem_cmd_valid_3 && worker_3_ddr.acquire)
             dmem_cmd_ready_3 = 0;
 
-        cache_miss_3 = (dmem_cmd_payload_address_3[27:3] < cache_adr_3) || (dmem_cmd_payload_address_3[27:3] > cache_adr_3 + 2);
+        cache_hit_adr_3 = 0;
+        cache_miss_3 = 0;
+        cache_hit_adr_3_q = 0;
+        cache_hit = 0;
+        for (i = 0; i < 8; i++) begin
+            if ((dmem_cmd_payload_address_3[27:3] >= cache_adr_3[i]) && (dmem_cmd_payload_address_3[27:3] <= cache_adr_3[i] + 2)) begin
+                cache_hit_adr_3 = 3'(i);
+                cache_hit = 1;
+            end
+
+            if ((dmem_cmd_payload_address_3_q[27:3] >= cache_adr_3[i]) && (dmem_cmd_payload_address_3_q[27:3] <= cache_adr_3[i] + 2)) begin
+                cache_hit_adr_3_q = 3'(i);
+            end
+        end
+        cache_miss_3 = !cache_hit;
 
         if (dmem_cmd_valid_3_q) begin
             case (dmem_cmd_payload_address_3_q[31:28])
                 4'd5: begin  // Video SRAM region
                     dmem_rsp_payload_data_3 = dmem_cmd_payload_address_3_q[2] ?
-                     cache_3[2'(dmem_cmd_payload_address_3_q[27:3]-cache_adr_3)][63:32] :
-                     cache_3[2'(dmem_cmd_payload_address_3_q[27:3]-cache_adr_3)][31:0];
-
+                     cache_3[cache_hit_adr_3_q][2'(dmem_cmd_payload_address_3_q[27:3]-cache_adr_3[cache_hit_adr_3_q])][63:32] :
+                     cache_3[cache_hit_adr_3_q][2'(dmem_cmd_payload_address_3_q[27:3]-cache_adr_3[cache_hit_adr_3_q])][31:0];
                 end
                 4'd4: begin  // Shared SRAM region
                     dmem_rsp_payload_data_3 = shared13_out_3;
@@ -521,8 +554,10 @@ module mpeg_video (
         end
     end
 
-
     always_comb begin
+        integer i;
+        bit cache_hit;
+
         imem_cmd_ready_2 = 1;
         imem_rsp_payload_word_2 = memory_out_i2;
 
@@ -541,15 +576,28 @@ module mpeg_video (
         if (dmem_cmd_payload_address_2[31:28] == 4'd5 && !dmem_cmd_payload_write_2 && dmem_cmd_valid_2 && worker_2_ddr.acquire)
             dmem_cmd_ready_2 = 0;
 
-        cache_miss_2 = (dmem_cmd_payload_address_2[27:3] < cache_adr_2) || (dmem_cmd_payload_address_2[27:3] > cache_adr_2 + 2);
+        cache_hit_adr_2 = 0;
+        cache_miss_2 = 0;
+        cache_hit_adr_2_q = 0;
+        cache_hit = 0;
+        for (i = 0; i < 8; i++) begin
+            if ((dmem_cmd_payload_address_2[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2[27:3] <= cache_adr_2[i] + 2)) begin
+                cache_hit_adr_2 = 3'(i);
+                cache_hit = 1;
+            end
+
+            if ((dmem_cmd_payload_address_2_q[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2_q[27:3] <= cache_adr_2[i] + 2)) begin
+                cache_hit_adr_2_q = 3'(i);
+            end
+        end
+        cache_miss_2 = !cache_hit;
 
         if (dmem_cmd_valid_2_q) begin
             case (dmem_cmd_payload_address_2_q[31:28])
                 4'd5: begin  // Video SRAM region
                     dmem_rsp_payload_data_2 = dmem_cmd_payload_address_2_q[2] ?
-                     cache_2[2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2)][63:32] :
-                     cache_2[2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2)][31:0];
-
+                     cache_2[cache_hit_adr_2_q][2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2[cache_hit_adr_2_q])][63:32] :
+                     cache_2[cache_hit_adr_2_q][2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2[cache_hit_adr_2_q])][31:0];
                 end
                 4'd4: begin  // Shared SRAM region
                     dmem_rsp_payload_data_2 = shared12_out_2;
@@ -737,6 +785,8 @@ module mpeg_video (
     end
 
     always_ff @(posedge clk60) begin
+        integer i;
+
         dmem_rsp_valid_2 <= 0;
         dmem_rsp_valid_3 <= 0;
 
@@ -752,12 +802,13 @@ module mpeg_video (
         if (data_burst_cnt_2 != 3 && worker_2_ddr.rdata_ready) begin
             if (worker_2_ddr.rdata_ready) begin
                 data_burst_cnt_2 <= data_burst_cnt_2 + 1;
-                cache_2[data_burst_cnt_2] <= worker_2_ddr.rdata;
+                cache_2[cache_write_adr_2][data_burst_cnt_2] <= worker_2_ddr.rdata;
             end
             if (data_burst_cnt_2 == 2) begin
                 worker_2_ddr.read <= 0;
                 worker_2_ddr.acquire <= 0;
                 dmem_rsp_valid_2 <= 1;
+                cache_write_adr_2 <= cache_write_adr_2 + 1;
             end
         end
 
@@ -782,12 +833,13 @@ module mpeg_video (
         if (data_burst_cnt_3 != 3 && worker_3_ddr.rdata_ready) begin
             if (worker_3_ddr.rdata_ready) begin
                 data_burst_cnt_3 <= data_burst_cnt_3 + 1;
-                cache_3[data_burst_cnt_3] <= worker_3_ddr.rdata;
+                cache_3[cache_write_adr_3][data_burst_cnt_3] <= worker_3_ddr.rdata;
             end
             if (data_burst_cnt_3 == 2) begin
                 worker_3_ddr.read <= 0;
                 worker_3_ddr.acquire <= 0;
                 dmem_rsp_valid_3 <= 1;
+                cache_write_adr_3 <= cache_write_adr_3 + 1;
             end
         end
 
@@ -849,14 +901,28 @@ module mpeg_video (
                         end
                         // verilog_format: on
                     end else if (cache_miss_2) begin
-                        //$display("Cache Miss %x %x",dmem_cmd_payload_address_2, dmem_cmd_payload_address_2[27:3] );
+                        // $display("Cache Miss 2 %x %x", dmem_cmd_payload_address_2, dmem_cmd_payload_address_2[27:3]);
                         worker_2_ddr.read <= 1;
                         worker_2_ddr.acquire <= 1;
                         worker_2_ddr.burstcnt <= 3;
                         data_burst_cnt_2 <= 0;
                         dmem_rsp_valid_2 <= 0;
                         worker_2_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
-                        cache_adr_2 <= dmem_cmd_payload_address_2[27:3];
+                        cache_adr_2[cache_write_adr_2] <= dmem_cmd_payload_address_2[27:3];
+
+`ifdef VERILATOR
+                        // Check quality of cache. Can we get faster with a bigger cache?
+                        for (i = 0; i < 16; i++) begin
+                            if (dmem_cmd_payload_address_2[27:3] == missed_cache_adr_2[i]) begin
+                                $display("Cache 2 Miss with recently requested address %x %x",
+                                         dmem_cmd_payload_address_2,
+                                         dmem_cmd_payload_address_2[27:3]);
+                                //$finish();
+                            end
+                        end
+                        missed_cache_adr_2[missed_cache_adr_index_2] <= dmem_cmd_payload_address_2[27:3];
+                        missed_cache_adr_index_2 <= missed_cache_adr_index_2 + 1;
+`endif
                     end else begin
                         //$display("Cache Hit %x %x",dmem_cmd_payload_address_2,dmem_cmd_payload_address_2[27:3]);
                     end
@@ -902,13 +968,31 @@ module mpeg_video (
                         end
                         // verilog_format: on
                     end else if (cache_miss_3) begin
+                        //$display("Cache Miss %x %x", dmem_cmd_payload_address_3,
+                        //         dmem_cmd_payload_address_3[27:3]);
                         worker_3_ddr.read <= 1;
                         worker_3_ddr.acquire <= 1;
                         worker_3_ddr.burstcnt <= 3;
                         data_burst_cnt_3 <= 0;
                         dmem_rsp_valid_3 <= 0;
                         worker_3_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_3[27:3]};
-                        cache_adr_3 <= dmem_cmd_payload_address_3[27:3];
+                        cache_adr_3[cache_write_adr_3] <= dmem_cmd_payload_address_3[27:3];
+
+`ifdef VERILATOR
+                        // Check quality of cache. Can we get faster with a bigger cache?
+                        for (i = 0; i < 16; i++) begin
+                            if (dmem_cmd_payload_address_3[27:3] == missed_cache_adr_3[i]) begin
+                                $display("Cache 3 Miss with recently requested address %x %x",
+                                         dmem_cmd_payload_address_3,
+                                         dmem_cmd_payload_address_3[27:3]);
+                                //$finish();
+                            end
+                        end
+                        missed_cache_adr_3[missed_cache_adr_index_3] <= dmem_cmd_payload_address_3[27:3];
+                        missed_cache_adr_index_3 <= missed_cache_adr_index_3 + 1;
+`endif
+                    end else begin
+                        //$display("Cache Hit %x %x",dmem_cmd_payload_address_3,dmem_cmd_payload_address_3[27:3]);
                     end
 
                 end
