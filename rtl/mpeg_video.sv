@@ -34,9 +34,9 @@ module mpeg_video (
     ddr_mux3 ddrmux (
         .clk(clk60),
         .x  (ddrif),
-        .a  (worker_2_ddr),
-        .b  (worker_3_ddr),
-        .c  (player_ddr)
+        .a  (player_ddr),
+        .b  (worker_2_ddr),
+        .c  (worker_3_ddr)
     );
 
     assign worker_2_ddr.byteenable = 8'hff;

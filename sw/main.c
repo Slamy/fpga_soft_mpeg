@@ -26,6 +26,8 @@ struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
 #define OUTPORT_END 0x1000000c
 #define OUTPORT_FRAME 0x10000010
 #define OUTPORT_HANDLE_SHARED 0x10000014
+#define OUTPORT_FRAME_ADR 0x10000018
+
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
 
 #include "shared.h"
@@ -149,6 +151,8 @@ void main(void)
 			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->cr.data;
 			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->cb.data;
 			*((volatile plm_frame_t **)OUTPORT_FRAME) = frame;
+			*((volatile uint32_t *)OUTPORT_FRAME_ADR) = (uint32_t)frame->y.data;
+			
 			cnt++;
 		}
 		else

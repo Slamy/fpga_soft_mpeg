@@ -2008,6 +2008,9 @@ struct plm_video_t {
 	plm_frame_t frame_forward;
 	plm_frame_t frame_backward;
 
+	plm_frame_t framebuffers[20];
+	int fbindex;
+
 	uint8_t *frames_data;
 
 	uint8_t intra_quant_matrix[64];
@@ -2250,9 +2253,13 @@ int plm_video_decode_sequence_header(plm_video_t *self) {
 	size_t frame_data_size = (luma_plane_size + 2 * chroma_plane_size);
 	*((volatile uint32_t *)OUTPORT) = frame_data_size;
 	self->frames_data = (uint8_t*)0;
+	self->fbindex = 0;
 	plm_video_init_frame(self, &self->frame_current, self->frames_data + frame_data_size * 0);
 	plm_video_init_frame(self, &self->frame_forward, self->frames_data + frame_data_size * 1);
 	plm_video_init_frame(self, &self->frame_backward, self->frames_data + frame_data_size * 2);
+
+	for (int i=0;i<20;i++)
+		plm_video_init_frame(self, &self->framebuffers[i], self->frames_data + frame_data_size * (3+i));
 
 	self->has_sequence_header = TRUE;
 	return TRUE;
@@ -2338,6 +2345,11 @@ void plm_video_decode_picture(plm_video_t *self) {
 	);
 
 	// Decode all slices
+	self->frame_current = self->framebuffers[self->fbindex];
+	self->fbindex++;
+	if (self->fbindex==20)
+		self->fbindex=0;
+	
 	while (PLM_START_IS_SLICE(self->start_code)) {
 		OUT_DEBUG = 7;
 
