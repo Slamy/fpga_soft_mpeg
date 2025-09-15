@@ -20,13 +20,22 @@ struct io_fifo_control
 	uint32_t hw_huffman_read_dct_coeff;
 };
 
+struct frame_display_fifo
+{
+	uint32_t y_adr;
+	uint32_t u_adr;
+	uint32_t v_adr;
+	uint32_t width;
+	uint32_t height;
+};
+
 struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
+struct frame_display_fifo *const frame_display_fifo = (struct frame_display_fifo *)0x10003000;
 
 #define OUTPORT 0x10000000
 #define OUTPORT_END 0x1000000c
 #define OUTPORT_FRAME 0x10000010
 #define OUTPORT_HANDLE_SHARED 0x10000014
-#define OUTPORT_FRAME_ADR 0x10000018
 
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
 
@@ -143,15 +152,21 @@ void main(void)
 			OUT_DEBUG = 28;
 
 			// Give some feedback to the user that we are running
-			*((volatile uint8_t *)OUTPORT) = cnt;
+			*((volatile uint32_t *)OUTPORT) = frame->time;
 
 			//*((volatile uint32_t *)OUTPORT) = frame->width;
 			//*((volatile uint32_t *)OUTPORT) = frame->height;
 			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->y.data;
 			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->cr.data;
 			//*((volatile uint32_t *)OUTPORT) = (uint32_t)frame->cb.data;
+			__asm volatile("" : : : "memory");
 			*((volatile plm_frame_t **)OUTPORT_FRAME) = frame;
-			*((volatile uint32_t *)OUTPORT_FRAME_ADR) = (uint32_t)frame->y.data;
+			frame_display_fifo->y_adr = (uint32_t)frame->y.data;
+			frame_display_fifo->u_adr = (uint32_t)frame->cb.data;
+			frame_display_fifo->v_adr = (uint32_t)frame->cr.data;
+			frame_display_fifo->width = frame->width;
+			frame_display_fifo->height = frame->height;
+			__asm volatile("" : : : "memory");
 			
 			cnt++;
 		}

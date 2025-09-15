@@ -666,8 +666,8 @@ module mpeg_video (
         end
     end
 
-    // Assuming 80 MHz clock rate and 25 Hz frame rate
-    localparam bit [34:0] TICKS_PER_FRAME = 35'(80e6) / 25;
+    // Assuming 90 MHz clock rate and 25 Hz frame rate
+    localparam bit [34:0] TICKS_PER_FRAME = 24'(int'(90e6) / 25);
 
     bit signed [15:0] shared_buffer_level = 0;
 
