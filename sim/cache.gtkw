@@ -1,0 +1,55 @@
+[*]
+[*] GTKWave Analyzer v3.3.125 (w)1999-2025 BSI
+[*] Tue Sep 16 17:56:58 2025
+[*]
+[dumpfile] "/tmp/waveform.vcd"
+[dumpfile_mtime] "Tue Sep 16 17:54:15 2025"
+[dumpfile_size] 21289
+[savefile] "/home/andre/GIT/HybridMPEG/sim/cache.gtkw"
+[timestart] 564
+[size] 1920 1032
+[pos] -1 -1
+*-3.737976 614 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.top_vexii.
+[treeopen] TOP.top_vexii.video.
+[sst_width] 422
+[signals_width] 302
+[sst_expanded] 1
+[sst_vpaned_height] 306
+@22
+TOP.top_vexii.video.dmem_cmd_payload_address_2[31:0]
+@23
+TOP.top_vexii.video.dmem_cmd_payload_address_2_q[31:0]
+@28
+TOP.top_vexii.video.dmem_cmd_payload_write_2
+TOP.top_vexii.video.dmem_cmd_ready_2
+TOP.top_vexii.video.dmem_cmd_valid_2
+@22
+TOP.top_vexii.video.dmem_cmd_payload_data_2[31:0]
+TOP.top_vexii.video.dmem_rsp_payload_data_2[31:0]
+@28
+TOP.top_vexii.video.dmem_rsp_valid_2
+@22
+TOP.top_vexii.video.cache_2_out[63:0]
+@28
+TOP.top_vexii.video.cache_hit_adr_2[2:0]
+TOP.top_vexii.video.cache_hit_adr_2_q[2:0]
+@200
+-
+@22
+TOP.top_vexii.DDRAM_ADDR[28:0]
+TOP.top_vexii.DDRAM_BE[7:0]
+TOP.top_vexii.DDRAM_BURSTCNT[7:0]
+@28
+TOP.top_vexii.DDRAM_BUSY
+TOP.top_vexii.DDRAM_CLK
+@22
+TOP.top_vexii.DDRAM_DIN[63:0]
+TOP.top_vexii.DDRAM_DOUT[63:0]
+@28
+TOP.top_vexii.DDRAM_DOUT_READY
+TOP.top_vexii.DDRAM_RD
+TOP.top_vexii.DDRAM_WE
+[pattern_trace] 1
+[pattern_trace] 0

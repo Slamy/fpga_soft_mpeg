@@ -28,6 +28,8 @@ module top_vexii (
     wire DDRAM_WE;  // request write at DDRAM_ADDR with DDRAM_DIN data and DDRAM_BE mask
 
     always_ff @(posedge DDRAM_CLK) begin
+        assert(!(DDRAM_RD && DDRAM_WE));
+
         DDRAM_DOUT_READY <= 0;
 
         if (DDRAM_WE && !DDRAM_BUSY) begin

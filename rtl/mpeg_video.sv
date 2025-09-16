@@ -469,6 +469,7 @@ module mpeg_video (
     bit cache_miss_2_q;
     bit [2:0] cache_hit_adr_2_q;
     bit [63:0] cache_2[8][3];
+    bit [63:0] cache_2_out;
     bit [1:0] data_burst_cnt_2;
     bit [27-3:0] cache_adr_2[8] = '{default: 8000};
     bit [2:0] cache_write_adr_2 = 0;
@@ -566,15 +567,23 @@ module mpeg_video (
 
         // Stall on DDR write until resolved
         if (worker_2_ddr.acquire && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
+        begin
             dmem_cmd_ready_2 = 0;
+            $display("Stall1");
+        end
 
         // Stall on DDR read until resolved
-        if (dmem_cmd_payload_address_2_q[31:28] == 4'd5 && !dmem_cmd_payload_write_2_q && dmem_cmd_valid_2_q && worker_2_ddr.acquire)
+        if (dmem_cmd_payload_address_2_q[31:28] == 4'd5 && !dmem_cmd_payload_write_2_q && dmem_cmd_valid_2_q && worker_2_ddr.acquire) begin
             dmem_cmd_ready_2 = 0;
+            $display("Stall2");
+        end
 
         // Handle read directly after write to avoid read and write at the same time
-        if (dmem_cmd_payload_address_2[31:28] == 4'd5 && !dmem_cmd_payload_write_2 && dmem_cmd_valid_2 && worker_2_ddr.acquire)
+        if (dmem_cmd_payload_address_2[31:28] == 4'd5 && !dmem_cmd_payload_write_2 && dmem_cmd_valid_2 && worker_2_ddr.acquire) begin
             dmem_cmd_ready_2 = 0;
+            $display("Stall3");
+
+        end
 
         cache_hit_adr_2 = 0;
         cache_miss_2 = 0;
@@ -596,8 +605,8 @@ module mpeg_video (
             case (dmem_cmd_payload_address_2_q[31:28])
                 4'd5: begin  // Video SRAM region
                     dmem_rsp_payload_data_2 = dmem_cmd_payload_address_2_q[2] ?
-                     cache_2[cache_hit_adr_2_q][2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2[cache_hit_adr_2_q])][63:32] :
-                     cache_2[cache_hit_adr_2_q][2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2[cache_hit_adr_2_q])][31:0];
+                     cache_2_out[63:32] :
+                     cache_2_out[31:0];
                 end
                 4'd4: begin  // Shared SRAM region
                     dmem_rsp_payload_data_2 = shared12_out_2;
@@ -667,7 +676,7 @@ module mpeg_video (
     end
 
     // Assuming 90 MHz clock rate and 25 Hz frame rate
-    localparam bit [34:0] TICKS_PER_FRAME = 24'(int'(90e6) / 25);
+    localparam bit [34:0] TICKS_PER_FRAME = 35'(int'(30e6) / 25);
 
     bit signed [15:0] shared_buffer_level = 0;
 
@@ -811,6 +820,7 @@ module mpeg_video (
                 cache_write_adr_2 <= cache_write_adr_2 + 1;
             end
         end
+        cache_2_out <= cache_2[cache_hit_adr_2_q][2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2_q[cache_hit_adr_2_q])];
 
         if (dmem_cmd_ready_2) begin
             if (dmem_cmd_valid_2) begin
