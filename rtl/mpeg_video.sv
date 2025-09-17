@@ -587,16 +587,11 @@ module mpeg_video (
 
         cache_hit_adr_2 = 0;
         cache_miss_2 = 0;
-        cache_hit_adr_2_q = 0;
         cache_hit = 0;
         for (i = 0; i < 8; i++) begin
             if ((dmem_cmd_payload_address_2[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2[27:3] <= cache_adr_2[i] + 2)) begin
                 cache_hit_adr_2 = 3'(i);
                 cache_hit = 1;
-            end
-
-            if ((dmem_cmd_payload_address_2_q[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2_q[27:3] <= cache_adr_2[i] + 2)) begin
-                cache_hit_adr_2_q = 3'(i);
             end
         end
         cache_miss_2 = !cache_hit;
@@ -808,6 +803,10 @@ module mpeg_video (
             worker_2_ddr.read <= 0;
         end
 
+        if (dmem_cmd_payload_address_2 == 32'h10000000 && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
+            $display("Core 2 Debug out %x", dmem_cmd_payload_data_2);
+
+
         if (data_burst_cnt_2 != 3 && worker_2_ddr.rdata_ready) begin
             if (worker_2_ddr.rdata_ready) begin
                 data_burst_cnt_2 <= data_burst_cnt_2 + 1;
@@ -820,12 +819,17 @@ module mpeg_video (
                 cache_write_adr_2 <= cache_write_adr_2 + 1;
             end
         end
-        cache_2_out <= cache_2[cache_hit_adr_2_q][2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2_q[cache_hit_adr_2_q])];
+
+        if (cache_miss_2)
+            cache_2_out <= cache_2[cache_hit_adr_2_q][2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2[cache_hit_adr_2_q])];
+        else
+            cache_2_out <= cache_2[cache_hit_adr_2][2'(dmem_cmd_payload_address_2[27:3]-cache_adr_2[cache_hit_adr_2])];            
 
         if (dmem_cmd_ready_2) begin
             if (dmem_cmd_valid_2) begin
                 dmem_cmd_payload_address_2_q <= dmem_cmd_payload_address_2;
                 dmem_cmd_payload_write_2_q   <= dmem_cmd_payload_write_2;
+                cache_hit_adr_2_q <= cache_hit_adr_2;
             end
             dmem_cmd_valid_2_q <= dmem_cmd_valid_2;
         end
