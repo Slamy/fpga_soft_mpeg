@@ -587,16 +587,11 @@ module mpeg_video (
 
         cache_hit_adr_2 = 0;
         cache_miss_2 = 0;
-        cache_hit_adr_2_q = 0;
         cache_hit = 0;
         for (i = 0; i < 8; i++) begin
             if ((dmem_cmd_payload_address_2[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2[27:3] <= cache_adr_2[i] + 2)) begin
                 cache_hit_adr_2 = 3'(i);
                 cache_hit = 1;
-            end
-
-            if ((dmem_cmd_payload_address_2_q[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2_q[27:3] <= cache_adr_2[i] + 2)) begin
-                cache_hit_adr_2_q = 3'(i);
             end
         end
         cache_miss_2 = !cache_hit;
@@ -793,11 +788,14 @@ module mpeg_video (
         end
     end
 
+    bit dmem_rsp_valid_2_next;
+
     always_ff @(posedge clk60) begin
         integer i;
 
         dmem_rsp_valid_2 <= 0;
         dmem_rsp_valid_3 <= 0;
+        dmem_rsp_valid_2_next <= 0;
 
         if (!worker_2_ddr.busy && worker_2_ddr.write) begin
             worker_2_ddr.write   <= 0;
@@ -820,20 +818,26 @@ module mpeg_video (
             if (data_burst_cnt_2 == 2) begin
                 worker_2_ddr.read <= 0;
                 worker_2_ddr.acquire <= 0;
+                //dmem_rsp_valid_2_next <= 1;
                 dmem_rsp_valid_2 <= 1;
                 cache_write_adr_2 <= cache_write_adr_2 + 1;
             end
         end
+        if (dmem_rsp_valid_2_next) dmem_rsp_valid_2 <= 1;
 
-        if (cache_miss_2)
-            cache_2_out <= cache_2[cache_hit_adr_2_q][2'(dmem_cmd_payload_address_2_q[27:3]-cache_adr_2[cache_hit_adr_2_q])];
-        else
-            cache_2_out <= cache_2[cache_hit_adr_2][2'(dmem_cmd_payload_address_2[27:3]-cache_adr_2[cache_hit_adr_2])];            
+        if (cache_miss_2) begin
+            // After a cache miss, the first entry is always the right one!
+            cache_2_out <= cache_2[cache_hit_adr_2_q][0];
+        end else begin
+            // We have hit the cache. Lookup
+            cache_2_out <= cache_2[cache_hit_adr_2][2'(dmem_cmd_payload_address_2[27:3]-cache_adr_2[cache_hit_adr_2])];
+        end
 
         if (dmem_cmd_ready_2) begin
             if (dmem_cmd_valid_2) begin
                 dmem_cmd_payload_address_2_q <= dmem_cmd_payload_address_2;
-                dmem_cmd_payload_write_2_q   <= dmem_cmd_payload_write_2;
+                dmem_cmd_payload_write_2_q <= dmem_cmd_payload_write_2;
+                cache_hit_adr_2_q <= cache_hit_adr_2;
             end
             dmem_cmd_valid_2_q <= dmem_cmd_valid_2;
         end
