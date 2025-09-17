@@ -802,9 +802,13 @@ module mpeg_video (
             worker_2_ddr.read <= 0;
         end
 
+        if (dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
+            $display("Core 2 Write %x %x", dmem_cmd_payload_address_2, dmem_cmd_payload_data_2);
+        if (!dmem_cmd_payload_write_2_q && dmem_rsp_valid_2 && dmem_cmd_ready_2)
+            $display("Core 2 Read %x %x", dmem_cmd_payload_write_2_q, dmem_rsp_payload_data_2);
+
         if (dmem_cmd_payload_address_2 == 32'h10000000 && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
             $display("Core 2 Debug out %x", dmem_cmd_payload_data_2);
-
 
         if (data_burst_cnt_2 != 3 && worker_2_ddr.rdata_ready) begin
             if (worker_2_ddr.rdata_ready) begin
