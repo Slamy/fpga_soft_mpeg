@@ -569,20 +569,16 @@ module mpeg_video (
         if (worker_2_ddr.acquire && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_payload_address_2[31:28] == 4'd5)
         begin
             dmem_cmd_ready_2 = 0;
-            $display("Stall1");
         end
 
         // Stall on DDR read until resolved
         if (dmem_cmd_payload_address_2_q[31:28] == 4'd5 && !dmem_cmd_payload_write_2_q && dmem_cmd_valid_2_q && worker_2_ddr.acquire) begin
             dmem_cmd_ready_2 = 0;
-            $display("Stall2");
         end
 
         // Handle read directly after write to avoid read and write at the same time
         if (dmem_cmd_payload_address_2[31:28] == 4'd5 && !dmem_cmd_payload_write_2 && dmem_cmd_valid_2 && worker_2_ddr.acquire) begin
             dmem_cmd_ready_2 = 0;
-            $display("Stall3");
-
         end
 
         cache_hit_adr_2 = 0;

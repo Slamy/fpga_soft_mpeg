@@ -64,41 +64,29 @@ void stop_verilator()
 
 void main(void)
 {
-#if 1
-  static uint32_t testword;
-  switch (OUT_DEBUG)
-  {
-  case 0x4218:
-    *((volatile uint32_t *)0x50000010) = 0x50000010;
-    *((volatile uint32_t *)0x50000014) = 0x50000014;
-    *((volatile uint32_t *)0x50000018) = 0x50000018;
-    *((volatile uint32_t *)0x5000001c) = 0x5000001c;
-    *((volatile uint32_t *)0x50000020) = 0x50000020;
-    *((volatile uint32_t *)0x50000024) = 0x50000024;
-    *((volatile uint32_t *)0x50000028) = 0x50000028;
-    *((volatile uint32_t *)0x5000002c) = 0x5000002c;
-
-    *((volatile uint32_t *)0x50000030) = 0x50000030;
-    *((volatile uint32_t *)0x50000034) = 0x50000034;
-
-    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000010);
-    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000014);
-    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000018);
-    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x5000001c);
-    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000020);
-    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000024);
-    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000028);
-    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x5000002c);
-    *((volatile uint32_t *)OUTPORT_END) = *((volatile uint32_t *)0x50000030);
-
-    break;
-  case 0x4212:
-    for (;;)
-      ;
-    break;
-  default:
-    *((volatile uint8_t *)OUTPORT_END) = 4;
-  }
+#if 0
+	static uint32_t testword;
+	switch (OUT_DEBUG)
+	{
+	case 0x4218:
+		memory_interface_test(&testword);
+		__asm volatile("" : : : "memory");
+		memory_interface_test((void *)0x50000010);
+		__asm volatile("" : : : "memory");
+		memory_interface_test((void *)0x40000010);
+		__asm volatile("" : : : "memory");
+		break;
+	case 0x4212:
+		memory_interface_test(&testword);
+		__asm volatile("" : : : "memory");
+		memory_interface_test((void *)0x50000030);
+		__asm volatile("" : : : "memory");
+		memory_interface_test((void *)0x40000030);
+		__asm volatile("" : : : "memory");
+		break;
+	default:
+		*((volatile uint8_t *)OUTPORT_END) = 4;
+	}
 #endif
 
   for (;;)
