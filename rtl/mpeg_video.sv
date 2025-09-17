@@ -587,11 +587,16 @@ module mpeg_video (
 
         cache_hit_adr_2 = 0;
         cache_miss_2 = 0;
+        cache_hit_adr_2_q = 0;
         cache_hit = 0;
         for (i = 0; i < 8; i++) begin
             if ((dmem_cmd_payload_address_2[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2[27:3] <= cache_adr_2[i] + 2)) begin
                 cache_hit_adr_2 = 3'(i);
                 cache_hit = 1;
+            end
+
+            if ((dmem_cmd_payload_address_2_q[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2_q[27:3] <= cache_adr_2[i] + 2)) begin
+                cache_hit_adr_2_q = 3'(i);
             end
         end
         cache_miss_2 = !cache_hit;
@@ -829,7 +834,6 @@ module mpeg_video (
             if (dmem_cmd_valid_2) begin
                 dmem_cmd_payload_address_2_q <= dmem_cmd_payload_address_2;
                 dmem_cmd_payload_write_2_q   <= dmem_cmd_payload_write_2;
-                cache_hit_adr_2_q <= cache_hit_adr_2;
             end
             dmem_cmd_valid_2_q <= dmem_cmd_valid_2;
         end
