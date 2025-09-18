@@ -744,9 +744,6 @@ module mpeg_video (
                 4'd4: begin  // Shared SRAM region
                 end
                 4'd1: begin
-                    if (dmem_cmd_payload_write_1) begin
-                        debugflag <= 1;
-                    end
                 end
                 4'd0: begin
                 end
@@ -784,14 +781,12 @@ module mpeg_video (
         end
     end
 
-    bit dmem_rsp_valid_2_next;
 
     always_ff @(posedge clk60) begin
         integer i;
 
         dmem_rsp_valid_2 <= 0;
         dmem_rsp_valid_3 <= 0;
-        dmem_rsp_valid_2_next <= 0;
 
         if (!worker_2_ddr.busy && worker_2_ddr.write) begin
             worker_2_ddr.write   <= 0;
@@ -802,10 +797,14 @@ module mpeg_video (
             worker_2_ddr.read <= 0;
         end
 
-        if (dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
+        if (dmem_cmd_payload_address_2[31:28]==4'd5 && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
             $display("Core 2 Write %x %x", dmem_cmd_payload_address_2, dmem_cmd_payload_data_2);
-        if (!dmem_cmd_payload_write_2_q && dmem_rsp_valid_2 && dmem_cmd_ready_2)
-            $display("Core 2 Read %x %x", dmem_cmd_payload_write_2_q, dmem_rsp_payload_data_2);
+
+        if (dmem_cmd_payload_address_2_q[31:28]==4'd5 && !dmem_cmd_payload_write_2_q && dmem_rsp_valid_2 && dmem_cmd_ready_2) begin
+            $display("Core 2 Read %x %x", dmem_cmd_payload_address_2_q, dmem_rsp_payload_data_2);
+
+            if (dmem_cmd_payload_address_2_q == 32'h50096f00) debugflag <= 1;
+        end
 
         if (dmem_cmd_payload_address_2 == 32'h10000000 && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
             $display("Core 2 Debug out %x", dmem_cmd_payload_data_2);
@@ -818,16 +817,15 @@ module mpeg_video (
             if (data_burst_cnt_2 == 2) begin
                 worker_2_ddr.read <= 0;
                 worker_2_ddr.acquire <= 0;
-                //dmem_rsp_valid_2_next <= 1;
                 dmem_rsp_valid_2 <= 1;
                 cache_write_adr_2 <= cache_write_adr_2 + 1;
+                cache_miss_2_q <= 0; // In case a read is followed by a read
             end
         end
-        if (dmem_rsp_valid_2_next) dmem_rsp_valid_2 <= 1;
 
         if (cache_miss_2) begin
             // After a cache miss, the first entry is always the right one!
-            cache_2_out <= cache_2[cache_hit_adr_2_q][0];
+            cache_2_out <= cache_2[cache_write_adr_2][0];
         end else begin
             // We have hit the cache. Lookup
             cache_2_out <= cache_2[cache_hit_adr_2][2'(dmem_cmd_payload_address_2[27:3]-cache_adr_2[cache_hit_adr_2])];
@@ -840,6 +838,7 @@ module mpeg_video (
                 cache_hit_adr_2_q <= cache_hit_adr_2;
             end
             dmem_cmd_valid_2_q <= dmem_cmd_valid_2;
+            cache_miss_2_q <= cache_miss_2;
         end
         dmem_cmd_ready_2_q <= dmem_cmd_ready_2;
 

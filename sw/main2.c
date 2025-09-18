@@ -64,29 +64,57 @@ void stop_verilator()
 
 void main(void)
 {
-#if 0
-	static uint32_t testword;
-	switch (OUT_DEBUG)
-	{
-	case 0x4218:
-		memory_interface_test(&testword);
-		__asm volatile("" : : : "memory");
-		memory_interface_test((void *)0x50000010);
-		__asm volatile("" : : : "memory");
-		memory_interface_test((void *)0x40000010);
-		__asm volatile("" : : : "memory");
-		break;
-	case 0x4212:
-		memory_interface_test(&testword);
-		__asm volatile("" : : : "memory");
-		memory_interface_test((void *)0x50000030);
-		__asm volatile("" : : : "memory");
-		memory_interface_test((void *)0x40000030);
-		__asm volatile("" : : : "memory");
-		break;
-	default:
-		*((volatile uint8_t *)OUTPORT_END) = 4;
-	}
+#if 1
+  static uint32_t testword;
+  switch (OUT_DEBUG)
+  {
+  case 0x4218:
+    *((volatile uint32_t *)0x50000010) = 0x01000010;
+    *((volatile uint32_t *)0x50000014) = 0x01000014;
+    *((volatile uint32_t *)0x50000018) = 0x01000018;
+    *((volatile uint32_t *)0x5000001c) = 0x0100001c;
+    *((volatile uint32_t *)0x50000020) = 0x01000020;
+    *((volatile uint32_t *)0x50000024) = 0x01000024;
+    *((volatile uint32_t *)0x50000028) = 0x01000028;
+    *((volatile uint32_t *)0x5000002c) = 0x0100002c;
+
+    *((volatile uint32_t *)0x50000030) = 0x01000030;
+    *((volatile uint32_t *)0x50000034) = 0x01000034;
+
+    // Fetch and read two from the same cache address
+    // This should be cache entry 0
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000010) + *((volatile uint32_t *)0x50000014);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000010) + *((volatile uint32_t *)0x50000014);
+
+    // Fetch and read two from the same cache address
+    // This should be cache entry 1
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000030) + *((volatile uint32_t *)0x50000034);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000030) + *((volatile uint32_t *)0x50000034);
+
+    *((volatile uint32_t *)0x50000050) = 0x01000050;
+    *((volatile uint32_t *)0x50000054) = 0x01000054;
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000050) + *((volatile uint32_t *)0x50000054);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000050) + *((volatile uint32_t *)0x50000054);
+
+/*
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000014);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000018);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x5000001c);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000020);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000024);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000028);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x5000002c);
+    */
+    *((volatile uint32_t *)OUTPORT_END) = *((volatile uint32_t *)0x50000030);
+
+    break;
+  case 0x4212:
+    for (;;)
+      ;
+    break;
+  default:
+    *((volatile uint8_t *)OUTPORT_END) = 4;
+  }
 #endif
 
   for (;;)
