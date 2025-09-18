@@ -469,11 +469,11 @@ module mpeg_video (
     bit [63:0] cache_2[8][3];
     bit [63:0] cache_2_out;
     bit [1:0] data_burst_cnt_2;
-    bit [27-3:0] cache_adr_2[8] = '{default: 8000};
+    bit [23-3:0] cache_adr_2[8] = '{default: 8000};
     bit [2:0] cache_write_adr_2 = 0;
 
 `ifdef VERILATOR
-    bit [27-3:0] missed_cache_adr_2[16] = '{default: 8000};
+    bit [23-3:0] missed_cache_adr_2[16] = '{default: 8000};
     bit [3:0] missed_cache_adr_index_2;
 `endif
 
@@ -482,11 +482,11 @@ module mpeg_video (
     bit [63:0] cache_3[8][3];
     bit [63:0] cache_3_out;
     bit [1:0] data_burst_cnt_3;
-    bit [27-3:0] cache_adr_3[8] = '{default: 8000};
+    bit [23-3:0] cache_adr_3[8] = '{default: 8000};
     bit [2:0] cache_write_adr_3 = 0;
 
 `ifdef VERILATOR
-    bit [27-3:0] missed_cache_adr_3[16] = '{default: 8000};
+    bit [23-3:0] missed_cache_adr_3[16] = '{default: 8000};
     bit [3:0] missed_cache_adr_index_3;
 `endif
 
@@ -516,7 +516,7 @@ module mpeg_video (
         cache_miss_3 = 0;
         cache_hit = 0;
         for (i = 0; i < 8; i++) begin
-            if ((dmem_cmd_payload_address_3[27:3] >= cache_adr_3[i]) && (dmem_cmd_payload_address_3[27:3] <= cache_adr_3[i] + 2)) begin
+            if ((dmem_cmd_payload_address_3[23:3] >= cache_adr_3[i]) && (dmem_cmd_payload_address_3[23:3] <= cache_adr_3[i] + 2)) begin
                 cache_hit_adr_3 = 3'(i);
                 cache_hit = 1;
             end
@@ -578,7 +578,7 @@ module mpeg_video (
         cache_miss_2 = 0;
         cache_hit = 0;
         for (i = 0; i < 8; i++) begin
-            if ((dmem_cmd_payload_address_2[27:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2[27:3] <= cache_adr_2[i] + 2)) begin
+            if ((dmem_cmd_payload_address_2[23:3] >= cache_adr_2[i]) && (dmem_cmd_payload_address_2[23:3] <= cache_adr_2[i] + 2)) begin
                 cache_hit_adr_2 = 3'(i);
                 cache_hit = 1;
             end
@@ -774,7 +774,9 @@ module mpeg_video (
         end
     end
 
-
+    bit [31:0] highest_adr_2;
+    bit [31:0] highest_adr_3;
+    
     always_ff @(posedge clk60) begin
         integer i;
 
@@ -789,17 +791,15 @@ module mpeg_video (
         if (!worker_2_ddr.busy && worker_2_ddr.read) begin
             worker_2_ddr.read <= 0;
         end
-/*
-        if (dmem_cmd_payload_address_2[31:28]==4'd5 && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
-            $display("Core 2 Write %x %x", dmem_cmd_payload_address_2, dmem_cmd_payload_data_2);
 
-        if (dmem_cmd_payload_address_2_q[31:28]==4'd5 && !dmem_cmd_payload_write_2_q && dmem_rsp_valid_2 && dmem_cmd_ready_2) begin
-            $display("Core 2 Read %x %x", dmem_cmd_payload_address_2_q, dmem_rsp_payload_data_2);
-            if (dmem_cmd_payload_address_2_q == 32'h50096f00) debugflag <= 1;
-        end*/
+        if (dmem_cmd_payload_address_2[31:28]==4'd5 && dmem_cmd_valid_2 && dmem_cmd_ready_2 && dmem_cmd_payload_address_2 > highest_adr_2)
+            highest_adr_2 = dmem_cmd_payload_address_2;
+
+        if (dmem_cmd_payload_address_3[31:28]==4'd5 && dmem_cmd_valid_3 && dmem_cmd_ready_3 && dmem_cmd_payload_address_3 > highest_adr_3)
+            highest_adr_3 = dmem_cmd_payload_address_3;
 
         if (dmem_cmd_payload_address_2 == 32'h10000000 && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
-            $display("Core 2 Debug out %x", dmem_cmd_payload_data_2);
+            $display("Core 2 Debug out %x %x", highest_adr_2, highest_adr_3);
 
         if (data_burst_cnt_2 != 3 && worker_2_ddr.rdata_ready) begin
             if (worker_2_ddr.rdata_ready) begin
@@ -927,19 +927,19 @@ module mpeg_video (
                         data_burst_cnt_2 <= 0;
                         dmem_rsp_valid_2 <= 0;
                         worker_2_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_2[27:3]};
-                        cache_adr_2[cache_write_adr_2] <= dmem_cmd_payload_address_2[27:3];
+                        cache_adr_2[cache_write_adr_2] <= dmem_cmd_payload_address_2[23:3];
 
 `ifdef VERILATOR
                         // Check quality of cache. Can we get faster with a bigger cache?
                         for (i = 0; i < 16; i++) begin
-                            if (dmem_cmd_payload_address_2[27:3] == missed_cache_adr_2[i]) begin
+                            if (dmem_cmd_payload_address_2[23:3] == missed_cache_adr_2[i]) begin
                                 $display("Cache 2 Miss with recently requested address %x %x",
                                          dmem_cmd_payload_address_2,
                                          dmem_cmd_payload_address_2[27:3]);
                                 //$finish();
                             end
                         end
-                        missed_cache_adr_2[missed_cache_adr_index_2] <= dmem_cmd_payload_address_2[27:3];
+                        missed_cache_adr_2[missed_cache_adr_index_2] <= dmem_cmd_payload_address_2[23:3];
                         missed_cache_adr_index_2 <= missed_cache_adr_index_2 + 1;
 `endif
                     end else begin
@@ -995,19 +995,19 @@ module mpeg_video (
                         data_burst_cnt_3 <= 0;
                         dmem_rsp_valid_3 <= 0;
                         worker_3_ddr.addr <= {DDR_CORE_BASE, dmem_cmd_payload_address_3[27:3]};
-                        cache_adr_3[cache_write_adr_3] <= dmem_cmd_payload_address_3[27:3];
+                        cache_adr_3[cache_write_adr_3] <= dmem_cmd_payload_address_3[23:3];
 
 `ifdef VERILATOR
                         // Check quality of cache. Can we get faster with a bigger cache?
                         for (i = 0; i < 16; i++) begin
-                            if (dmem_cmd_payload_address_3[27:3] == missed_cache_adr_3[i]) begin
+                            if (dmem_cmd_payload_address_3[23:3] == missed_cache_adr_3[i]) begin
                                 $display("Cache 3 Miss with recently requested address %x %x",
                                          dmem_cmd_payload_address_3,
                                          dmem_cmd_payload_address_3[27:3]);
                                 //$finish();
                             end
                         end
-                        missed_cache_adr_3[missed_cache_adr_index_3] <= dmem_cmd_payload_address_3[27:3];
+                        missed_cache_adr_3[missed_cache_adr_index_3] <= dmem_cmd_payload_address_3[23:3];
                         missed_cache_adr_index_3 <= missed_cache_adr_index_3 + 1;
 `endif
                     end else begin
