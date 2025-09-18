@@ -796,15 +796,14 @@ module mpeg_video (
         if (!worker_2_ddr.busy && worker_2_ddr.read) begin
             worker_2_ddr.read <= 0;
         end
-
+/*
         if (dmem_cmd_payload_address_2[31:28]==4'd5 && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
             $display("Core 2 Write %x %x", dmem_cmd_payload_address_2, dmem_cmd_payload_data_2);
 
         if (dmem_cmd_payload_address_2_q[31:28]==4'd5 && !dmem_cmd_payload_write_2_q && dmem_rsp_valid_2 && dmem_cmd_ready_2) begin
             $display("Core 2 Read %x %x", dmem_cmd_payload_address_2_q, dmem_rsp_payload_data_2);
-
             if (dmem_cmd_payload_address_2_q == 32'h50096f00) debugflag <= 1;
-        end
+        end*/
 
         if (dmem_cmd_payload_address_2 == 32'h10000000 && dmem_cmd_valid_2 && dmem_cmd_payload_write_2 && dmem_cmd_ready_2)
             $display("Core 2 Debug out %x", dmem_cmd_payload_data_2);
@@ -819,11 +818,11 @@ module mpeg_video (
                 worker_2_ddr.acquire <= 0;
                 dmem_rsp_valid_2 <= 1;
                 cache_write_adr_2 <= cache_write_adr_2 + 1;
-                cache_miss_2_q <= 0; // In case a read is followed by a read
+                cache_miss_2_q <= 0;  // In case a read is followed by a read
             end
         end
 
-        if (cache_miss_2) begin
+        if (worker_2_ddr.rdata_ready && data_burst_cnt_2 == 2) begin
             // After a cache miss, the first entry is always the right one!
             cache_2_out <= cache_2[cache_write_adr_2][0];
         end else begin

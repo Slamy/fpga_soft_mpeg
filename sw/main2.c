@@ -64,7 +64,7 @@ void stop_verilator()
 
 void main(void)
 {
-#if 1
+#if 0
   static uint32_t testword;
   switch (OUT_DEBUG)
   {
@@ -81,20 +81,27 @@ void main(void)
     *((volatile uint32_t *)0x50000030) = 0x01000030;
     *((volatile uint32_t *)0x50000034) = 0x01000034;
 
+    *((volatile uint32_t *)0x50000050) = 0x01000050;
+    *((volatile uint32_t *)0x50000054) = 0x01000054;
+
     // Fetch and read two from the same cache address
     // This should be cache entry 0
     *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000010) + *((volatile uint32_t *)0x50000014);
     *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000010) + *((volatile uint32_t *)0x50000014);
 
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000030) + *((volatile uint32_t *)0x50000050);
+    *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000030) + *((volatile uint32_t *)0x50000050);
+
+#if 0
     // Fetch and read two from the same cache address
     // This should be cache entry 1
     *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000030) + *((volatile uint32_t *)0x50000034);
     *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000030) + *((volatile uint32_t *)0x50000034);
 
-    *((volatile uint32_t *)0x50000050) = 0x01000050;
-    *((volatile uint32_t *)0x50000054) = 0x01000054;
+
     *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000050) + *((volatile uint32_t *)0x50000054);
     *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000050) + *((volatile uint32_t *)0x50000054);
+#endif
 
 /*
     *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000014);
