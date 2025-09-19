@@ -27,6 +27,7 @@ struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
 #define OUTPORT_FRAME 0x10000010
 #define OUTPORT_HANDLE_SHARED 0x10000014
 #define OUT_DEBUG *(volatile uint32_t *)0x10000030
+#define INVALIDATE_CACHE *(volatile uint32_t *)0x10001110
 
 #include "memtest.h"
 #include "shared.h"
@@ -86,20 +87,11 @@ void main(void)
       macroblock_worker(s, d, desc->cpm.odd_h, desc->cpm.odd_v,
                         desc->cpm.interpolate, desc->cpm.dw, desc->cpm.di,
                         desc->cpm.si, desc->cpm.block_size);
+      INVALIDATE_CACHE = 1;
     }
     else if (desc->ready == 3)
     {
       // Do nothing. Just for syncing CPUs
-
-      // force cache invalidation by reading some areas
-      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000100);
-      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000200);
-      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000300);
-      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000400);
-      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000500);
-      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000600);
-      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000700);
-      *((volatile uint32_t *)OUTPORT) = *((volatile uint32_t *)0x50000800);
     }
 
     __asm volatile("" : : : "memory");
