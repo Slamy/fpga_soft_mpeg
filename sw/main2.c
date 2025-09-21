@@ -67,6 +67,8 @@ void main(void)
 {
   for (;;)
   {
+    INVALIDATE_CACHE = 1;
+
     struct image_synthesis_descriptor *desc = get_next_ready_synthesis_desc();
 
     if (desc->ready == 1)
@@ -83,7 +85,6 @@ void main(void)
       uint8_t *s = (uint8_t *)(((uint32_t)desc->cpm.s) + 0x50000000);
       uint8_t *d = (uint8_t *)(((uint32_t)desc->cpm.d) + 0x50000000);
       OUT_DEBUG = 34;
-      INVALIDATE_CACHE = 1;
 
       macroblock_worker(s, d, desc->cpm.odd_h, desc->cpm.odd_v,
                         desc->cpm.interpolate, desc->cpm.dw, desc->cpm.di,

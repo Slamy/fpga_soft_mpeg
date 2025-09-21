@@ -96,6 +96,7 @@ struct image_synthesis_descriptor *get_next_ready_synthesis_desc()
     struct image_synthesis_descriptor *retval = &image_synthesis_buffer[image_synthesis_buffer_index++];
 
     OUT_DEBUG = 35;
+    __asm volatile("" : : : "memory");
 
     while (retval->ready == 0)
         __asm volatile("" : : : "memory");
