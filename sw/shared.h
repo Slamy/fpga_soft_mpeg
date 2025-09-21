@@ -32,17 +32,21 @@ struct image_synthesis_descriptor
         struct cmd_write_pixels cwp;
         struct cmd_process_macroblock cpm;
     };
-    int ready; // set to 1 to enable processing by second core
+    uint8_t ready; // set to 1 to enable processing by second core
+    uint8_t cmdcnt;
 };
 
 struct image_synthesis_descriptor *image_synthesis_buffer = (struct image_synthesis_descriptor *)0x40000000;
 struct image_synthesis_descriptor *image_synthesis_buffer2 = (struct image_synthesis_descriptor *)0x41000000;
 int image_synthesis_buffer_index = 0;
 int image_synthesis_buffer_index2 = 0;
+static uint8_t cmdcnt = 0;
+static uint8_t cmdcnt1 = 0;
+static uint8_t cmdcnt2 = 0;
 static int worker_cnt = 0;
 
 #define CMD_SIZE 288
-#define SHARED_BUFFER_ENTRIES (16384/CMD_SIZE)
+#define SHARED_BUFFER_ENTRIES (16384 / CMD_SIZE)
 
 struct image_synthesis_descriptor *get_next_synthesis_desc()
 {
@@ -54,6 +58,9 @@ struct image_synthesis_descriptor *get_next_synthesis_desc()
 
         if (image_synthesis_buffer_index == SHARED_BUFFER_ENTRIES)
             image_synthesis_buffer_index = 0;
+
+        cmdcnt1++;
+        retval->cmdcnt = cmdcnt1;
     }
     else
     {
@@ -61,6 +68,9 @@ struct image_synthesis_descriptor *get_next_synthesis_desc()
 
         if (image_synthesis_buffer_index2 == SHARED_BUFFER_ENTRIES)
             image_synthesis_buffer_index2 = 0;
+
+        cmdcnt2++;
+        retval->cmdcnt = cmdcnt2;
     }
 
     __asm volatile("" : : : "memory");
@@ -89,6 +99,15 @@ struct image_synthesis_descriptor *get_next_ready_synthesis_desc()
 
     while (retval->ready == 0)
         __asm volatile("" : : : "memory");
+
+    cmdcnt++;
+    if (cmdcnt != retval->cmdcnt)
+    {
+        // something went horribly wrong
+        *((volatile uint8_t *)OUTPORT_END) = 7;
+        for (;;)
+            ;
+    }
 
     OUT_DEBUG = 36;
 
