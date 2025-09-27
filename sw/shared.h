@@ -91,6 +91,16 @@ struct image_synthesis_descriptor *get_next_synthesis_desc()
     return retval;
 }
 
+/// @brief Invalidate all possible commands
+/// Meant to be executed by the consuming worker cores
+void clear_shared_memory()
+{
+    for (int i=0; i< SHARED_BUFFER_ENTRIES;i++)
+    {
+        image_synthesis_buffer[i].ready=0;
+    }
+}
+
 struct image_synthesis_descriptor *get_next_ready_synthesis_desc()
 {
     struct image_synthesis_descriptor *retval = &image_synthesis_buffer[image_synthesis_buffer_index++];

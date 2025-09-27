@@ -101,8 +101,6 @@ module frameplayer (
     end
     always_ff @(posedge clkddr) begin
 
-
-
         if (!ddrif.busy) begin
             ddrif.read <= 0;
         end

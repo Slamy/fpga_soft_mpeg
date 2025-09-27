@@ -1565,20 +1565,26 @@ static const int PLM_START_USER_DATA = 0xB2;
 #define PLM_START_IS_SLICE(c) \
 	(c >= PLM_START_SLICE_FIRST && c <= PLM_START_SLICE_LAST)
 
-#if 0
-static const float PLM_VIDEO_PIXEL_ASPECT_RATIO[] = {
-	1.0000, /* square pixels */
-	0.6735, /* 3:4? */
-	0.7031, /* MPEG-1 / MPEG-2 video encoding divergence? */
-	0.7615, 0.8055, 0.8437, 0.8935, 0.9157, 0.9815,
-	1.0255, 1.0695, 1.0950, 1.1575, 1.2051,
-};
+#define TICKS_30MHZ(x) (x ? 30000000.0/x : 10000)
 
-static const double PLM_VIDEO_PICTURE_RATE[] = {
-	0.000, 23.976, 24.000, 25.000, 29.970, 30.000, 50.000, 59.940,
-	60.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000
+static const uint32_t PLM_VIDEO_PICTURE_RATE[] = {
+	TICKS_30MHZ(0.000),
+	TICKS_30MHZ(23.976),
+	TICKS_30MHZ(24.000),
+	TICKS_30MHZ(25.000),
+	TICKS_30MHZ(29.970),
+	TICKS_30MHZ(30.000),
+	TICKS_30MHZ(50.000),
+	TICKS_30MHZ(59.94),
+	TICKS_30MHZ(60.000),
+	TICKS_30MHZ(0.000),
+	TICKS_30MHZ(0.000),
+	TICKS_30MHZ(0.000),
+	TICKS_30MHZ(0.000),
+	TICKS_30MHZ(0.000),
+	TICKS_30MHZ(0.000),
+	TICKS_30MHZ(0.0),
 };
-#endif
 
 static const uint8_t PLM_VIDEO_ZIG_ZAG[] = {
 	 0,  1,  8, 16,  9,  2,  3, 10,
@@ -2211,7 +2217,7 @@ int plm_video_decode_sequence_header(plm_video_t *self) {
 	#endif
 
 	// Get frame rate
-	self->framerate = plm_dma_buffer_read(self->buffer, 4);
+	self->framerate = PLM_VIDEO_PICTURE_RATE[plm_dma_buffer_read(self->buffer, 4)];
 
 	// Skip bit_rate, marker, buffer_size and constrained bit
 	plm_dma_buffer_skip(self->buffer, 18 + 1 + 10 + 1);

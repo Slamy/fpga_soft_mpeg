@@ -65,6 +65,10 @@ void stop_verilator()
 
 void main(void)
 {
+  // It might be possible that the shared memory contains residual data
+  // from previous runs. Invalidate the commands to start new
+  clear_shared_memory();
+
   for (;;)
   {
     INVALIDATE_CACHE = 1;

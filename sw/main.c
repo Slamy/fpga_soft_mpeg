@@ -27,6 +27,7 @@ struct frame_display_fifo
 	uint32_t v_adr;
 	uint32_t width;
 	uint32_t height;
+	uint32_t frameperiod; // ticks of 30 MHz
 };
 
 struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;
@@ -166,8 +167,9 @@ void main(void)
 			frame_display_fifo->v_adr = (uint32_t)frame->cr.data;
 			frame_display_fifo->width = frame->width;
 			frame_display_fifo->height = frame->height;
+			frame_display_fifo->frameperiod = mpeg->framerate;
 			__asm volatile("" : : : "memory");
-			
+
 			cnt++;
 		}
 		else
