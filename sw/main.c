@@ -69,7 +69,6 @@ void print_str(const char *p)
 
 void stop_verilator()
 {
-	print_str("Nope\n");
 	*((volatile uint8_t *)OUTPORT_END) = 0;
 }
 

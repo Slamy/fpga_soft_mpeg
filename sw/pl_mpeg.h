@@ -3794,8 +3794,7 @@ int plm_audio_decode_header(plm_audio_t *self) {
 	if (
 		self->has_header && (
 			self->bitrate_index != bitrate_index ||
-			self->samplerate_index != samplerate_index ||
-			self->mode != mode
+			self->samplerate_index != samplerate_index
 		)
 	) {
 		return 0;
