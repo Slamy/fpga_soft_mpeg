@@ -128,9 +128,7 @@ void main(void)
 
 	fifo_ctrl->signal_decoding_started = 1;
 
-	int timeout = 10;
-
-	while (timeout)
+	for (;;)
 	{
 		plm_samples_t *samples = plm_audio_decode(mpeg);
 
@@ -139,7 +137,6 @@ void main(void)
 			// Give some feedback to the user that we are running
 			cnt++;
 			fifo_ctrl->signal_frame_decoded = cnt;
-			timeout = 10;
 		}
 		else
 		{
@@ -147,7 +144,6 @@ void main(void)
 			// been decoded with one call to plm_decode_audio()
 			// But on the second, it is successful?
 			// Happens with Philips Bumper on Lucky Luke
-			timeout--;
 		}
 	}
 
