@@ -1565,8 +1565,26 @@ static const int PLM_START_USER_DATA = 0xB2;
 #define PLM_START_IS_SLICE(c) \
 	(c >= PLM_START_SLICE_FIRST && c <= PLM_START_SLICE_LAST)
 
-#define TICKS_30MHZ(x) (x ? 30000000.0/x : 10000)
+#define FRACTIONAL_ASPECT_RATIO(x) (256.0 * x)
 
+static const float PLM_VIDEO_PIXEL_ASPECT_RATIO[] = {
+	FRACTIONAL_ASPECT_RATIO(1.0000), /* square pixels */
+	FRACTIONAL_ASPECT_RATIO(0.6735), /* 3:4? */
+	FRACTIONAL_ASPECT_RATIO(0.7031), /* MPEG-1 / MPEG-2 video encoding divergence? */
+	FRACTIONAL_ASPECT_RATIO(0.7615), 
+	FRACTIONAL_ASPECT_RATIO(0.8055),
+	FRACTIONAL_ASPECT_RATIO(0.8437),
+	FRACTIONAL_ASPECT_RATIO(0.8935),
+	FRACTIONAL_ASPECT_RATIO(0.9157),
+	FRACTIONAL_ASPECT_RATIO(0.9815),
+	FRACTIONAL_ASPECT_RATIO(1.0255),
+	FRACTIONAL_ASPECT_RATIO(1.0695),
+	FRACTIONAL_ASPECT_RATIO(1.0950),
+	FRACTIONAL_ASPECT_RATIO(1.1575),
+	FRACTIONAL_ASPECT_RATIO(1.2051),
+};
+
+#define TICKS_30MHZ(x) (x ? 30000000.0/x : 10000)
 static const uint32_t PLM_VIDEO_PICTURE_RATE[] = {
 	TICKS_30MHZ(0.000),
 	TICKS_30MHZ(23.976),
@@ -2202,7 +2220,6 @@ int plm_video_decode_sequence_header(plm_video_t *self) {
 	// Get pixel aspect ratio
 	int pixel_aspect_ratio_code;
 	pixel_aspect_ratio_code = plm_dma_buffer_read(self->buffer, 4);
-	#if 0
 	pixel_aspect_ratio_code -= 1;
 	if (pixel_aspect_ratio_code < 0) {
 		pixel_aspect_ratio_code = 0;
@@ -2214,7 +2231,6 @@ int plm_video_decode_sequence_header(plm_video_t *self) {
 	}
 	self->pixel_aspect_ratio =
 		PLM_VIDEO_PIXEL_ASPECT_RATIO[pixel_aspect_ratio_code];
-	#endif
 
 	// Get frame rate
 	self->framerate = PLM_VIDEO_PICTURE_RATE[plm_dma_buffer_read(self->buffer, 4)];
