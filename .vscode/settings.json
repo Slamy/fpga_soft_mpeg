@@ -51,6 +51,7 @@
         "span": "cpp",
         "shared.h": "c",
         "ratio": "c",
-        "system_error": "c"
+        "system_error": "c",
+        "memtest.h": "c"
     }
 }
