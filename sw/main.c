@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -111,6 +112,7 @@ void main(void)
 		*((volatile uint8_t *)OUTPORT_END) = 3;
 
 	int cnt = 0;
+	bool first_intra_frame_occured = false;
 
 	for (;;)
 	{
@@ -139,6 +141,20 @@ void main(void)
 			frame_display_fifo->y_adr = (uint32_t)frame->y.data;
 			frame_display_fifo->u_adr = (uint32_t)frame->cb.data;
 			frame_display_fifo->v_adr = (uint32_t)frame->cr.data;
+
+			if (frame->temporal_ref == 0)
+				first_intra_frame_occured = false;
+
+			if (!first_intra_frame_occured && frame->picture_type == PLM_VIDEO_PICTURE_TYPE_INTRA)
+			{
+				first_intra_frame_occured = true;
+				frame_display_fifo->first_intra_frame_of_gop = 1;
+			}
+			else
+			{
+				frame_display_fifo->first_intra_frame_of_gop = 0;
+			}
+
 			frame_display_fifo->width = frame->width;
 			frame_display_fifo->height = frame->height;
 			frame_display_fifo->frameperiod = mpeg->framerate;

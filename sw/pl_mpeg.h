@@ -205,6 +205,8 @@ typedef struct {
 	plm_plane_t y;
 	plm_plane_t cr;
 	plm_plane_t cb;
+	int picture_type;
+	int temporal_ref;
 } plm_frame_t;
 
 
@@ -1284,10 +1286,15 @@ int plm_buffer_has_ended(plm_buffer_t *self) {
 	return self->has_ended;
 }
 
-static inline void plm_dma_buffer_wait_for_data(plm_dma_buffer_t *self, size_t count) {
+static inline void plm_dma_buffer_wait_for_data(plm_dma_buffer_t *self, size_t count)
+{
 	__asm volatile("" : : : "memory");
-	while (((fifo_ctrl->write_byte_index << 3) - fifo_ctrl->read_bit_index) < count) {
-        __asm volatile("" : : : "memory");
+	uint32_t timeout = 800000;
+	while (((fifo_ctrl->write_byte_index << 3) - fifo_ctrl->read_bit_index) < count)
+	{
+		if (timeout-- == 0)
+			frame_display_fifo->event_buffer_underflow = 1;
+		__asm volatile("" : : : "memory");
 	}
 }
 
@@ -1938,6 +1945,7 @@ struct plm_video_t {
 
 	int start_code;
 	int picture_type;
+	int temporal_ref;
 
 	plm_video_motion_t motion_forward;
 	plm_video_motion_t motion_backward;
@@ -2240,7 +2248,7 @@ void plm_video_init_frame(plm_video_t *self, plm_frame_t *frame, uint8_t *base) 
 void plm_video_decode_picture(plm_video_t *self) {
 	OUT_DEBUG = 3;
 
-	plm_dma_buffer_skip(self->buffer, 10); // skip temporalReference
+	self->temporal_ref = plm_dma_buffer_read(self->buffer, 10);
 	self->picture_type = plm_dma_buffer_read(self->buffer, 3);
 	plm_dma_buffer_skip(self->buffer, 16); // skip vbv_delay
 
@@ -2297,6 +2305,10 @@ void plm_video_decode_picture(plm_video_t *self) {
 
 	// Decode all slices
 	self->frame_current = self->framebuffers[self->fbindex];
+
+	self->frame_current.picture_type = self->picture_type;
+	self->frame_current.temporal_ref = self->temporal_ref;
+
 	self->fbindex++;
 	if (self->fbindex==20)
 		self->fbindex=0;

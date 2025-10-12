@@ -20,6 +20,8 @@ struct frame_display_fifo
 	uint32_t frameperiod; // ticks of 30 MHz
 	uint32_t fractional_pixel_width;
 	uint32_t event_sequence_end;
+	uint32_t first_intra_frame_of_gop;
+	uint32_t event_buffer_underflow;
 };
 
 struct io_fifo_control *const fifo_ctrl = (struct io_fifo_control *)0x10002000;

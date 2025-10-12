@@ -11,7 +11,7 @@
 #define PL_MPEG_IMPLEMENTATION
 #define PLM_NO_STDIO
 int OUT_DEBUG;
-#include "pl_mpeg.h"
+#include "pl_mpeg_pc.h"
 
 int write_bmp(const char *path, int width, int height, uint8_t *pixels)
 {
@@ -46,7 +46,7 @@ int write_bmp(const char *path, int width, int height, uint8_t *pixels)
 
 int main(void)
 {
-	const char *path = "../sim/fmv.m1v";
+	const char *path = "fmv_m1v.bin";
 	// const char *path = "/home/andre/GIT/MPEG1_Handbook/bunny.mp2";
 
 #if 1
@@ -88,7 +88,7 @@ int main(void)
 			int h = frame->height;
 			uint8_t *pixels = (uint8_t *)malloc(w * h * 3);
 			assert(pixels);
-			printf("%x %x %x\n", *frame->y.data, *frame->cr.data, *frame->cb.data);
+			printf("B %x %x   %x %x\n", mpeg->temporal_ref, mpeg->picture_type, frame->temporal_ref, frame->picture_type);
 			/*
 			69 80 78
 Writing 000000.bmp

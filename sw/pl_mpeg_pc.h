@@ -204,6 +204,8 @@ typedef struct {
 	plm_plane_t y;
 	plm_plane_t cr;
 	plm_plane_t cb;
+	int picture_type;
+	int temporal_ref;
 } plm_frame_t;
 
 
@@ -1681,6 +1683,10 @@ int plm_buffer_has(plm_buffer_t *self, size_t count) {
 }
 
 int plm_buffer_read(plm_buffer_t *self, int count) {
+	if (!plm_buffer_has(self, count)) {
+		return 0;
+	}
+
 	int value = 0;
 
 	while (count) {
@@ -1719,11 +1725,12 @@ int plm_buffer_skip_bytes(plm_buffer_t *self, uint8_t v) {
 	}
 	return skipped;
 }
+static const int PLM_START_SEQ_END = 0xB7;
 
 int plm_buffer_next_start_code(plm_buffer_t *self) {
 	plm_buffer_align(self);
 
-	while (plm_buffer_has(self, (5 << 3))) {
+	while (plm_buffer_has(self, (4 << 3))) {
 		size_t byte_index = (self->bit_index) >> 3;
 		if (
 			self->bytes[byte_index] == 0x00 &&
@@ -1731,7 +1738,15 @@ int plm_buffer_next_start_code(plm_buffer_t *self) {
 			self->bytes[byte_index + 2] == 0x01
 		) {
 			self->bit_index = (byte_index + 4) << 3;
-			return self->bytes[byte_index + 3];
+
+			int startcode = self->bytes[byte_index + 3];
+
+			if (startcode == PLM_START_SEQ_END)
+			{
+				printf("END at %x!\n",byte_index);
+			}
+
+			return startcode;
 		}
 		self->bit_index += 8;
 	}
@@ -1742,6 +1757,12 @@ int plm_buffer_find_start_code(plm_buffer_t *self, int code) {
 	int current = 0;
 	while (TRUE) {
 		current = plm_buffer_next_start_code(self);
+
+		if (current == PLM_START_SEQ_END)
+		{
+			printf("END2\n");
+		}
+
 		if (current == code || current == -1) {
 			return current;
 		}
@@ -2724,6 +2745,7 @@ struct plm_video_t {
 
 	int start_code;
 	int picture_type;
+	int temporal_ref;
 
 	plm_video_motion_t motion_forward;
 	plm_video_motion_t motion_backward;
@@ -3045,7 +3067,7 @@ void plm_video_init_frame(plm_video_t *self, plm_frame_t *frame, uint8_t *base) 
 
 void plm_video_decode_picture(plm_video_t *self) {
 
-	plm_buffer_skip(self->buffer, 10); // skip temporalReference
+	self->temporal_ref = plm_buffer_read(self->buffer, 10); // skip temporalReference
 	self->picture_type = plm_buffer_read(self->buffer, 3);
 	plm_buffer_skip(self->buffer, 16); // skip vbv_delay
 
@@ -3095,6 +3117,9 @@ void plm_video_decode_picture(plm_video_t *self) {
 		self->start_code == PLM_START_EXTENSION || 
 		self->start_code == PLM_START_USER_DATA
 	);
+
+	self->frame_current.picture_type = self->picture_type;
+	self->frame_current.temporal_ref = self->temporal_ref;
 
 	// Decode all slices
 	while (PLM_START_IS_SLICE(self->start_code)) {
@@ -3514,8 +3539,32 @@ void plm_video_decode_block(plm_video_t *self, int block) {
 
 	int *s = self->block_data;
 	int si = 0;
-	
-
+	if (self->macroblock_intra) {
+		// Overwrite (no prediction)
+		if (n == 1) {
+			int clamped = plm_clamp((s[0] + 128) >> 8);
+			PLM_BLOCK_SET(d, di, dw, si, 8, 8, clamped);
+			s[0] = 0;
+		}
+		else {
+			plm_video_idct(s);
+			PLM_BLOCK_SET(d, di, dw, si, 8, 8, plm_clamp(s[si]));
+			memset(self->block_data, 0, sizeof(self->block_data));
+		}
+	}
+	else {
+		// Add data to the predicted macroblock
+		if (n == 1) {
+			int value = (s[0] + 128) >> 8;
+			PLM_BLOCK_SET(d, di, dw, si, 8, 8, plm_clamp(d[di] + value));
+			s[0] = 0;
+		}
+		else {
+			plm_video_idct(s);
+			PLM_BLOCK_SET(d, di, dw, si, 8, 8, plm_clamp(d[di] + s[si]));
+			memset(self->block_data, 0, sizeof(self->block_data));
+		}
+	}
 }
 
 void plm_video_idct(int *block) {
