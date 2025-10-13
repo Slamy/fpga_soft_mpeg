@@ -52,6 +52,7 @@
         "shared.h": "c",
         "ratio": "c",
         "system_error": "c",
-        "memtest.h": "c"
+        "memtest.h": "c",
+        "exception": "cpp"
     }
 }
