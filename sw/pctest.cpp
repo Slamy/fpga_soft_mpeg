@@ -44,9 +44,23 @@ int write_bmp(const char *path, int width, int height, uint8_t *pixels)
 	return file_size;
 }
 
+const char *pictype(int type)
+{
+	switch (type)
+	{
+	case PLM_VIDEO_PICTURE_TYPE_INTRA:
+		return "I";
+	case PLM_VIDEO_PICTURE_TYPE_PREDICTIVE:
+		return "P";
+	case PLM_VIDEO_PICTURE_TYPE_B:
+		return "B";
+	}
+	return "?";
+}
+
 int main(void)
 {
-	const char *path = "fmv_m1v.bin";
+	const char *path = "fmv.m1v";
 	// const char *path = "/home/andre/GIT/MPEG1_Handbook/bunny.mp2";
 
 #if 1
@@ -77,25 +91,36 @@ int main(void)
 	char bmp_name[16];
 	int cnt = 0;
 
+	int expected_temporal_ref = 0;
+
 	for (;;)
 	{
-
 		plm_frame_t *frame = plm_video_decode(mpeg);
 
 		if (frame)
 		{
 			int w = frame->width;
 			int h = frame->height;
-			uint8_t *pixels = (uint8_t *)malloc(w * h * 3);
-			assert(pixels);
-			printf("B %x %x   %x %x\n", mpeg->temporal_ref, mpeg->picture_type, frame->temporal_ref, frame->picture_type);
+
+			//printf("Frame  TemporalRef:%d PicType:%s   TemporalRef:%d PicType:%s\n", mpeg->temporal_ref, pictype(mpeg->picture_type), frame->temporal_ref, pictype(frame->picture_type));
+
+			if (expected_temporal_ref != frame->temporal_ref && frame->temporal_ref != 0)
+			{
+				printf("Fail!\n");
+				exit(1);
+			}
+
+			expected_temporal_ref = frame->temporal_ref + 1;
+#if 0
+		uint8_t *pixels = (uint8_t *)malloc(w * h * 3);
+		assert(pixels);
 			/*
 			69 80 78
-Writing 000000.bmp
-69 80 78
-Writing 000001.bmp
-69 80 78
-*/
+			Writing 000000.bmp
+			69 80 78
+			Writing 000001.bmp
+			69 80 78
+			*/
 			// Give some feedback to the user that we are running
 			plm_frame_to_bgr(frame, pixels, w * 3); // BMP expects BGR ordering
 
@@ -104,6 +129,7 @@ Writing 000001.bmp
 			write_bmp(bmp_name, w, h, pixels);
 			cnt++;
 			free(pixels);
+#endif
 		}
 		else
 		{
